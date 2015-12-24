@@ -10,4 +10,6 @@ public class WeacParsedMethod {
 
     public String methodSource;
     public boolean isAbstract;
+
+    public String access = "public";
 }

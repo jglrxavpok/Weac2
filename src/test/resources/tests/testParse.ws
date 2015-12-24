@@ -9,9 +9,15 @@ import weac.lang.Math
 */
 
 class TestParse {
-#ifdef NotDefinedCondition
+    #ifdef NotDefinedCondition
     Void nonCompiledField
-#else
+    #else
     Void compiledField
-#end
+    #end
 }
+
+public class PublicClass > MotherClass{}
+
+protected class ProtectedClass > MyInterface + AnotherInterface {}
+
+private class PrivateClass {}

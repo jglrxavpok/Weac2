@@ -24,6 +24,7 @@ public class WeacParsedSource {
                 System.out.println(i.importedType);
             }
         });
+        classes.forEach(WeacParsedClass::echo);
         System.out.println("[===END===]");
     }
 }

@@ -88,13 +88,4 @@ public class WeacPreProcessor extends WeacCompilePhase {
         return true;
     }
 
-    private String trimStartingSpace(String l) {
-        while(l.startsWith(" ")) {
-            l = l.substring(1);
-        }
-        while(l.startsWith("\t")) {
-            l = l.substring(1);
-        }
-        return l;
-    }
 }

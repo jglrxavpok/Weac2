@@ -6,4 +6,6 @@ public class WeacParsedField {
     public String type;
     public String name;
     public String defaultValue;
+
+    public String access = "public";
 }

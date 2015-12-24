@@ -6,8 +6,10 @@ import java.util.ArrayList;
 
 public class WeacParser extends WeacCompilePhase {
 
-    public WeacParser() {
+    private final WeacClassParser classParser;
 
+    public WeacParser() {
+        classParser = new WeacClassParser();
     }
 
     public WeacParsedSource parseSource(String source) {
@@ -26,16 +28,31 @@ public class WeacParser extends WeacCompilePhase {
         int globalIndex = 0;
         for(String fullLine : lines) {
             String l = trimStartingSpace(fullLine).replace("\r", "");
-            int end = l.indexOf(' ');
-            if(end < 0)
-                end = l.length();
-            String command = l.substring(0, end);
+            String command = readUntilSpace(l);
             switch (command) {
                 case "class":
                 case "enum":
                 case "struct":
                 case "interface":
-                    readClass(parsedSource, source.substring(globalIndex, source.indexOf("}", globalIndex)+1));
+                    readClass(parsedSource, extractClass(source, globalIndex), lineIndex);
+                    break;
+
+                case "private":
+                case "public":
+                case "protected":
+                    String s = readUntilSpace(trimStartingSpace(l.replaceFirst(command, "")));
+                    switch (s) {
+                        case "class":
+                        case "enum":
+                        case "struct":
+                        case "interface":
+                            readClass(parsedSource, extractClass(source, globalIndex), lineIndex);
+                            break;
+
+                        default:
+                            newError("Invalid token after " + command, lineIndex);
+                            break;
+                    }
                     break;
 
                 case "package":
@@ -56,8 +73,27 @@ public class WeacParser extends WeacCompilePhase {
                     break;
             }
             lineIndex++;
-            globalIndex+=fullLine.length();
+            globalIndex+=fullLine.length()+1; // the +1 comes from the fact that line returns are removed before the iteration
         }
+    }
+
+    private String extractClass(String source, int startIndex) {
+        int unclosedCurlyBrackets = 0;
+        StringBuilder builder = new StringBuilder();
+        for(int i = startIndex;i<source.length();i++) {
+            char c = source.charAt(i);
+            builder.append(c);
+
+            if(c == '{') {
+                unclosedCurlyBrackets++;
+            } else if(c == '}') {
+                unclosedCurlyBrackets--;
+                if(unclosedCurlyBrackets == 0) {
+                    break;
+                }
+            }
+        }
+        return builder.toString();
     }
 
     private void readImport(WeacParsedSource parsedSource, String line, int lineIndex) {
@@ -75,15 +111,10 @@ public class WeacParser extends WeacCompilePhase {
         parsedSource.imports.add(parsedImport);
     }
 
-    private String readUntilSpace(String arg) {
-        int end = arg.indexOf(' ');
-        if(end < 0)
-            end = arg.length();
-        return arg.substring(0, end);
-    }
-
-    private void readClass(WeacParsedSource parsedSource, String source) {
-        System.err.println(">>class "+source); // TODO
+    private void readClass(WeacParsedSource parsedSource, String classSource, int startingLine) {
+        System.err.println(">>class "+classSource); // TODO
+        WeacParsedClass parsedClass = classParser.parseClass(classSource, startingLine);
+        parsedSource.classes.add(parsedClass);
     }
 
     private String removeComments(String source) {
@@ -127,13 +158,4 @@ public class WeacParser extends WeacCompilePhase {
         return builder.toString();
     }
 
-    private String trimStartingSpace(String l) {
-        while(l.startsWith(" ")) {
-            l = l.substring(1);
-        }
-        while(l.startsWith("\t")) {
-            l = l.substring(1);
-        }
-        return l;
-    }
 }
