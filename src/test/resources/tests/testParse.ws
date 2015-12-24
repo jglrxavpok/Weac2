@@ -10,14 +10,22 @@ import weac.lang.Math
 
 class TestParse {
     #ifdef NotDefinedCondition
-    Void nonCompiledField
+    Void nonCompiledField;
     #else
-    Void compiledField
+    Void compiledField;
     #end
 }
 
-public class PublicClass > MotherClass{}
+public class PublicClass > MotherClass {
+    Double myMethod(Float arg0, String arg1) {
+        return arg0+arg1;
+    }
+}
 
 protected class ProtectedClass > MyInterface + AnotherInterface {}
 
 private class PrivateClass {}
+
+struct MyStruct {
+    Byte data;
+}

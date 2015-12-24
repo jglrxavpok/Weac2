@@ -1,5 +1,6 @@
 package org.jglr.weac.parse;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class WeacParsedClass {
@@ -29,6 +30,9 @@ public class WeacParsedClass {
             System.out.print(interfaceImpl);
             System.out.print(" + ");
         }
-        System.out.println();
+        System.out.println(" {");
+        fields.forEach(WeacParsedField::echo);
+        methods.forEach(WeacParsedMethod::echo);
+        System.out.println("}");
     }
 }
