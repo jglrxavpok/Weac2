@@ -34,6 +34,7 @@ public class WeacParser extends WeacCompilePhase {
                 case "enum":
                 case "struct":
                 case "interface":
+                case "object":
                     readClass(parsedSource, extractClass(source, globalIndex), lineIndex);
                     break;
 
@@ -46,6 +47,7 @@ public class WeacParser extends WeacCompilePhase {
                         case "enum":
                         case "struct":
                         case "interface":
+                        case "object":
                             readClass(parsedSource, extractClass(source, globalIndex), lineIndex);
                             break;
 

@@ -29,3 +29,7 @@ private class PrivateClass {}
 struct MyStruct {
     Byte data;
 }
+
+object MyObject {
+    Byte someConstantValue = 10b;
+}

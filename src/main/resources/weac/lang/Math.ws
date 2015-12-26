@@ -2,7 +2,7 @@ package weac.lang
 
 import java.lang.Math as JMath
 
-class Math {
+object Math {
 
     double sin(double arad) {
         return JMath.sin(arad);

@@ -33,6 +33,8 @@ public class WeacParsedMethod {
             System.out.print(" ");
             System.out.print(argumentNames.get(i));
         }
-        System.out.println(")");
+        System.out.println(") {");
+        System.out.println(methodSource);
+        System.out.println("}");
     }
 }

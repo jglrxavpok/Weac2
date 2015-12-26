@@ -1,15 +1,15 @@
 package org.jglr.weac;
 
 public enum Keywords {
-    CLASS, STRUCT, PUBLIC, PROTECTED, PRIVATE, IMPORT, AS, RETURN, THIS, SUPER;
+    CLASS, STRUCT, PUBLIC, PROTECTED, PRIVATE, IMPORT, AS, RETURN, THIS, SUPER, OBJECT;
 
     private final String stringRepresentation;
 
-    private Keywords() {
+    Keywords() {
         stringRepresentation = name().toLowerCase();
     }
 
-    private Keywords(String name) {
+    Keywords(String name) {
         stringRepresentation = name;
     }
 

@@ -1,5 +1,7 @@
 package org.jglr.weac.utils;
 
+import org.jglr.weac.Keywords;
+
 public class Identifier {
 
     private final String id;
@@ -20,6 +22,11 @@ public class Identifier {
     }
 
     public static boolean isValid(String potientialID) {
+        for(Keywords w : Keywords.values()) {
+           if(w.toString().toLowerCase().equals(potientialID)) {
+               return false;
+           }
+        }
         if(potientialID.isEmpty())
             return false;
         if(!Character.isJavaIdentifierStart(potientialID.charAt(0)))

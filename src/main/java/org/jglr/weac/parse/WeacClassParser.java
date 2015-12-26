@@ -108,7 +108,9 @@ public class WeacClassParser extends WeacCompilePhase {
         method.type = type;
         method.name = name;
         method.access = access;
-        String[] arguments = readUntil(chars, indexOf(chars, i, '(')+1, ')').split(",");
+        int argStart = indexOf(chars, i, '(')+1;
+        String allArgs = readUntil(chars, argStart, ')');
+        String[] arguments = allArgs.split(",");
         for(String arg : arguments) {
             arg = trimStartingSpace(arg);
             String[] parts = arg.split(" ");
@@ -119,8 +121,9 @@ public class WeacClassParser extends WeacCompilePhase {
         }
 
         StringBuilder methodSource = new StringBuilder();
-        int unclosedBrackets = 0;
-        for(int j = 0;j<chars.length;j++) {
+        int codeStart = argStart+allArgs.length()+readUntil(chars, argStart+allArgs.length(), '{').length()+1;
+        int unclosedBrackets = 1;
+        for(int j = codeStart;j<chars.length;j++) {
             if(chars[j] == '{') {
                 unclosedBrackets++;
             } else if(chars[j] == '}') {
@@ -187,6 +190,7 @@ public class WeacClassParser extends WeacCompilePhase {
             case "struct":
             case "enum":
             case "interface":
+            case "object":
                 parsedClass.classType = EnumClassTypes.valueOf(firstPart.toUpperCase());
                 readHierarchy(parsedClass, trimStartingSpace(header.replaceFirst(firstPart, "")));
                 break;
