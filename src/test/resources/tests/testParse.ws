@@ -10,14 +10,14 @@ import weac.lang.Math
 
 class TestParse {
     #ifdef NotDefinedCondition
-    Void nonCompiledField;
+    private Void nonCompiledField;
     #else
-    Void compiledField;
+    private Void compiledField;
     #end
 }
 
 public class PublicClass > MotherClass {
-    Double myMethod(Float arg0, String arg1) {
+    protected Double myMethod(Float arg0, String arg1) {
         return arg0+arg1;
     }
 }

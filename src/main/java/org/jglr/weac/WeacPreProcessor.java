@@ -4,6 +4,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 
+/**
+ * Preprocess a source code.<br/>
+ * The available preprocessing commands are:
+ * <ul>
+ *     <li><code>#ifndef &lt var &gt</code>: Keep following code if the <code>var</code> is not defined</li>
+ *     <li><code>#ifdef &lt var &gt</code>: Keep following code if the <code>var</code> is defined</li>
+ *     <li><code>#define &lt var &gt</code>: Defines <code>var</code> and gives it the value 1</li>
+ *     <li><code>#define &lt var &gt &lt value &gt</code>: Defines <code>var</code> and gives it the value described by <code>value</code></li>
+ * </ul>
+ */
 public class WeacPreProcessor extends WeacCompilePhase {
 
     private final Map<String, String> compilerDefinitions;
@@ -14,6 +24,13 @@ public class WeacPreProcessor extends WeacCompilePhase {
         conditions = new Stack<>();
     }
 
+    /**
+     * Preprocesses the source code
+     * @param source
+     *              The source code
+     * @return
+     *              The preprocessed source code
+     */
     public String preprocess(String source) {
         conditions.clear();
         compilerDefinitions.clear();
@@ -37,6 +54,13 @@ public class WeacPreProcessor extends WeacCompilePhase {
         return builder.toString();
     }
 
+    /**
+     * Processes a command line.
+     * @param command
+     *              The command line
+     * @return
+     *          Returns true if it was a valid command, false if not
+     */
     private boolean processCommand(String command) {
         int end = command.indexOf(' ');
         if(end < 0)

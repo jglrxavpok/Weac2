@@ -1,17 +1,36 @@
 package org.jglr.weac.parse;
 
 import org.jglr.weac.WeacCompilePhase;
+import org.jglr.weac.parse.structure.WeacParsedClass;
+import org.jglr.weac.parse.structure.WeacParsedImport;
+import org.jglr.weac.parse.structure.WeacParsedSource;
+import org.jglr.weac.utils.WeacModifier;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
+/**
+ * Parses a WeaC source file
+ */
 public class WeacParser extends WeacCompilePhase {
 
+    /**
+     * The class parsing helper
+     */
     private final WeacClassParser classParser;
 
     public WeacParser() {
         classParser = new WeacClassParser();
     }
 
+    /**
+     * Parses the given source
+     * @param source
+     *              The source code
+     * @return
+     *              The parsed source, contains all the extracted data from the source file
+     */
     public WeacParsedSource parseSource(String source) {
         WeacParsedSource parsedSource = new WeacParsedSource();
         parsedSource.imports = new ArrayList<>();
@@ -22,68 +41,81 @@ public class WeacParser extends WeacCompilePhase {
         return parsedSource;
     }
 
+    /**
+     * Parses the source file in order to find the package declaration, the imports and the classes
+     * @param parsedSource
+     *                  The current source
+     * @param source
+     *                  The source code
+     */
     private void analyseHeader(WeacParsedSource parsedSource, String source) {
-        String[] lines = source.split("\n");
+        source = source.replace("\r", "");
+        char[] chars = source.toCharArray();
         int lineIndex = 0;
-        int globalIndex = 0;
-        for(String fullLine : lines) {
-            String l = trimStartingSpace(fullLine).replace("\r", "");
-            String command = readUntilSpace(l);
+        List<WeacModifier> modifiers = new LinkedList<>();
+        for(int i = 0;i<chars.length;i++) {
+            i += readUntilNot(chars, i, ' ', '\n').length();
+            String command = readUntil(chars, i, ' ', '\n');
             switch (command) {
-                case "class":
-                case "enum":
-                case "struct":
-                case "interface":
-                case "object":
-                    readClass(parsedSource, extractClass(source, globalIndex), lineIndex);
-                    break;
-
-                case "private":
-                case "public":
-                case "protected":
-                    String s = readUntilSpace(trimStartingSpace(l.replaceFirst(command, "")));
-                    switch (s) {
-                        case "class":
-                        case "enum":
-                        case "struct":
-                        case "interface":
-                        case "object":
-                            readClass(parsedSource, extractClass(source, globalIndex), lineIndex);
-                            break;
-
-                        default:
-                            newError("Invalid token after " + command, lineIndex);
-                            break;
-                    }
-                    break;
-
                 case "package":
-                    String arg = trimStartingSpace(l.replaceFirst("package", ""));
-                    String packageName = readUntilSpace(arg);
+                    i += command.length();
+                    i += readUntilNot(chars, i, ' ', '\n').length();
+                    String packageName = readUntil(chars, i, ' ', '\n');
                     if(parsedSource.packageName != null) {
                         newError("Cannot set package name twice", lineIndex);
                     } else {
                         parsedSource.packageName = packageName;
                     }
+                    i += packageName.length();
                     break;
 
                 case "import":
-                    readImport(parsedSource, l, lineIndex);
+                    i += command.length();
+                    i += readUntilNot(chars, i, ' ', '\n').length();
+                    i += readImport(parsedSource, chars, i, lineIndex);
                     break;
 
                 default:
+                    i += readModifiers(chars, i, modifiers);
+                    WeacModifier currentAccess = null;
+                    for(WeacModifier modif : modifiers) {
+                        // TODO: Abstract & mixins
+                        if(modif.isAccessModifier()) {
+                            if(currentAccess != null) {
+                                newError("Cannot specify twice the access permissions", lineIndex);
+                            } else {
+                                currentAccess = modif;
+                            }
+                        }
+                    }
+                    modifiers.clear();
+                    if(currentAccess == null)
+                        currentAccess = WeacModifier.PUBLIC;
+                    String extractedClass = extractClass(chars, i);
+                    WeacParsedClass clazz = readClass(parsedSource, extractedClass, lineIndex);
+                    clazz.access = currentAccess;
+                    i+=extractedClass.length();
                     break;
             }
-            lineIndex++;
-            globalIndex+=fullLine.length()+1; // the +1 comes from the fact that line returns are removed before the iteration
+            if(chars[i] == '\n')
+                lineIndex++;
         }
     }
 
-    private String extractClass(String source, int startIndex) {
+    /**
+     * Extracts a single class from the source code
+     * @param chars
+     *                  The source code characters
+     * @param startIndex
+     *                  The offset at which to start the extraction
+     * @return
+     *                  The extracted class source code
+     */
+    private String extractClass(char[] chars, int startIndex) {
         int unclosedCurlyBrackets = 0;
         StringBuilder builder = new StringBuilder();
-        for(int i = startIndex;i<source.length();i++) {
-            char c = source.charAt(i);
+        for(int i = startIndex;i<chars.length;i++) {
+            char c = chars[i];
             builder.append(c);
 
             if(c == '{') {
@@ -98,9 +130,24 @@ public class WeacParser extends WeacCompilePhase {
         return builder.toString();
     }
 
-    private void readImport(WeacParsedSource parsedSource, String line, int lineIndex) {
-        String toImport = trimStartingSpace(line.replace("import", "")).replace("  ", "");
-        String[] parts = toImport.split(" ");
+    /**
+     * Extracts an import from the source and stores it into <code>parsedSource</code>.
+     * @param parsedSource
+     *                  The current source
+     * @param chars
+     *                  The source characters
+     * @param offset
+     *                  The offset at which to start extracting the import declaration
+     * @param lineIndex
+     *                  The line of the import
+     * @return
+     *                  The number of characters read
+     */
+    private int readImport(WeacParsedSource parsedSource, char[] chars, int offset, int lineIndex) {
+        final int start = offset;
+        String importStatement = readUntil(chars, offset, '\n');
+        String[] parts = importStatement.split(" ");
+        offset += importStatement.length();
         WeacParsedImport parsedImport = new WeacParsedImport();
         parsedImport.importedType = parts[0];
         if(parts.length > 2) {
@@ -111,14 +158,33 @@ public class WeacParser extends WeacCompilePhase {
             }
         }
         parsedSource.imports.add(parsedImport);
+        return offset-start;
     }
 
-    private void readClass(WeacParsedSource parsedSource, String classSource, int startingLine) {
-        System.err.println(">>class "+classSource); // TODO
+    /**
+     * Parses a class and stores it to <code>parsedSource</code>.
+     * @param parsedSource
+     *                  The current source
+     * @param classSource
+     *                  The source code of the class
+     * @param startingLine
+     *                  The line at which the class starts inside the source file
+     * @return
+     *                  The parsed class
+     */
+    private WeacParsedClass readClass(WeacParsedSource parsedSource, String classSource, int startingLine) {
         WeacParsedClass parsedClass = classParser.parseClass(classSource, startingLine);
         parsedSource.classes.add(parsedClass);
+        return parsedClass;
     }
 
+    /**
+     * Removes all the comments from the source
+     * @param source
+     *              The source code
+     * @return
+     *              The source code without the comments
+     */
     private String removeComments(String source) {
         char[] chars = source.toCharArray();
         StringBuilder builder = new StringBuilder();

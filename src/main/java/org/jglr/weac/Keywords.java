@@ -1,7 +1,10 @@
 package org.jglr.weac;
 
+/**
+ * List of reserved keywords in WeaC
+ */
 public enum Keywords {
-    CLASS, STRUCT, PUBLIC, PROTECTED, PRIVATE, IMPORT, AS, RETURN, THIS, SUPER, OBJECT;
+    CLASS, STRUCT, PUBLIC, PROTECTED, PRIVATE, IMPORT, AS, RETURN, THIS, SUPER, OBJECT, MIXIN;
 
     private final String stringRepresentation;
 

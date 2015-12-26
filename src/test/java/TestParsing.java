@@ -1,5 +1,5 @@
 import org.jglr.weac.WeacPreProcessor;
-import org.jglr.weac.parse.WeacParsedSource;
+import org.jglr.weac.parse.structure.WeacParsedSource;
 import org.jglr.weac.parse.WeacParser;
 import org.junit.Test;
 

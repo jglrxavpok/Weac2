@@ -1,4 +1,4 @@
-package org.jglr.weac.parse;
+package org.jglr.weac.parse.structure;
 
 import java.util.List;
 
@@ -19,9 +19,9 @@ public class WeacParsedSource {
         System.out.println("package "+packageName);
         imports.forEach(i -> {
             if(i.usageName != null) {
-                System.out.println(i.importedType+" as "+i.usageName);
+                System.out.println("import "+i.importedType+" as "+i.usageName);
             } else {
-                System.out.println(i.importedType);
+                System.out.println("import "+i.importedType);
             }
         });
         classes.forEach(WeacParsedClass::echo);

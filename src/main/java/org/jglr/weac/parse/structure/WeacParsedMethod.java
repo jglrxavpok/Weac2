@@ -1,30 +1,67 @@
-package org.jglr.weac.parse;
+package org.jglr.weac.parse.structure;
 
 import org.jglr.weac.utils.Identifier;
+import org.jglr.weac.utils.WeacModifier;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a method extracted from the source file
+ */
 public class WeacParsedMethod {
 
+    /**
+     * The line at which the method starts
+     */
     public int startingLine = -1;
+
+    /**
+     * The return type of the method
+     */
     public Identifier type;
+
+    /**
+     * The name of the method
+     */
     public Identifier name;
-    public List<Identifier> argumentNames;
+
+    /**
+     * The types of the arguments
+     */
     public List<Identifier> argumentTypes;
 
+    /**
+     * The names of the arguments
+     */
+    public List<Identifier> argumentNames;
+
+    /**
+     * The code of the method
+     */
     public String methodSource;
+
+    /**
+     * Is this method abstract?
+     */
     public boolean isAbstract;
 
-    public String access = "public";
+    /**
+     * The access modifier of the method
+     */
+    public WeacModifier access = WeacModifier.PUBLIC;
 
     public WeacParsedMethod() {
         argumentNames = new ArrayList<>();
         argumentTypes = new ArrayList<>();
     }
 
+    /**
+     * Prints this method to the console, intended for debugging
+     */
+    @Deprecated
     public void echo() {
-        System.out.print(access+" "+type+" "+name+"(");
+        System.out.print(access.name().toLowerCase()+" "+type+" "+name+"(");
         for(int i = 0;i<argumentNames.size();i++) {
             if(i != 0) {
                 System.out.print(", ");
