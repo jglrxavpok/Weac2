@@ -17,9 +17,9 @@ public class WeacParsedMethod {
     public int startingLine = -1;
 
     /**
-     * The return type of the method
+     * The return returnType of the method
      */
-    public Identifier type;
+    public Identifier returnType;
 
     /**
      * The name of the method
@@ -50,6 +50,7 @@ public class WeacParsedMethod {
      * The access modifier of the method
      */
     public WeacModifier access = WeacModifier.PUBLIC;
+    public int off;
 
     public WeacParsedMethod() {
         argumentNames = new ArrayList<>();
@@ -61,7 +62,7 @@ public class WeacParsedMethod {
      */
     @Deprecated
     public void echo() {
-        System.out.print(access.name().toLowerCase()+" "+type+" "+name+"(");
+        System.out.print(access.name().toLowerCase()+" "+ returnType +" "+name+"(");
         for(int i = 0;i<argumentNames.size();i++) {
             if(i != 0) {
                 System.out.print(", ");

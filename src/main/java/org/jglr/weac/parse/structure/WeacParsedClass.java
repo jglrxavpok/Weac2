@@ -21,7 +21,7 @@ public class WeacParsedClass {
     public String name;
 
     /**
-     * The class type
+     * The class returnType
      */
     public EnumClassTypes classType;
 
@@ -46,7 +46,7 @@ public class WeacParsedClass {
     public List<String> interfacesImplemented;
 
     /**
-     * The access type to this class
+     * The access returnType to this class
      */
     public WeacModifier access = WeacModifier.PUBLIC;
 

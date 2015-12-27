@@ -17,6 +17,8 @@ public class Identifier {
      */
     public static final Identifier INVALID = new Identifier("");
 
+    public static final Identifier VOID = new Identifier("Void");
+
     /**
      * Creates a new instance of {@link Identifier}
      * @param id

@@ -26,6 +26,18 @@ protected class ProtectedClass > MyInterface + AnotherInterface {}
 
 private class PrivateClass {}
 
+public enum MyEnum {
+ //   VALUE0, VALUE1, VALUE2, VALUE3, VALUE4
+}
+
+public enum OtherEnum {
+//    VALUE0("value;"), VALUE1("value;"), VALUE2("value;"), VALUE3("value;"), VALUE4("value;");
+
+    OtherEnum(String value) {
+        ;;
+    }
+}
+
 struct MyStruct {
     Byte data;
 }

@@ -79,56 +79,113 @@ public class WeacClassParser extends WeacCompilePhase {
             i += readUntilNot(chars, i, ' ').length();
             if(i == chars.length)
                 break;
+            if(parsedClass.classType == EnumClassTypes.ENUM) {
+                // TODO: Read Enum constants
+            }
             Identifier firstPart = Identifier.read(chars, i);
             if(firstPart.isValid()) {
-                i += firstPart.getId().length()+1;
+                i += firstPart.getId().length();
                 i += readUntilNot(chars, i, ' ', '\n').length();
-                Identifier secondPart = Identifier.read(chars, i);
-                i+=secondPart.getId().length();
-                if(!secondPart.isValid()) {
-                    newError("Invalid identifier: "+secondPart.getId(), startingLine);
+                if(chars[i] == '(') { // Constructor
+
+                    WeacParsedMethod function = readFunction(chars, i, Identifier.VOID, firstPart, currentAccess);
+                    function.startingLine = lineIndex+startingLine;
+                    parsedClass.methods.add(function);
+                    i += function.off;
+
                 } else {
-                    int potentialFunction = indexOf(chars, i, '{');
-                    int potentialField = indexOf(chars, i, ';');
-                    int nameEnd;
-                    boolean isField = false; // true for field, false for function
-                    if(potentialField == -1) {
-                        nameEnd = potentialFunction;
-                    } else if(potentialFunction == -1) {
-                        nameEnd = potentialField;
-                        isField = true;
+                    Identifier secondPart = Identifier.read(chars, i);
+                    i+=secondPart.getId().length();
+                    if(!secondPart.isValid()) {
+                        newError("Invalid identifier: "+secondPart.getId(), startingLine);
                     } else {
-                        if(potentialField < potentialFunction) {
+                        int potentialFunction = indexOf(chars, i, '{');
+                        int potentialField = indexOf(chars, i, ';');
+                        int nameEnd;
+                        boolean isField = false; // true for field, false for function
+                        if(potentialField == -1) {
+                            nameEnd = potentialFunction;
+                        } else if(potentialFunction == -1) {
                             nameEnd = potentialField;
                             isField = true;
                         } else {
-                            nameEnd = potentialFunction;
+                            if(potentialField < potentialFunction) {
+                                nameEnd = potentialField;
+                                isField = true;
+                            } else {
+                                nameEnd = potentialFunction;
+                            }
                         }
-                    }
 
-                    String start = read(chars, i, nameEnd);
-                    if(isField) {
-                        WeacParsedField field = new WeacParsedField();
-                        field.name = secondPart;
-                        field.type = firstPart;
-                        field.access = currentAccess;
-                        field.startingLine = startingLine+lineIndex;
-                        if(start.contains("=")) {
-                            field.defaultValue = trimStartingSpace(start.split("=")[1]);
+                        String start = read(chars, i, nameEnd);
+                        if(isField) {
+                            WeacParsedField field = new WeacParsedField();
+                            field.name = secondPart;
+                            field.type = firstPart;
+                            field.access = currentAccess;
+                            field.startingLine = startingLine+lineIndex;
+                            if(start.contains("=")) {
+                                field.defaultValue = trimStartingSpace(start.split("=")[1]);
+                            }
+                            parsedClass.fields.add(field);
+                            i = nameEnd+1;
+                        } else {
+                            WeacParsedMethod function = readFunction(chars, i, firstPart, secondPart, currentAccess);
+                            function.startingLine = lineIndex+startingLine;
+                            parsedClass.methods.add(function);
+                            i += function.off;
                         }
-                        parsedClass.fields.add(field);
-                        i = nameEnd+1;
-                    } else {
-                        WeacParsedMethod function = readFunction(chars, i, firstPart, secondPart, currentAccess);
-                        function.startingLine = lineIndex+startingLine;
-                        parsedClass.methods.add(function);
-                        i = function.methodSource.length()+1+nameEnd;
                     }
                 }
             } else {
                 newError("Invalid identifier: " + firstPart.getId(), startingLine+lineIndex);
             }
         }
+    }
+
+    private String readArguments(char[] chars, int offset) {
+        StringBuilder builder = new StringBuilder();
+
+        boolean inString = false;
+        boolean inQuote = false;
+        int unclosedBrackets = 1;
+        boolean escaped = false;
+        finalLoop: for(int i = offset+1;i<chars.length;i++) {
+            char c = chars[i];
+            boolean append = true;
+            switch (c) {
+                case '(':
+                    unclosedBrackets++;
+                    break;
+
+                case ')':
+                    unclosedBrackets--;
+                    if(unclosedBrackets == 0) {
+                        break finalLoop;
+                    }
+                    break;
+
+                case '"':
+                    if(!inQuote && !escaped)
+                        inString = !inString;
+                    break;
+
+                case '\'':
+                    if(!inString && !escaped)
+                        inQuote = !inQuote;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    break;
+            }
+            if(append)
+                builder.append(c);
+        }
+        return builder.toString();
     }
 
     /**
@@ -138,7 +195,7 @@ public class WeacClassParser extends WeacCompilePhase {
      * @param i
      *              The offset at which to start the reading
      * @param type
-     *              The return type
+     *              The return returnType
      * @param name
      *              The method name
      * @param access
@@ -147,12 +204,14 @@ public class WeacClassParser extends WeacCompilePhase {
      *              The extracted method
      */
     private WeacParsedMethod readFunction(char[] chars, int i, Identifier type, Identifier name, WeacModifier access) {
+        final int start = i;
         WeacParsedMethod method = new WeacParsedMethod();
-        method.type = type;
+        method.returnType = type;
         method.name = name;
         method.access = access;
-        int argStart = indexOf(chars, i, '(')+1;
-        String allArgs = readUntil(chars, argStart, ')');
+        System.out.println(">>>! "+name);
+        String allArgs = readArguments(chars, i);
+        System.out.println(">>> "+allArgs);
         String[] arguments = allArgs.split(",");
         for(String arg : arguments) {
             arg = trimStartingSpace(arg);
@@ -164,25 +223,63 @@ public class WeacClassParser extends WeacCompilePhase {
         }
 
         StringBuilder methodSource = new StringBuilder();
-        int codeStart = argStart+allArgs.length()+readUntil(chars, argStart+allArgs.length(), '{').length()+1;
+        i+=allArgs.length();
+        int codeStart = i+readUntil(chars, i, '{').length()+1;
+        codeStart+=readUntilNot(chars, codeStart, '\n').length();
+
         int unclosedBrackets = 1;
-        for(int j = codeStart;j<chars.length;j++) {
-            if(chars[j] == '{') {
-                unclosedBrackets++;
-            } else if(chars[j] == '}') {
-                unclosedBrackets--;
-                if(unclosedBrackets == 0) {
+        boolean inString = false;
+        boolean inQuote = false;
+        boolean escaped = false;
+        int j = codeStart;
+        bracketLoop: for(;j<chars.length;j++) {
+            char c = chars[j];
+            boolean append = true;
+            switch (c) {
+                case '{':
+                    unclosedBrackets++;
                     break;
-                }
+
+                case '}':
+                    unclosedBrackets--;
+                    if(unclosedBrackets == 0) {
+                        break bracketLoop;
+                    }
+                    break;
+
+                case '"':
+                    if(!inQuote && !escaped)
+                        inString = !inString;
+                    if(escaped)
+                        escaped = false;
+                    break;
+
+                case '\'':
+                    if(!inString && !escaped)
+                        inQuote = !inQuote;
+                    if(escaped)
+                        escaped = false;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    else
+                        escaped = false;
+                    break;
             }
-            methodSource.append(chars[j]);
+            if(append)
+                methodSource.append(c);
         }
         method.methodSource = methodSource.toString();
+        method.off = (j+1) - start;
         return method;
     }
 
     /**
-     * Parses the header of the class. Currently only find the class type and the hierarchy
+     * Parses the header of the class. Currently only find the class returnType and the hierarchy
      * @param parsedClass
      *                  The current class
      * @param header

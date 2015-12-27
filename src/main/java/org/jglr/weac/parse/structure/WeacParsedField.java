@@ -14,7 +14,7 @@ public class WeacParsedField {
     public int startingLine = -1;
 
     /**
-     * The type of the field
+     * The returnType of the field
      */
     public Identifier type;
 

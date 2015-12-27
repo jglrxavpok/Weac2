@@ -6,7 +6,7 @@ package org.jglr.weac.parse.structure;
 public class WeacParsedImport {
 
     /**
-     * The type to import (with the full name)
+     * The returnType to import (with the full name)
      */
     public String importedType;
 
