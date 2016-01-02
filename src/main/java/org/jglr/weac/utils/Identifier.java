@@ -2,10 +2,14 @@ package org.jglr.weac.utils;
 
 import org.jglr.weac.Keywords;
 
+import java.util.List;
+
 /**
  * A WeaC identifier, used for types, variable and method names
  */
 public class Identifier {
+
+    public static final char[] allowedCharacters = {'<', '>', '*', '[', ']'};
 
     /**
      * The raw id
@@ -58,10 +62,19 @@ public class Identifier {
         if(!Character.isJavaIdentifierStart(potientialID.charAt(0)))
             return false;
         for(int i = 1;i<potientialID.length();i++) {
-            if(!Character.isJavaIdentifierPart(potientialID.charAt(i)))
+            char c = potientialID.charAt(i);
+            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c))
                 return false;
         }
         return true;
+    }
+
+    public static boolean isAllowedCharacter(char c) {
+        for(char allowed : allowedCharacters) {
+            if(c == allowed)
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -84,7 +97,7 @@ public class Identifier {
         builder.append(chars[start]);
         for(int i = start+1;i<chars.length;i++) {
             char c = chars[i];
-            if(!Character.isJavaIdentifierPart(c)) {
+            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c)) {
                 break;
             }
             builder.append(c);

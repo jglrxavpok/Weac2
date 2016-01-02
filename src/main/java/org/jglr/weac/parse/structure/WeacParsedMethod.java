@@ -47,6 +47,11 @@ public class WeacParsedMethod {
     public boolean isAbstract;
 
     /**
+     * Is this method a constructor?
+     */
+    public boolean isConstructor;
+
+    /**
      * The access modifier of the method
      */
     public WeacModifier access = WeacModifier.PUBLIC;
@@ -67,12 +72,19 @@ public class WeacParsedMethod {
             if(i != 0) {
                 System.out.print(", ");
             }
-            System.out.print(argumentTypes.get(i));
-            System.out.print(" ");
+            if(!isConstructor) {
+                System.out.print(argumentTypes.get(i));
+                System.out.print(" ");
+            }
             System.out.print(argumentNames.get(i));
         }
-        System.out.println(") {");
-        System.out.println(methodSource);
+        System.out.print(")");
+        if(isAbstract) {
+            System.out.println(";");
+        } else {
+            System.out.println(" {");
+            System.out.println(methodSource);
+        }
         System.out.println("}");
     }
 }

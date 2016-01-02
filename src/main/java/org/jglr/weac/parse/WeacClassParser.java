@@ -1,6 +1,6 @@
 package org.jglr.weac.parse;
 
-import org.jglr.weac.WeacCompilePhase;
+import org.jglr.weac.WeacCompileUtils;
 import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Parses a class source to find its components: hierarchy, fields, and methods.
  */
-public class WeacClassParser extends WeacCompilePhase {
+public class WeacClassParser extends WeacCompileUtils {
 
     public WeacClassParser() {
 
@@ -32,6 +32,7 @@ public class WeacClassParser extends WeacCompilePhase {
     public WeacParsedClass parseClass(String source, int startingLine) {
         WeacParsedClass parsedClass = new WeacParsedClass();
         parsedClass.startingLine = startingLine;
+        parsedClass.enumConstants = new ArrayList<>();
         parsedClass.fields = new ArrayList<>();
         parsedClass.methods = new ArrayList<>();
         parsedClass.interfacesImplemented = new ArrayList<>();
@@ -77,10 +78,20 @@ public class WeacClassParser extends WeacCompilePhase {
             if(currentAccess == null)
                 currentAccess = WeacModifier.PUBLIC;
             i += readUntilNot(chars, i, ' ').length();
-            if(i == chars.length)
+            if(i >= chars.length)
                 break;
             if(parsedClass.classType == EnumClassTypes.ENUM) {
+                String constants = readUntilInsnEnd(chars, i);
                 // TODO: Read Enum constants
+
+                i += constants.length()+1;
+                i += readUntilNot(chars, i, ' ', '\n').length();
+                System.out.println(">> "+constants);
+
+                fillEnumConstants(constants, parsedClass.enumConstants);
+
+                if(i >= chars.length) // We might have reached end of file
+                    break;
             }
             Identifier firstPart = Identifier.read(chars, i);
             if(firstPart.isValid()) {
@@ -141,6 +152,119 @@ public class WeacClassParser extends WeacCompilePhase {
                 newError("Invalid identifier: " + firstPart.getId(), startingLine+lineIndex);
             }
         }
+    }
+
+    private void fillEnumConstants(String constantList, List<String> out) {
+        int i = 0;
+        String constant = readSingleArgument(constantList, 0, true).replace("\n", "");
+        while(!constant.isEmpty()) {
+            out.add(constant);
+
+            i += constant.length()+1;
+
+            i += readUntilNot(constantList.toCharArray(), i, ' ', '\n', ',', '\r').length();
+            constant = readSingleArgument(constantList, i, true).replace("\n", "");
+        }
+    }
+
+    private String readSingleArgument(String constantList, int offset, boolean isSemiColonValidSeparator) {
+        StringBuilder builder = new StringBuilder();
+        boolean inString = false;
+        boolean inQuote = false;
+        boolean escaped = false;
+        int unclosedCurlyBrackets = 0;
+        int unclosedBrackets = 0;
+        char[] chars = constantList.toCharArray();
+        iterationLoop: for(int i = offset; i<chars.length;i++) {
+            char c = chars[i];
+            boolean append = true;
+            switch (c) {
+                case '"':
+                    if (!inQuote && !escaped)
+                        inString = !inString;
+                    break;
+
+                case '\'':
+                    if (!inString && !escaped)
+                        inQuote = !inQuote;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    break;
+
+                case '(':
+                    unclosedBrackets++;
+                    break;
+
+                case ')':
+                    unclosedBrackets--;
+                    break;
+
+                case '{':
+                    unclosedCurlyBrackets++;
+                    break;
+
+                case '}':
+                    unclosedCurlyBrackets--;
+                    break;
+
+                case ',':
+                    if(unclosedCurlyBrackets == 0 && unclosedBrackets == 0) {
+                        break iterationLoop;
+                    }
+                    break;
+
+                case ';':
+                    if(isSemiColonValidSeparator && unclosedCurlyBrackets == 0 && unclosedBrackets == 0) {
+                        break iterationLoop;
+                    }
+                    break;
+            }
+            if (append)
+                builder.append(c);
+        }
+        return builder.toString();
+    }
+
+    private String readUntilInsnEnd(char[] chars, int offset) {
+        StringBuilder builder = new StringBuilder();
+
+        boolean inString = false;
+        boolean inQuote = false;
+        boolean escaped = false;
+        finalLoop: for(int i = offset;i<chars.length;i++) {
+            char c = chars[i];
+            boolean append = true;
+            switch (c) {
+                case '"':
+                    if(!inQuote && !escaped)
+                        inString = !inString;
+                    break;
+
+                case '\'':
+                    if(!inString && !escaped)
+                        inQuote = !inQuote;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    break;
+
+                case ';':
+                    if(!inQuote && !inString)
+                        break finalLoop;
+            }
+            if(append)
+                builder.append(c);
+        }
+        return builder.toString();
     }
 
     private String readArguments(char[] chars, int offset) {
@@ -367,4 +491,5 @@ public class WeacClassParser extends WeacCompilePhase {
         }
         return buffer.toString();
     }
+
 }

@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Parses a WeaC source file
  */
-public class WeacParser extends WeacCompilePhase {
+public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
 
     /**
      * The class parsing helper
@@ -31,7 +31,7 @@ public class WeacParser extends WeacCompilePhase {
      * @return
      *              The parsed source, contains all the extracted data from the source file
      */
-    public WeacParsedSource parseSource(String source) {
+    public WeacParsedSource process(String source) {
         WeacParsedSource parsedSource = new WeacParsedSource();
         parsedSource.imports = new ArrayList<>();
         parsedSource.classes = new ArrayList<>();
@@ -39,6 +39,16 @@ public class WeacParser extends WeacCompilePhase {
         analyseHeader(parsedSource, source);
         parsedSource.sourceCode = source;
         return parsedSource;
+    }
+
+    @Override
+    public Class<String> getInputClass() {
+        return String.class;
+    }
+
+    @Override
+    public Class<WeacParsedSource> getOutputClass() {
+        return WeacParsedSource.class;
     }
 
     /**
@@ -78,6 +88,8 @@ public class WeacParser extends WeacCompilePhase {
                 default:
                     i += readModifiers(chars, i, modifiers);
                     WeacModifier currentAccess = null;
+                    boolean isAbstract = false;
+                    boolean isMixin = false;
                     for(WeacModifier modif : modifiers) {
                         // TODO: Abstract & mixins
                         if(modif.isAccessModifier()) {
@@ -86,13 +98,17 @@ public class WeacParser extends WeacCompilePhase {
                             } else {
                                 currentAccess = modif;
                             }
+                        } else if(modif == WeacModifier.ABSTRACT) {
+                            isAbstract = true;
+                        } else if(modif == WeacModifier.MIXIN) {
+                            isMixin = true;
                         }
                     }
                     modifiers.clear();
                     if(currentAccess == null)
                         currentAccess = WeacModifier.PUBLIC;
                     String extractedClass = extractClass(chars, i);
-                    WeacParsedClass clazz = readClass(parsedSource, extractedClass, lineIndex);
+                    WeacParsedClass clazz = readClass(parsedSource, extractedClass, lineIndex, isAbstract, isMixin);
                     clazz.access = currentAccess;
                     i+=extractedClass.length();
                     break;
@@ -169,11 +185,17 @@ public class WeacParser extends WeacCompilePhase {
      *                  The source code of the class
      * @param startingLine
      *                  The line at which the class starts inside the source file
+     * @param isAbstract
+     *                  Is the class abstract?
+     * @param isMixin
+     *                  Is the class a mixin class?
      * @return
      *                  The parsed class
      */
-    private WeacParsedClass readClass(WeacParsedSource parsedSource, String classSource, int startingLine) {
+    private WeacParsedClass readClass(WeacParsedSource parsedSource, String classSource, int startingLine, boolean isAbstract, boolean isMixin) {
         WeacParsedClass parsedClass = classParser.parseClass(classSource, startingLine);
+        parsedClass.isAbstract = isAbstract;
+        parsedClass.isMixin = isMixin;
         parsedSource.classes.add(parsedClass);
         return parsedClass;
     }

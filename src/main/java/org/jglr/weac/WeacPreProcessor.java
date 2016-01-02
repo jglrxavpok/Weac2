@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 
+// h0I I'm temmie!
 /**
  * Preprocess a source code.<br/>
  * The available preprocessing commands are:
@@ -14,7 +15,7 @@ import java.util.Stack;
  *     <li><code>#define &lt var &gt &lt value &gt</code>: Defines <code>var</code> and gives it the value described by <code>value</code></li>
  * </ul>
  */
-public class WeacPreProcessor extends WeacCompilePhase {
+public class WeacPreProcessor extends WeacCompilePhase<String, String> {
 
     private final Map<String, String> compilerDefinitions;
     private final Stack<Boolean> conditions;
@@ -31,7 +32,8 @@ public class WeacPreProcessor extends WeacCompilePhase {
      * @return
      *              The preprocessed source code
      */
-    public String preprocess(String source) {
+    @Override
+    public String process(String source) {
         conditions.clear();
         compilerDefinitions.clear();
         conditions.push(true);
@@ -52,6 +54,16 @@ public class WeacPreProcessor extends WeacCompilePhase {
             lineIndex++;
         }
         return builder.toString();
+    }
+
+    @Override
+    public Class<String> getInputClass() {
+        return String.class;
+    }
+
+    @Override
+    public Class<String> getOutputClass() {
+        return String.class;
     }
 
     /**

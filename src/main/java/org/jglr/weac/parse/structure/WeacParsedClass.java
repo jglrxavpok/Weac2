@@ -46,6 +46,18 @@ public class WeacParsedClass {
     public List<String> interfacesImplemented;
 
     /**
+     * Empty if this class is not an enum, otherwise contains the names & instantiation of each of the enum constants
+     */
+    public List<String> enumConstants;
+
+    public boolean isAbstract;
+
+    /**
+     * Is this class meant to have its code injected into the classes inheriting from it?
+     */
+    public boolean isMixin;
+
+    /**
      * The access returnType to this class
      */
     public WeacModifier access = WeacModifier.PUBLIC;
@@ -70,6 +82,16 @@ public class WeacParsedClass {
             System.out.print(" + ");
         }
         System.out.println(" {");
+        if(!enumConstants.isEmpty()) {
+            for(int i = 0;i<enumConstants.size();i++) {
+                if(i != 0) {
+                    System.out.print(", ");
+                }
+                System.out.print(enumConstants.get(i));
+            }
+            System.out.println(";");
+            System.out.println();
+        }
         fields.forEach(WeacParsedField::echo);
         methods.forEach(WeacParsedMethod::echo);
         System.out.println("}");
