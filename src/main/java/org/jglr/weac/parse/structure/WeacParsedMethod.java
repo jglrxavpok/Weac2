@@ -1,6 +1,7 @@
 package org.jglr.weac.parse.structure;
 
 import org.jglr.weac.utils.Identifier;
+import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.ArrayList;
@@ -55,6 +56,9 @@ public class WeacParsedMethod {
      * The access modifier of the method
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
+
+    public List<WeacAnnotation> annotations;
+
     public int off;
 
     public WeacParsedMethod() {

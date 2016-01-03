@@ -1,6 +1,7 @@
 package org.jglr.weac.parse.structure;
 
 import org.jglr.weac.parse.EnumClassTypes;
+import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.List;
@@ -61,6 +62,8 @@ public class WeacParsedClass {
      * The access returnType to this class
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
+
+    public List<WeacAnnotation> annotations;
 
     /**
      * Prints this class to the console, intended for debug use only

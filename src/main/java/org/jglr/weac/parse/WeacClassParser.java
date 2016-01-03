@@ -4,9 +4,7 @@ import org.jglr.weac.WeacCompileUtils;
 import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
-import org.jglr.weac.utils.Identifier;
-import org.jglr.weac.utils.WeacModifier;
-import org.jglr.weac.utils.WeacModifierType;
+import org.jglr.weac.utils.*;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -67,6 +65,8 @@ public class WeacClassParser extends WeacCompileUtils {
             WeacModifierType currentAccess = null;
             boolean isAbstract = false;
             boolean isMixin = false;
+
+            List<WeacAnnotation> annotations = new ArrayList<>();
             for(WeacModifier modif : modifiers) {
                 // TODO: Abstract & mixins
                 if(modif.getType().isAccessModifier()) {
@@ -79,6 +79,8 @@ public class WeacClassParser extends WeacCompileUtils {
                     isAbstract = true;
                 } else if(modif.getType() == WeacModifierType.MIXIN) {
                     isMixin = true;
+                } else if(modif.getType() == WeacModifierType.ANNOTATION) {
+                    annotations.add(((AnnotationModifier) modif).getAnnotation());
                 }
             }
             modifiers.clear();
@@ -107,6 +109,7 @@ public class WeacClassParser extends WeacCompileUtils {
                 if(chars[i] == '(') { // Constructor
 
                     WeacParsedMethod function = readFunction(chars, i, parsedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
+                    function.annotations = annotations;
                     function.startingLine = lineIndex+startingLine;
                     parsedClass.methods.add(function);
                     i += function.off;
@@ -138,6 +141,7 @@ public class WeacClassParser extends WeacCompileUtils {
                         String start = read(chars, i, nameEnd);
                         if(isField) {
                             WeacParsedField field = new WeacParsedField();
+                            field.annotations = annotations;
                             field.name = secondPart;
                             field.type = firstPart;
                             field.access = currentAccess;
@@ -149,6 +153,7 @@ public class WeacClassParser extends WeacCompileUtils {
                             i = nameEnd+1;
                         } else {
                             WeacParsedMethod function = readFunction(chars, i, parsedClass, firstPart, secondPart, currentAccess, isAbstract);
+                            function.annotations = annotations;
                             function.startingLine = lineIndex+startingLine;
                             parsedClass.methods.add(function);
                             i += function.off;

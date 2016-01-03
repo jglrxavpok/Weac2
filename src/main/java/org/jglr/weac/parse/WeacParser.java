@@ -4,6 +4,8 @@ import org.jglr.weac.WeacCompilePhase;
 import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedImport;
 import org.jglr.weac.parse.structure.WeacParsedSource;
+import org.jglr.weac.utils.AnnotationModifier;
+import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifier;
 import org.jglr.weac.utils.WeacModifierType;
 
@@ -91,6 +93,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                     WeacModifierType currentAccess = null;
                     boolean isAbstract = false;
                     boolean isMixin = false;
+                    List<WeacAnnotation> annotations = new ArrayList<>();
                     for(WeacModifier modif : modifiers) {
                         // TODO: Abstract & mixins
                         if(modif.getType().isAccessModifier()) {
@@ -103,6 +106,8 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                             isAbstract = true;
                         } else if(modif.getType() == WeacModifierType.MIXIN) {
                             isMixin = true;
+                        } else if(modif.getType() == WeacModifierType.ANNOTATION) {
+                            annotations.add(((AnnotationModifier) modif).getAnnotation());
                         }
                     }
                     modifiers.clear();
@@ -111,6 +116,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                     String extractedClass = extractClass(chars, i);
                     WeacParsedClass clazz = readClass(parsedSource, extractedClass, lineIndex, isAbstract, isMixin);
                     clazz.access = currentAccess;
+                    clazz.annotations = annotations;
                     i+=extractedClass.length();
                     break;
             }

@@ -8,4 +8,8 @@ public class AnnotationModifier extends WeacModifier {
         super(type);
         this.annotation = annotation;
     }
+
+    public WeacAnnotation getAnnotation() {
+        return annotation;
+    }
 }

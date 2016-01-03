@@ -1,7 +1,10 @@
 package org.jglr.weac.parse.structure;
 
 import org.jglr.weac.utils.Identifier;
+import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
+
+import java.util.List;
 
 /**
  * Represents a field that has be extracted from the source code.
@@ -32,6 +35,8 @@ public class WeacParsedField {
      * The access modifier of this field
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
+
+    public List<WeacAnnotation> annotations;
 
     /**
      * Prints this field to the console, intended for debugging
