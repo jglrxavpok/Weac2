@@ -1,21 +1,14 @@
 package org.jglr.weac.utils;
 
-public enum WeacModifier {
-    PUBLIC(true, false), PRIVATE(true, false), PROTECTED(true, false), ABSTRACT(false, true), MIXIN(false, true);
+public class WeacModifier {
 
-    private final boolean accessModifier;
-    private final boolean roleModifier;
+    private final WeacModifierType type;
 
-    WeacModifier(boolean accessModifier, boolean roleModifier) {
-        this.accessModifier = accessModifier;
-        this.roleModifier = roleModifier;
+    public WeacModifier(WeacModifierType type) {
+        this.type = type;
     }
 
-    public boolean isRoleModifier() {
-        return roleModifier;
-    }
-
-    public boolean isAccessModifier() {
-        return accessModifier;
+    public WeacModifierType getType() {
+        return type;
     }
 }

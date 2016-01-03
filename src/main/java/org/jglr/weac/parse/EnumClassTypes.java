@@ -27,5 +27,10 @@ public enum EnumClassTypes {
     /**
      * A singleton.
      */
-    OBJECT
+    OBJECT,
+
+    /**
+     * An annotation
+     */
+    ANNOTATION
 }

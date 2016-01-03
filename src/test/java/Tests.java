@@ -1,3 +1,5 @@
+import org.jglr.weac.WeacDefaultProcessor;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -6,7 +8,7 @@ import java.io.UnsupportedEncodingException;
 public abstract class Tests {
 
     public String read(String filename) throws IOException {
-        InputStream stream = getClass().getResourceAsStream("/"+filename);
+        InputStream stream = WeacDefaultProcessor.class.getResourceAsStream("/"+filename);
         byte[] buffer = new byte[8096];
         int i;
         ByteArrayOutputStream out = new ByteArrayOutputStream();

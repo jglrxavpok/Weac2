@@ -1,6 +1,9 @@
 package org.jglr.weac;
 
+import org.jglr.weac.utils.AnnotationModifier;
+import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifier;
+import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.List;
 
@@ -120,12 +123,21 @@ public abstract class WeacCompileUtils {
         offset += readUntilNot(chars, start, ' ', '\n').length();
         boolean isValidToken = true;
         while(isValidToken) {
-            String token = readUntil(chars, offset, ' ');
+            String token = readUntil(chars, offset, ' ', '\n');
             isValidToken = false;
-            for(WeacModifier modifier : WeacModifier.values()) {
+            for(WeacModifierType modifier : WeacModifierType.values()) {
+                if(modifier == WeacModifierType.ANNOTATION)
+                    continue;
                 if(modifier.name().toLowerCase().equals(token)) {
                     isValidToken = true;
-                    out.add(modifier);
+                    out.add(new WeacModifier(modifier));
+                }
+            }
+            if(!isValidToken) {
+                if(token.startsWith("@")) {
+                    WeacAnnotation annotation = new WeacAnnotation(token.substring(1));
+                    out.add(new AnnotationModifier(WeacModifierType.ANNOTATION, annotation));
+                    isValidToken = true;
                 }
             }
             if(isValidToken)

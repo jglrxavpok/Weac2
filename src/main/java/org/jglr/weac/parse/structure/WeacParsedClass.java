@@ -1,7 +1,7 @@
 package org.jglr.weac.parse.structure;
 
 import org.jglr.weac.parse.EnumClassTypes;
-import org.jglr.weac.utils.WeacModifier;
+import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ public class WeacParsedClass {
     public int startingLine = -1;
 
     /**
-     * The full name of the class, e.g. weac.lang.Math
+     * The simple name of the class, such as Math, Class, String, etc.
      */
     public String name;
 
@@ -60,7 +60,7 @@ public class WeacParsedClass {
     /**
      * The access returnType to this class
      */
-    public WeacModifier access = WeacModifier.PUBLIC;
+    public WeacModifierType access = WeacModifierType.PUBLIC;
 
     /**
      * Prints this class to the console, intended for debug use only

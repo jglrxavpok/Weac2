@@ -1,7 +1,7 @@
 package org.jglr.weac.parse.structure;
 
 import org.jglr.weac.utils.Identifier;
-import org.jglr.weac.utils.WeacModifier;
+import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +54,7 @@ public class WeacParsedMethod {
     /**
      * The access modifier of the method
      */
-    public WeacModifier access = WeacModifier.PUBLIC;
+    public WeacModifierType access = WeacModifierType.PUBLIC;
     public int off;
 
     public WeacParsedMethod() {
@@ -67,7 +67,10 @@ public class WeacParsedMethod {
      */
     @Deprecated
     public void echo() {
-        System.out.print(access.name().toLowerCase()+" "+ returnType +" "+name+"(");
+        System.out.print(access.name().toLowerCase()+" ");
+        if(isAbstract)
+            System.out.print("abstract ");
+        System.out.print(returnType +" "+name+"(");
         for(int i = 0;i<argumentNames.size();i++) {
             if(i != 0) {
                 System.out.print(", ");
@@ -84,7 +87,7 @@ public class WeacParsedMethod {
         } else {
             System.out.println(" {");
             System.out.println(methodSource);
+            System.out.println("}");
         }
-        System.out.println("}");
     }
 }

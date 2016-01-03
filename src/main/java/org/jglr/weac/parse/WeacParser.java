@@ -5,6 +5,7 @@ import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedImport;
 import org.jglr.weac.parse.structure.WeacParsedSource;
 import org.jglr.weac.utils.WeacModifier;
+import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -87,26 +88,26 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
 
                 default:
                     i += readModifiers(chars, i, modifiers);
-                    WeacModifier currentAccess = null;
+                    WeacModifierType currentAccess = null;
                     boolean isAbstract = false;
                     boolean isMixin = false;
                     for(WeacModifier modif : modifiers) {
                         // TODO: Abstract & mixins
-                        if(modif.isAccessModifier()) {
+                        if(modif.getType().isAccessModifier()) {
                             if(currentAccess != null) {
                                 newError("Cannot specify twice the access permissions", lineIndex);
                             } else {
-                                currentAccess = modif;
+                                currentAccess = modif.getType();
                             }
-                        } else if(modif == WeacModifier.ABSTRACT) {
+                        } else if(modif.getType() == WeacModifierType.ABSTRACT) {
                             isAbstract = true;
-                        } else if(modif == WeacModifier.MIXIN) {
+                        } else if(modif.getType() == WeacModifierType.MIXIN) {
                             isMixin = true;
                         }
                     }
                     modifiers.clear();
                     if(currentAccess == null)
-                        currentAccess = WeacModifier.PUBLIC;
+                        currentAccess = WeacModifierType.PUBLIC;
                     String extractedClass = extractClass(chars, i);
                     WeacParsedClass clazz = readClass(parsedSource, extractedClass, lineIndex, isAbstract, isMixin);
                     clazz.access = currentAccess;

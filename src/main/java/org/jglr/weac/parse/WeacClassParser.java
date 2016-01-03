@@ -6,6 +6,7 @@ import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
 import org.jglr.weac.utils.Identifier;
 import org.jglr.weac.utils.WeacModifier;
+import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -63,20 +64,26 @@ public class WeacClassParser extends WeacCompileUtils {
                 lineIndex++;
             }
             i += readModifiers(chars, i, modifiers);
-            WeacModifier currentAccess = null;
+            WeacModifierType currentAccess = null;
+            boolean isAbstract = false;
+            boolean isMixin = false;
             for(WeacModifier modif : modifiers) {
                 // TODO: Abstract & mixins
-                if(modif.isAccessModifier()) {
+                if(modif.getType().isAccessModifier()) {
                     if(currentAccess != null) {
                         newError("Cannot specify twice the access permissions", lineIndex+startingLine);
                     } else {
-                        currentAccess = modif;
+                        currentAccess = modif.getType();
                     }
+                } else if(modif.getType() == WeacModifierType.ABSTRACT) {
+                    isAbstract = true;
+                } else if(modif.getType() == WeacModifierType.MIXIN) {
+                    isMixin = true;
                 }
             }
             modifiers.clear();
             if(currentAccess == null)
-                currentAccess = WeacModifier.PUBLIC;
+                currentAccess = WeacModifierType.PUBLIC;
             i += readUntilNot(chars, i, ' ').length();
             if(i >= chars.length)
                 break;
@@ -99,7 +106,7 @@ public class WeacClassParser extends WeacCompileUtils {
                 i += readUntilNot(chars, i, ' ', '\n').length();
                 if(chars[i] == '(') { // Constructor
 
-                    WeacParsedMethod function = readFunction(chars, i, Identifier.VOID, firstPart, currentAccess);
+                    WeacParsedMethod function = readFunction(chars, i, parsedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
                     function.startingLine = lineIndex+startingLine;
                     parsedClass.methods.add(function);
                     i += function.off;
@@ -110,7 +117,7 @@ public class WeacClassParser extends WeacCompileUtils {
                     if(!secondPart.isValid()) {
                         newError("Invalid identifier: "+secondPart.getId(), startingLine);
                     } else {
-                        int potentialFunction = indexOf(chars, i, '{');
+                        int potentialFunction = indexOf(chars, i, '(');
                         int potentialField = indexOf(chars, i, ';');
                         int nameEnd;
                         boolean isField = false; // true for field, false for function
@@ -141,7 +148,7 @@ public class WeacClassParser extends WeacCompileUtils {
                             parsedClass.fields.add(field);
                             i = nameEnd+1;
                         } else {
-                            WeacParsedMethod function = readFunction(chars, i, firstPart, secondPart, currentAccess);
+                            WeacParsedMethod function = readFunction(chars, i, parsedClass, firstPart, secondPart, currentAccess, isAbstract);
                             function.startingLine = lineIndex+startingLine;
                             parsedClass.methods.add(function);
                             i += function.off;
@@ -318,20 +325,25 @@ public class WeacClassParser extends WeacCompileUtils {
      *              The source characters
      * @param i
      *              The offset at which to start the reading
+     * @param parsedClass
+     *              The owner of this method
      * @param type
      *              The return returnType
      * @param name
-     *              The method name
+ *                  The method name
      * @param access
-     *              The method access modifier
+*                   The method access modifier
+     * @param isAbstract
+     *              True if the method abstract and has no implementation
      * @return
      *              The extracted method
      */
-    private WeacParsedMethod readFunction(char[] chars, int i, Identifier type, Identifier name, WeacModifier access) {
+    private WeacParsedMethod readFunction(char[] chars, int i, WeacParsedClass parsedClass, Identifier type, Identifier name, WeacModifierType access, boolean isAbstract) {
         final int start = i;
         WeacParsedMethod method = new WeacParsedMethod();
         method.returnType = type;
         method.name = name;
+        method.isAbstract = isAbstract;
         method.access = access;
         System.out.println(">>>! "+name);
         String allArgs = readArguments(chars, i);
@@ -339,6 +351,9 @@ public class WeacClassParser extends WeacCompileUtils {
         String[] arguments = allArgs.split(",");
         for(String arg : arguments) {
             arg = trimStartingSpace(arg);
+            if(arg.isEmpty()) {
+               continue;
+            }
             String[] parts = arg.split(" ");
             Identifier argType = new Identifier(parts[0]);
             Identifier argName = new Identifier(parts[1]);
@@ -346,59 +361,64 @@ public class WeacClassParser extends WeacCompileUtils {
             method.argumentNames.add(argName);
         }
 
-        StringBuilder methodSource = new StringBuilder();
         i+=allArgs.length();
-        int codeStart = i+readUntil(chars, i, '{').length()+1;
-        codeStart+=readUntilNot(chars, codeStart, '\n').length();
+        if(isAbstract || parsedClass.classType == EnumClassTypes.INTERFACE) {
+            i+=1;
+            method.methodSource = "";
+            method.off = i - start;
+        } else {
+            StringBuilder methodSource = new StringBuilder();
+            int codeStart = i+readUntil(chars, i, '{').length()+1;
+            codeStart+=readUntilNot(chars, codeStart, '\n').length();
+            int unclosedBrackets = 1;
+            boolean inString = false;
+            boolean inQuote = false;
+            boolean escaped = false;
+            int j = codeStart;
+            bracketLoop: for(;j<chars.length;j++) {
+                char c = chars[j];
+                boolean append = true;
+                switch (c) {
+                    case '{':
+                        unclosedBrackets++;
+                        break;
 
-        int unclosedBrackets = 1;
-        boolean inString = false;
-        boolean inQuote = false;
-        boolean escaped = false;
-        int j = codeStart;
-        bracketLoop: for(;j<chars.length;j++) {
-            char c = chars[j];
-            boolean append = true;
-            switch (c) {
-                case '{':
-                    unclosedBrackets++;
-                    break;
+                    case '}':
+                        unclosedBrackets--;
+                        if(unclosedBrackets == 0) {
+                            break bracketLoop;
+                        }
+                        break;
 
-                case '}':
-                    unclosedBrackets--;
-                    if(unclosedBrackets == 0) {
-                        break bracketLoop;
-                    }
-                    break;
+                    case '"':
+                        if(!inQuote && !escaped)
+                            inString = !inString;
+                        if(escaped)
+                            escaped = false;
+                        break;
 
-                case '"':
-                    if(!inQuote && !escaped)
-                        inString = !inString;
-                    if(escaped)
-                        escaped = false;
-                    break;
+                    case '\'':
+                        if(!inString && !escaped)
+                            inQuote = !inQuote;
+                        if(escaped)
+                            escaped = false;
+                        break;
 
-                case '\'':
-                    if(!inString && !escaped)
-                        inQuote = !inQuote;
-                    if(escaped)
-                        escaped = false;
-                    break;
-
-                case '\\':
-                    if(!escaped) {
-                        append = false;
-                        escaped = true;
-                    }
-                    else
-                        escaped = false;
-                    break;
+                    case '\\':
+                        if(!escaped) {
+                            append = false;
+                            escaped = true;
+                        }
+                        else
+                            escaped = false;
+                        break;
+                }
+                if(append)
+                    methodSource.append(c);
             }
-            if(append)
-                methodSource.append(c);
+            method.methodSource = methodSource.toString();
+            method.off = (j+1) - start;
         }
-        method.methodSource = methodSource.toString();
-        method.off = (j+1) - start;
         return method;
     }
 
@@ -417,6 +437,7 @@ public class WeacClassParser extends WeacCompileUtils {
             case "enum":
             case "interface":
             case "object":
+            case "annotation":
                 parsedClass.classType = EnumClassTypes.valueOf(firstPart.toUpperCase());
                 readHierarchy(parsedClass, trimStartingSpace(header.replaceFirst(firstPart, "")));
                 break;

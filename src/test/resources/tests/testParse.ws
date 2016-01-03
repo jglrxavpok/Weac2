@@ -22,12 +22,16 @@ public class PublicClass > MotherClass {
     }
 }
 
-protected class ProtectedClass > MyInterface + AnotherInterface {}
+annotation TestAnnotation {
+
+}
+
+protected @TestAnnotation class ProtectedClass > MyInterface + AnotherInterface {}
 
 private class PrivateClass {}
 
 abstract class AbstractClass {
-    abstract void methodA();
+    abstract void methodA()
 }
 
 public enum MyEnum {

@@ -1,9 +1,5 @@
 package org.jglr.weac;
 
-import org.jglr.weac.utils.WeacModifier;
-
-import java.util.List;
-
 /**
  * A phase in the compilation of the source code
  */
