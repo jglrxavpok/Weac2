@@ -1,9 +1,9 @@
-package org.jglr.weac.parse.structure;
+package org.jglr.weac.utils;
 
 /**
  * Represents a simple import statement
  */
-public class WeacParsedImport {
+public class WeacImport {
 
     /**
      * The returnType to import (with the full name)

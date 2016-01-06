@@ -1,5 +1,7 @@
 package org.jglr.weac.parse.structure;
 
+import org.jglr.weac.utils.WeacImport;
+
 import java.util.List;
 
 public class WeacParsedSource {
@@ -7,7 +9,7 @@ public class WeacParsedSource {
     public String sourceCode;
 
     public String packageName;
-    public List<WeacParsedImport> imports;
+    public List<WeacImport> imports;
     public List<WeacParsedClass> classes;
 
     /**

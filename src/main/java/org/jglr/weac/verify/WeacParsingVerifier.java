@@ -9,7 +9,7 @@ import org.jglr.weac.parse.structure.WeacParsedSource;
 public class WeacParsingVerifier extends WeacCompilePhase<WeacParsedSource, WeacParsedSource> {
     @Override
     public WeacParsedSource process(WeacParsedSource source) {
-        // TODO: Verifications
+        // TODO: More verifications
         source.classes.forEach(this::verify);
         return source;
     }

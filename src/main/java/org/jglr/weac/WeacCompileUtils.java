@@ -145,4 +145,149 @@ public abstract class WeacCompileUtils {
         }
         return offset-start;
     }
+
+    protected String readSingleArgument(String constantList, int offset, boolean isSemiColonValidSeparator) {
+        StringBuilder builder = new StringBuilder();
+        boolean inString = false;
+        boolean inQuote = false;
+        boolean escaped = false;
+        int unclosedCurlyBrackets = 0;
+        int unclosedBrackets = 0;
+        char[] chars = constantList.toCharArray();
+        iterationLoop: for(int i = offset; i<chars.length;i++) {
+            char c = chars[i];
+            boolean append = true;
+            switch (c) {
+                case '"':
+                    if (!inQuote && !escaped)
+                        inString = !inString;
+                    break;
+
+                case '\'':
+                    if (!inString && !escaped)
+                        inQuote = !inQuote;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    break;
+
+                case '(':
+                    unclosedBrackets++;
+                    break;
+
+                case ')':
+                    unclosedBrackets--;
+                    break;
+
+                case '{':
+                    unclosedCurlyBrackets++;
+                    break;
+
+                case '}':
+                    unclosedCurlyBrackets--;
+                    break;
+
+                case ',':
+                    if(unclosedCurlyBrackets == 0 && unclosedBrackets == 0) {
+                        break iterationLoop;
+                    }
+                    break;
+
+                case ';':
+                    if(isSemiColonValidSeparator && unclosedCurlyBrackets == 0 && unclosedBrackets == 0) {
+                        break iterationLoop;
+                    }
+                    break;
+            }
+            if (append)
+                builder.append(c);
+        }
+        return builder.toString();
+    }
+
+    protected String readUntilInsnEnd(char[] chars, int offset) {
+        StringBuilder builder = new StringBuilder();
+
+        boolean inString = false;
+        boolean inQuote = false;
+        boolean escaped = false;
+        finalLoop: for(int i = offset;i<chars.length;i++) {
+            char c = chars[i];
+            boolean append = true;
+            switch (c) {
+                case '"':
+                    if(!inQuote && !escaped)
+                        inString = !inString;
+                    break;
+
+                case '\'':
+                    if(!inString && !escaped)
+                        inQuote = !inQuote;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    break;
+
+                case ';':
+                    if(!inQuote && !inString)
+                        break finalLoop;
+            }
+            if(append)
+                builder.append(c);
+        }
+        return builder.toString();
+    }
+
+    protected String readArguments(char[] chars, int offset) {
+        StringBuilder builder = new StringBuilder();
+
+        boolean inString = false;
+        boolean inQuote = false;
+        int unclosedBrackets = 1;
+        boolean escaped = false;
+        finalLoop: for(int i = offset+1;i<chars.length;i++) {
+            char c = chars[i];
+            boolean append = true;
+            switch (c) {
+                case '(':
+                    unclosedBrackets++;
+                    break;
+
+                case ')':
+                    unclosedBrackets--;
+                    if(unclosedBrackets == 0) {
+                        break finalLoop;
+                    }
+                    break;
+
+                case '"':
+                    if(!inQuote && !escaped)
+                        inString = !inString;
+                    break;
+
+                case '\'':
+                    if(!inString && !escaped)
+                        inQuote = !inQuote;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    break;
+            }
+            if(append)
+                builder.append(c);
+        }
+        return builder.toString();
+    }
 }

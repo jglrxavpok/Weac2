@@ -2,7 +2,7 @@ package org.jglr.weac.parse;
 
 import org.jglr.weac.WeacCompilePhase;
 import org.jglr.weac.parse.structure.WeacParsedClass;
-import org.jglr.weac.parse.structure.WeacParsedImport;
+import org.jglr.weac.utils.WeacImport;
 import org.jglr.weac.parse.structure.WeacParsedSource;
 import org.jglr.weac.utils.AnnotationModifier;
 import org.jglr.weac.utils.WeacAnnotation;
@@ -171,7 +171,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
         String importStatement = readUntil(chars, offset, '\n');
         String[] parts = importStatement.split(" ");
         offset += importStatement.length();
-        WeacParsedImport parsedImport = new WeacParsedImport();
+        WeacImport parsedImport = new WeacImport();
         parsedImport.importedType = parts[0];
         if(parts.length > 2) {
             if(parts[1].equals("as")) {
