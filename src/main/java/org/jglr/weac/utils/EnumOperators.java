@@ -1,37 +1,46 @@
 package org.jglr.weac.utils;
 
+import static org.jglr.weac.utils.EnumOperators.Associativity.*;
+
 public enum EnumOperators {
 
-    INCREMENT("++", 2),
-    DECREMENT("--", 2),
-    BITWISE_NOT("~", 2),
-    LOGICAL_NOT("!", 2),
-    MULTIPLY("*", 3),
-    DIVIDE("/", 3),
-    MOD("%", 3),
-    PLUS("+", 4),
-    MINOR("-", 4),
-    LEFT_SHIFT("<<", 5),
-    SIGNED_RIGHT_SHIFT(">>", 5),
-    UNSIGNED_RIGHT_SHIFT(">>>", 5),
-    LESS_THAN("<", 6),
-    LESS_OR_EQUAL("<=", 6),
-    GREATER_THAN(">", 6),
-    GREATER_OR_EQUAL(">=", 6),
-    INSTANCEOF("instanceof", 6), // TODO: change away from the Java's instanceof
-    EQUAL("==", 7),
-    NOTEQUAL("!=", 7),
-    AND("&", 8),
-    OR("|", 10),
-    XOR("^", 11),
-    DOUBLE_AND("&", 11),
-    DOUBLE_OR("||", 12)
+    NEW("new", 2, RIGHT),
+    INCREMENT("++", 2, RIGHT),
+    DECREMENT("--", 2, RIGHT),
+    BITWISE_NOT("~", 2, RIGHT),
+    LOGICAL_NOT("!", 2, RIGHT),
+    MULTIPLY("*", 3, LEFT),
+    DIVIDE("/", 3, LEFT),
+    MOD("%", 3, LEFT),
+
+    UNARY_PLUS("+", 2, RIGHT),
+    UNARY_MINUS("-", 2, RIGHT),
+
+    PLUS("+", 4, LEFT),
+    MINUS("-", 4, LEFT),
+    LEFT_SHIFT("<<", 5, LEFT),
+    SIGNED_RIGHT_SHIFT(">>", 5, LEFT),
+    UNSIGNED_RIGHT_SHIFT(">>>", 5, LEFT),
+    LESS_THAN("<", 6, LEFT),
+    LESS_OR_EQUAL("<=", 6, LEFT),
+    GREATER_THAN(">", 6, LEFT),
+    GREATER_OR_EQUAL(">=", 6, LEFT),
+    INSTANCEOF("instanceof", 6, LEFT), // TODO: change away from the Java's instanceof
+    EQUAL("==", 7, LEFT),
+    NOTEQUAL("!=", 7, LEFT),
+    AND("&", 8, LEFT),
+    OR("|", 10, LEFT),
+    XOR("^", 11, LEFT),
+    DOUBLE_AND("&", 11, LEFT),
+    DOUBLE_OR("||", 12, LEFT)
     ;
 
     private final String raw;
     private final int precedence;
+    private final Associativity associativity;
 
-    EnumOperators(String raw, int precedence) {
+    EnumOperators(String raw, int precedence, Associativity associativity) {
+        this.associativity = associativity;
         this.raw = raw;
         this.precedence = precedence;
     }
@@ -44,5 +53,32 @@ public enum EnumOperators {
         return precedence;
     }
 
+    public Associativity associativity() {
+        return associativity;
+    }
+
+    public boolean unary() {
+        return this == UNARY_MINUS || this == UNARY_PLUS || this == NEW;
+    }
+
+    public static EnumOperators get(String raw, boolean unary) {
+        if(unary) {
+            if(raw.equals("+")) {
+                return UNARY_PLUS;
+            } else if(raw.equals("-")) {
+                return UNARY_MINUS;
+            }
+        }
+        for(EnumOperators op : values()) {
+            if(op.raw().equals(raw)) {
+                return op;
+            }
+        }
+        return null;
+    }
+
+    public enum Associativity {
+        LEFT, RIGHT
+    }
 
 }

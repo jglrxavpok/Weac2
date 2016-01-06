@@ -90,7 +90,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         char[] chars = expression.toCharArray();
         List<WeacToken> tokens = new LinkedList<>();
         for(int i = 0;i<chars.length;) {
-            char c = chars[i];
             WeacToken token = readToken(chars, i);
             if(token != null) {
                 i += token.length;
@@ -100,12 +99,18 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             }
         }
         Iterator<WeacToken> iterator = tokens.iterator();
+        while(iterator.hasNext()) {
+            WeacToken token = iterator.next();
+            if (token.getType() == WeacTokenType.WAITING_FOR_NEXT) {
+                iterator.remove();
+            }
+        }
+
+        iterator = tokens.iterator();
         WeacToken previous = null;
         while(iterator.hasNext()) {
             WeacToken token = iterator.next();
-            if(token.getType() == WeacTokenType.WAITING_FOR_NEXT) {
-                iterator.remove();
-            } else if(previous != null) {
+            if(previous != null) {
                 if(previous.getType() == WeacTokenType.LITERAL) {
                     if(token.getType() == WeacTokenType.OPENING_PARENTHESIS) {
                         previous.setType(WeacTokenType.FUNCTION);
@@ -124,14 +129,155 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     }
                 }
             }
+
+            if(token.getType() == WeacTokenType.LITERAL && !iterator.hasNext()) {
+                token.setType(WeacTokenType.VARIABLE);
+            }
             previous = token;
         }
-        for(WeacToken token : tokens) {
+        List<WeacToken> output = convertToRPN(expression, tokens);
+
+        for(WeacToken token : output) {
             System.out.print(token.getType().name()+"("+token.getContent()+") ");
         }
         System.out.println();
-        // TODO: reserve polish notates everything
         return insns;
+    }
+
+    /**
+     * Implementation of <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm">Edsger Dijkstra's Shuting-Yard Algorithm</a>
+     * @param expr
+     * @param tokens
+     * @return
+     */
+    private List<WeacToken> convertToRPN(String expr, List<WeacToken> tokens) {
+        List<WeacToken> out = new ArrayList<>();
+        Stack<WeacToken> stack = new Stack<>();
+        int argCount = 0;
+        Stack<Integer> argCountStack = new Stack<>();
+        for(int i = 0;i<tokens.size();i++) {
+            WeacToken token = tokens.get(i);
+            if(token.getType() == WeacTokenType.NUMBER || token.getType() == WeacTokenType.STRING
+                    || token.getType() == WeacTokenType.SINGLE_CHARACTER || token.getType() == WeacTokenType.VARIABLE) {
+                if(i+2 < tokens.size()) {
+                    if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
+                        if(tokens.get(i+2).getType() == WeacTokenType.VARIABLE) {
+                            out.add(token);
+                            out.add(tokens.get(i+1));
+                            out.add(tokens.get(i+2));
+                            argCount++;
+                            i+=2;
+                        } else { // it is a method
+                            stack.push(token);
+                            i++; // skip the '.'
+                        }
+                    } else {
+                        out.add(token);
+                        argCount++;
+                    }
+                } else {
+                    out.add(token);
+                    argCount++;
+                }
+            } else if(token.getType() == WeacTokenType.FUNCTION) {
+                stack.push(token);
+                argCountStack.push(argCount);
+                argCount = 0;
+            } else if(token.getType() == WeacTokenType.ARGUMENT_SEPARATOR) {
+                if(stack.isEmpty()) {
+                    newError("Unmatched parenthesises, please fix", -1);
+                    return Collections.EMPTY_LIST;
+                }
+                while(stack.peek().getType() != WeacTokenType.OPENING_PARENTHESIS) {
+                    out.add(stack.pop());
+                    if(stack.isEmpty()) {
+                        newError("Unmatched parenthesises, please fix", -1);
+                        return Collections.EMPTY_LIST;
+                    }
+                }
+            } else if(token.getType() == WeacTokenType.UNARY_OPERATOR || token.getType() == WeacTokenType.BINARY_OPERATOR) {
+                EnumOperators operator = EnumOperators.get(token.getContent(), token.getType() == WeacTokenType.UNARY_OPERATOR);
+                if(operator != null) {
+                    if (!stack.isEmpty()) {
+                        while (stack.peek().getType() == WeacTokenType.UNARY_OPERATOR || stack.peek().getType() == WeacTokenType.BINARY_OPERATOR) {
+                            WeacToken stackTop = stack.pop();
+                            EnumOperators operator2 = EnumOperators.get(stackTop.getContent(), stackTop.getType() == WeacTokenType.UNARY_OPERATOR);
+                            if (operator2 != null) {
+                                if (operator.associativity() == EnumOperators.Associativity.LEFT) {
+                                    if (operator.precedence() > operator2.precedence()) {
+                                        out.add(stackTop);
+                                        if(!operator2.unary()) {
+                                            argCount--;
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                } else {
+                                    if (operator.precedence() >= operator2.precedence()) {
+                                        out.add(stackTop);
+                                        if(!operator2.unary()) {
+                                            argCount--;
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                }
+                            } else {
+                                newError("dzqdzqd", -1);
+                                break;
+                            }
+                        }
+                    }
+                    stack.push(token);
+                } else {
+                    newError("dzqdzqd", -1);
+                }
+            } else if(token.getType() == WeacTokenType.OPENING_PARENTHESIS) {
+                stack.push(token);
+            } else if(token.getType() == WeacTokenType.CLOSING_PARENTHESIS) {
+                if(!stack.isEmpty()) {
+                    while(stack.peek().getType() != WeacTokenType.OPENING_PARENTHESIS) {
+                        if(stack.peek().getType() == WeacTokenType.BINARY_OPERATOR || stack.peek().getType() == WeacTokenType.UNARY_OPERATOR) {
+                            out.add(stack.pop());
+                        } else {
+                            break;
+                        }
+                    }
+                    if(stack.isEmpty()) {
+                        newError("Unmatched parenthesises, please fix", -1);
+                        return Collections.EMPTY_LIST;
+                    } else {
+                        stack.pop();
+                        WeacToken top = stack.peek();
+                        if(top.getType() == WeacTokenType.FUNCTION) {
+                            WeacToken originalToken = stack.pop();
+                            WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount, WeacTokenType.FUNCTION, originalToken.length);
+                            argCount = argCountStack.pop();
+                            argCount++;
+                            out.add(functionToken);
+
+                            if(!stack.isEmpty()) {
+                                if(stack.peek().getType() == WeacTokenType.VARIABLE) {
+                                   out.add(stack.pop());
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    newError("Unmatched parenthesises, please fix", -1);
+                    return Collections.EMPTY_LIST;
+                }
+            }
+        }
+        while(!stack.isEmpty()) {
+            WeacToken token = stack.pop();
+            if(token.getType() == WeacTokenType.OPENING_PARENTHESIS) {
+                newError("Unmatched parenthesis in "+expr, -1);
+                break;
+            }
+            out.add(token);
+        }
+        return out;
     }
 
     private WeacToken readToken(char[] chars, int i) {
@@ -144,19 +290,19 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 String number = readNumber(chars, i);
                 return new WeacToken(number, WeacTokenType.NUMBER, number.length());
             } else {
-                if(first == '.') {
-                    if(i+1 < chars.length) {
-                        char next = chars[i+1];
-                        if(Character.isDigit(next)) {
-                            String number = readNumber(chars, i+1);
+                if (first == '.') {
+                    if (i + 1 < chars.length) {
+                        char next = chars[i + 1];
+                        if (Character.isDigit(next)) {
+                            String number = readNumber(chars, i + 1);
                             return new WeacToken(number, WeacTokenType.NUMBER, number.length());
-                        } else if(next == '.') {
+                        } else if (next == '.') {
                             return new WeacToken("..", WeacTokenType.INTERVAL_SEPARATOR, 2);
                         }
                     }
                     return new WeacToken(String.valueOf(first), WeacTokenType.MEMBER_ACCESSING, 1);
                 }
-                switch(first) {
+                switch (first) {
                     case ':':
                         return new WeacToken(String.valueOf(first), WeacTokenType.INTERVAL_STEP, 1);
 
@@ -168,8 +314,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                         // is naming it Chara an Undertale reference? I don't know... Am I allowed to do it?
                         String chara = readCharacter(chars, i);
-                        if(chara != null) {
-                            return new WeacToken(chara, WeacTokenType.SINGLE_CHARACTER, chara.length()+2);
+                        if (chara != null) {
+                            return new WeacToken(chara, WeacTokenType.SINGLE_CHARACTER, chara.length() + 2);
                         } else {
                             newError("Invalid character", -1); // TODO: find line
                             return null;
@@ -177,8 +323,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                     case '"':
                         String text = readString(chars, i);
-                        if(text != null) {
-                            return new WeacToken(text, WeacTokenType.STRING, text.length()+2);
+                        if (text != null) {
+                            return new WeacToken(text, WeacTokenType.STRING, text.length() + 2);
                         } else {
                             newError("Invalid string constant", -1); // TODO: find line
                             return null;
@@ -207,14 +353,21 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                 }
 
-                String operator = readOperator(chars, i);
-                if(operator != null) {
-                    return new WeacToken(operator, WeacTokenType.OPERATOR, operator.length());
+                String literal = readLiteral(chars, i);
+                if(literal.isEmpty()) {
+                    String operator = readOperator(chars, i);
+                    if(operator != null)
+                        return new WeacToken(operator, WeacTokenType.OPERATOR, operator.length());
                 } else {
-                    // read literal
-                    String literal = readLiteral(chars, i);
-                    return new WeacToken(literal, WeacTokenType.LITERAL, literal.length());
+                    // check if we did not read an operator by mistake
+                    EnumOperators potentialOperator = EnumOperators.get(literal, false);
+                    if(potentialOperator != null) {
+                        return new WeacToken(potentialOperator.raw(), WeacTokenType.OPERATOR, potentialOperator.raw().length());
+                    } else {
+                        return new WeacToken(literal, WeacTokenType.LITERAL, literal.length());
+                    }
                 }
+                return null;
             }
         }
     }
@@ -226,17 +379,21 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     private String readOperator(char[] chars, int offset) {
         List<EnumOperators> operators = new LinkedList<>();
         Collections.addAll(operators, EnumOperators.values());
+        operators.remove(EnumOperators.UNARY_MINUS);
+        operators.remove(EnumOperators.UNARY_PLUS);
         for(int i = offset;i<chars.length;i++) {
             char c = chars[i];
             int localIndex = i-offset;
             Iterator<EnumOperators> iterator = operators.iterator();
             while(iterator.hasNext()) {
                 EnumOperators operator = iterator.next();
-                if(localIndex < operator.raw().length() && operator.raw().charAt(localIndex) != c) {
+                if(operator.raw().length()+offset >= chars.length) {
+                    iterator.remove();
+                } else if(localIndex < operator.raw().length() && operator.raw().charAt(localIndex) != c) {
+                    iterator.remove();
+                } else if(localIndex > operator.raw().length()) {
                     iterator.remove();
                 }
-                if(localIndex > operator.raw().length())
-                    iterator.remove();
             }
 
             if(operators.size() == 1) {

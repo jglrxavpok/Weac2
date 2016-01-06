@@ -13,15 +13,19 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "0b1010");
         precompile(preCompiler, "\"A string\"");
         precompile(preCompiler, "'0'");
-        precompile(preCompiler, "'0', '2'");
+        precompile(preCompiler, "'0'+'2'");
         precompile(preCompiler, "100+200");
         precompile(preCompiler, "100-200");
         precompile(preCompiler, "100^200");
         precompile(preCompiler, "100*200");
         precompile(preCompiler, "100 != 0xAC");
-        precompile(preCompiler, "[1,2,5]");
-        precompile(preCompiler, "[1..5:0.5f]");
+        precompile(preCompiler, "new Object()");
+        precompile(preCompiler, "new Foo(bar)");
+        precompile(preCompiler, "bar instanceof Foo");
+        //precompile(preCompiler, "[1,2,5]");
+        //precompile(preCompiler, "[1..5:0.5f]");
         precompile(preCompiler, "myVar.myMethod(\"My argument\", myVar2)");
+        precompile(preCompiler, "myVar.myMethod(nestedMethod(\"My argument\", myVar2), \"MyString\".length(), constant.afield)");
     }
 
     private void precompile(WeacPreCompiler preCompiler, String s) {
