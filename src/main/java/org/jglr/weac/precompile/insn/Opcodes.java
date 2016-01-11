@@ -1,5 +1,8 @@
 package org.jglr.weac.precompile.insn;
 
+import java.lang.reflect.Field;
+import java.util.HashMap;
+
 public interface Opcodes {
 
     int     NULL = 0x00,
@@ -13,6 +16,28 @@ public interface Opcodes {
             NEW = 0x08,
             RETURN = 0x09,
             LOAD_STRING_CONSTANT = 0x0A,
-            LOAD_CHARACTER_CONSTANT = 0x0B
+            LOAD_CHARACTER_CONSTANT = 0x0B,
+            STORE_ARRAY = 0x0C
     ;
+
+    HashMap<Integer, String> names = new HashMap<>();
+
+    static String getName(int opcode) {
+        if(names.isEmpty()) {
+            Field[] fields = Opcodes.class.getDeclaredFields();
+            for(Field field : fields) {
+                if(field.getType() == Integer.TYPE) {
+                    try {
+                        names.put(field.getInt(null), field.getName());
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        if(names.containsKey(opcode)) {
+            return names.get(opcode);
+        }
+        return "NULL";
+    }
 }

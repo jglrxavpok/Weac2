@@ -1,5 +1,9 @@
 import org.jglr.weac.precompile.WeacPreCompiler;
+import org.jglr.weac.precompile.insn.Opcodes;
+import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
 import org.junit.Test;
+
+import java.util.List;
 
 public class TestPrecompile extends Tests {
 
@@ -31,7 +35,8 @@ public class TestPrecompile extends Tests {
 
     private void precompile(WeacPreCompiler preCompiler, String s) {
         System.out.println("[=== START OF PRECOMPILE OF \""+s+"\" ===]");
-        preCompiler.precompileExpression(s);
+        List<WeacPrecompiledInsn> insns = preCompiler.precompileExpression(s);
+        insns.forEach(i -> System.out.println(Opcodes.getName(i.getOpcode())));
         System.out.println("[=== END ===]");
     }
 }

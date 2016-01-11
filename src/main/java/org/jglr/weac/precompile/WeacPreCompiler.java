@@ -146,6 +146,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     }
 
     private List<WeacPrecompiledInsn> toInstructions(List<WeacToken> output, List<WeacPrecompiledInsn> insns) {
+        // TODO: Handle 'new' after function calls
         for(WeacToken token : output) {
             switch (token.getType()) {
                 case NUMBER:
@@ -171,6 +172,22 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     boolean lookForInstance = Boolean.parseBoolean(contents[2]);
                     insns.add(new WeacFunctionCall(name, argCount, lookForInstance));
                     break;
+
+                case BINARY_OPERATOR:
+                    insns.add(new WeacOperatorInsn(EnumOperators.get(token.getContent(), false)));
+                    break;
+
+                case UNARY_OPERATOR:
+                    insns.add(new WeacOperatorInsn(EnumOperators.get(token.getContent(), true)));
+                    break;
+
+                case DEFINE_ARRAY:
+                    int length = Integer.parseInt(token.getContent());
+                    insns.add(new WeacCreateArray(length, null));
+                    for(int i = 0;i<length;i++)
+                        insns.add(new WeacStoreArray(length-i-1));
+                    break;
+
             }
         }
         return insns;
