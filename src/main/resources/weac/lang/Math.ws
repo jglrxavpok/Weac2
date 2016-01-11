@@ -4,19 +4,24 @@ import java.lang.Math as JMath
 
 object Math {
 
-    double sin(double arad) {
+    Double sin(Double arad) {
         return JMath.sin(arad);
     }
 
-    double cos(double arad) {
+    Double cos(Double arad) {
         return JMath.cos(arad);
     }
 
-    double tan(double arad) {
+    Double tan(Double arad) {
         return JMath.tan(arad);
     }
 
-    double random() {
+    Double random() {
         return JMath.random();
     }
+
+    Boolean isInteger(Double value) {
+        return value % 1 == 0;
+    }
+
 }

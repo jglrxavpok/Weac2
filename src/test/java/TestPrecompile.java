@@ -22,8 +22,9 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "new Object()");
         precompile(preCompiler, "new Foo(bar)");
         precompile(preCompiler, "bar instanceof Foo");
-        //precompile(preCompiler, "[1,2,5]");
-        //precompile(preCompiler, "[1..5:0.5f]");
+        precompile(preCompiler, "[1,2,5]");
+        precompile(preCompiler, "[1..5].by(0.5f)");
+        precompile(preCompiler, "global(01)");
         precompile(preCompiler, "myVar.myMethod(\"My argument\", myVar2)");
         precompile(preCompiler, "myVar.myMethod(nestedMethod(\"My argument\", myVar2), \"MyString\".length(), constant.afield)");
     }

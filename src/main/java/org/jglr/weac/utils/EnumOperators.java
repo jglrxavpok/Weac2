@@ -4,6 +4,7 @@ import static org.jglr.weac.utils.EnumOperators.Associativity.*;
 
 public enum EnumOperators {
 
+    RETURN("return", 2, RIGHT),
     NEW("new", 2, RIGHT),
     INCREMENT("++", 2, RIGHT),
     DECREMENT("--", 2, RIGHT),
@@ -31,7 +32,8 @@ public enum EnumOperators {
     AND("&", 8, LEFT),
     OR("|", 10, LEFT),
     XOR("^", 11, LEFT),
-    DOUBLE_AND("&", 11, LEFT),
+    DOUBLE_AND("&&", 11, LEFT),
+    INTERVAL_SEPARATOR("..", 11, LEFT),
     DOUBLE_OR("||", 12, LEFT)
     ;
 

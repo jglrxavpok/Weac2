@@ -5,10 +5,11 @@ import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
 import org.jglr.weac.parse.structure.WeacParsedSource;
-import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
+import org.jglr.weac.precompile.insn.*;
 import org.jglr.weac.precompile.structure.*;
 import org.jglr.weac.utils.EnumOperators;
 import org.jglr.weac.utils.Identifier;
+import org.jglr.weac.utils.WeacType;
 
 import java.util.*;
 
@@ -141,6 +142,37 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             System.out.print(token.getType().name()+"("+token.getContent()+") ");
         }
         System.out.println();
+        return toInstructions(output, insns);
+    }
+
+    private List<WeacPrecompiledInsn> toInstructions(List<WeacToken> output, List<WeacPrecompiledInsn> insns) {
+        for(WeacToken token : output) {
+            switch (token.getType()) {
+                case NUMBER:
+                    insns.add(new WeacLoadNumberConstant(token.getContent()));
+                    break;
+
+                case STRING:
+                    insns.add(new WeacLoadStringConstant(token.getContent()));
+                    break;
+
+                case SINGLE_CHARACTER:
+                    insns.add(new WeacLoadCharacterConstant(token.getContent()));
+                    break;
+
+                case VARIABLE:
+                    insns.add(new WeacLoadVariable(token.getContent()));
+                    break;
+
+                case FUNCTION:
+                    String[] contents = token.getContent().split(";");
+                    String name = contents[0];
+                    int argCount = Integer.parseInt(contents[1]);
+                    boolean lookForInstance = Boolean.parseBoolean(contents[2]);
+                    insns.add(new WeacFunctionCall(name, argCount, lookForInstance));
+                    break;
+            }
+        }
         return insns;
     }
 
@@ -168,7 +200,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                             argCount++;
                             i+=2;
                         } else { // it is a method
-                            stack.push(token);
+                            stack.push(tokens.get(i+1));
+                            out.add(token);
                             i++; // skip the '.'
                         }
                     } else {
@@ -188,7 +221,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     newError("Unmatched parenthesises, please fix", -1);
                     return Collections.EMPTY_LIST;
                 }
-                while(stack.peek().getType() != WeacTokenType.OPENING_PARENTHESIS) {
+                while(!stack.peek().isOpeningBracketLike()) {
                     out.add(stack.pop());
                     if(stack.isEmpty()) {
                         newError("Unmatched parenthesises, please fix", -1);
@@ -232,33 +265,56 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 } else {
                     newError("dzqdzqd", -1);
                 }
-            } else if(token.getType() == WeacTokenType.OPENING_PARENTHESIS) {
+            } else if(token.isOpeningBracketLike()) {
                 stack.push(token);
-            } else if(token.getType() == WeacTokenType.CLOSING_PARENTHESIS) {
+                if(token.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
+                    argCountStack.push(argCount);
+                    argCount = 0;
+                }
+            } else if(token.isClosingBracketLike()) {
                 if(!stack.isEmpty()) {
-                    while(stack.peek().getType() != WeacTokenType.OPENING_PARENTHESIS) {
+                    while(!stack.peek().isOpposite(token)) {
                         if(stack.peek().getType() == WeacTokenType.BINARY_OPERATOR || stack.peek().getType() == WeacTokenType.UNARY_OPERATOR) {
                             out.add(stack.pop());
                         } else {
                             break;
                         }
                     }
-                    if(stack.isEmpty()) {
-                        newError("Unmatched parenthesises, please fix", -1);
-                        return Collections.EMPTY_LIST;
-                    } else {
-                        stack.pop();
-                        WeacToken top = stack.peek();
-                        if(top.getType() == WeacTokenType.FUNCTION) {
-                            WeacToken originalToken = stack.pop();
-                            WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount, WeacTokenType.FUNCTION, originalToken.length);
-                            argCount = argCountStack.pop();
-                            argCount++;
-                            out.add(functionToken);
 
-                            if(!stack.isEmpty()) {
-                                if(stack.peek().getType() == WeacTokenType.VARIABLE) {
-                                   out.add(stack.pop());
+                    if(token.getType() == WeacTokenType.CLOSING_SQUARE_BRACKETS) {
+                        stack.pop(); // pop opening bracket
+                        out.add(new WeacToken(""+argCount, WeacTokenType.DEFINE_ARRAY, -1));
+                        argCount = argCountStack.pop();
+                        argCount++;
+                    } else {
+                        if(stack.isEmpty()) {
+                            newError("Unmatched parenthesises, please fix", -1);
+                            return Collections.EMPTY_LIST;
+                        } else {
+                            WeacToken previous = stack.pop();
+                            if(previous.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
+                                argCount++;
+                            } else {
+                                if(!stack.isEmpty()) {
+                                    WeacToken top = stack.peek();
+                                    if(top.getType() == WeacTokenType.FUNCTION) {
+                                        WeacToken originalToken = stack.pop();
+                                        boolean shouldLookForInstance = false;
+                                        if(!stack.isEmpty()) {
+                                            if(stack.peek().getType() == WeacTokenType.MEMBER_ACCESSING) {
+                                                shouldLookForInstance = true;
+                                                stack.pop();
+                                            }
+                                        } else if(stack.isEmpty() && out.size()-argCount > 0) {
+                                            shouldLookForInstance = true;
+                                        }
+                                        // function name;argument count;true if we should look for the object to call it on in the stack
+                                        WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), WeacTokenType.FUNCTION, originalToken.length);
+                                        argCount = argCountStack.pop();
+                                        argCount++;
+                                        out.add(functionToken);
+
+                                    }
                                 }
                             }
                         }
@@ -271,7 +327,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         }
         while(!stack.isEmpty()) {
             WeacToken token = stack.pop();
-            if(token.getType() == WeacTokenType.OPENING_PARENTHESIS) {
+            if(token.isOpeningBracketLike()) {
                 newError("Unmatched parenthesis in "+expr, -1);
                 break;
             }
@@ -296,8 +352,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                         if (Character.isDigit(next)) {
                             String number = readNumber(chars, i + 1);
                             return new WeacToken(number, WeacTokenType.NUMBER, number.length());
-                        } else if (next == '.') {
-                            return new WeacToken("..", WeacTokenType.INTERVAL_SEPARATOR, 2);
+                        } else if(next == '.') {
+                            return new WeacToken("..", WeacTokenType.BINARY_OPERATOR, 2);
                         }
                     }
                     return new WeacToken(String.valueOf(first), WeacTokenType.MEMBER_ACCESSING, 1);

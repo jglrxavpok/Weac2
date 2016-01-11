@@ -20,7 +20,8 @@ public enum WeacTokenType {
     OPENING_CURLY_BRACKETS,
     CLOSING_CURLY_BRACKETS,
 
-    INTERVAL_SEPARATOR,
+    DEFINE_INTERVAL,
+    DEFINE_ARRAY, // requires the size to be given inside the token
     INTERVAL_STEP,
 
     // Those three are created from the LITERAL value after analysing their context (parenthesis after it or not)
