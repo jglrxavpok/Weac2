@@ -25,6 +25,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     public WeacPrecompiledSource process(WeacParsedSource parsed) {
         WeacPrecompiledSource source = new WeacPrecompiledSource();
 
+        source.classes = new ArrayList<>();
+
         source.imports = parsed.imports;
 
         source.packageName = parsed.packageName;
@@ -37,25 +39,28 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     private WeacPrecompiledClass precompile(WeacParsedClass c) {
         WeacPrecompiledClass clazz = new WeacPrecompiledClass();
         clazz.access = c.access;
-        clazz.annotations = c.annotations;
+        clazz.annotations.addAll(c.annotations);
         clazz.classType = c.classType;
-        clazz.enumConstants = precompileEnumConstants(c.enumConstants);
-        clazz.fields = precompileFields(c.fields);
-        clazz.interfacesImplemented = c.interfacesImplemented;
+        clazz.enumConstants.addAll(precompileEnumConstants(c.enumConstants));
+        clazz.fields.addAll(precompileFields(c.fields));
+        clazz.interfacesImplemented.addAll(c.interfacesImplemented);
         clazz.isAbstract = c.isAbstract;
         clazz.isMixin = c.isMixin;
-        clazz.methods = precompileMethods(c.methods);
+        clazz.methods.addAll(precompileMethods(c.methods));
         clazz.motherClass = c.motherClass;
         clazz.name = c.name;
+        clazz.packageName = c.packageName;
+
+        clazz.fullName = c.packageName == null || c.packageName.isEmpty() ? c.name : c.packageName+"."+c.name;
         return clazz;
     }
 
     private List<WeacPrecompiledMethod> precompileMethods(List<WeacParsedMethod> methods) {
-        return null;
+        return Collections.emptyList();
     }
 
     private List<WeacPrecompiledField> precompileFields(List<WeacParsedField> fields) {
-        return null;
+        return Collections.emptyList();
     }
 
     private List<WeacPrecompiledEnumConstant> precompileEnumConstants(List<String> enumConstants) {

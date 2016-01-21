@@ -1,28 +1,28 @@
-package org.jglr.weac.precompile.structure;
+package org.jglr.weac.resolve.structure;
 
-import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
 import org.jglr.weac.utils.Identifier;
 import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 import org.jglr.weac.utils.WeacType;
 
+import java.util.LinkedList;
 import java.util.List;
 
-public class WeacPrecompiledMethod {
+public class WeacResolvedMethod {
 
-    public Identifier returnType;
+    public WeacType returnType;
 
     public Identifier name;
 
     /**
      * The types of the arguments
      */
-    public List<Identifier> argumentTypes;
+    public final List<WeacType> argumentTypes;
 
     /**
      * The names of the arguments
      */
-    public List<Identifier> argumentNames;
+    public final List<Identifier> argumentNames;
 
     /**
      * Is this method abstract?
@@ -39,7 +39,11 @@ public class WeacPrecompiledMethod {
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
 
-    public List<WeacAnnotation> annotations;
+    public final List<WeacAnnotation> annotations;
 
-    public List<WeacPrecompiledInsn> instructions;
+    public WeacResolvedMethod() {
+        annotations = new LinkedList<>();
+        argumentNames = new LinkedList<>();
+        argumentTypes = new LinkedList<>();
+    }
 }

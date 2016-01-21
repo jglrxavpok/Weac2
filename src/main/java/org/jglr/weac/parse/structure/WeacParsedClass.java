@@ -21,6 +21,8 @@ public class WeacParsedClass {
      */
     public String name;
 
+    public String packageName;
+
     /**
      * The class returnType
      */

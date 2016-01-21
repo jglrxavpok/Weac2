@@ -6,6 +6,7 @@ import org.jglr.weac.parse.structure.WeacParsedMethod;
 import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class WeacPrecompiledClass {
@@ -15,6 +16,8 @@ public class WeacPrecompiledClass {
      */
     public String name;
 
+    public String packageName;
+
     /**
      * The class returnType
      */
@@ -23,12 +26,12 @@ public class WeacPrecompiledClass {
     /**
      * The fields present in this class
      */
-    public List<WeacPrecompiledField> fields;
+    public final List<WeacPrecompiledField> fields;
 
     /**
      * The methods defined in this class
      */
-    public List<WeacPrecompiledMethod> methods;
+    public final List<WeacPrecompiledMethod> methods;
 
     /**
      * The parent class, can be null. The name is not yet resolved (that's to say we don't know yet if it is a valid class)
@@ -38,12 +41,12 @@ public class WeacPrecompiledClass {
     /**
      * The interfaces this class implements
      */
-    public List<String> interfacesImplemented;
+    public final List<String> interfacesImplemented;
 
     /**
      * Empty if this class is not an enum, otherwise contains the enum constants of this class
      */
-    public List<WeacPrecompiledEnumConstant> enumConstants;
+    public final List<WeacPrecompiledEnumConstant> enumConstants;
 
     public boolean isAbstract;
 
@@ -57,6 +60,15 @@ public class WeacPrecompiledClass {
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
 
-    public List<WeacAnnotation> annotations;
+    public final List<WeacAnnotation> annotations;
 
+    public String fullName;
+
+    public WeacPrecompiledClass() {
+        annotations = new LinkedList<>();
+        interfacesImplemented = new LinkedList<>();
+        enumConstants = new LinkedList<>();
+        fields = new LinkedList<>();
+        methods = new LinkedList<>();
+    }
 }

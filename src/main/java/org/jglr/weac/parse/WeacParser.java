@@ -201,6 +201,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
      */
     private WeacParsedClass readClass(WeacParsedSource parsedSource, String classSource, int startingLine, boolean isAbstract, boolean isMixin) {
         WeacParsedClass parsedClass = classParser.parseClass(classSource, startingLine);
+        parsedClass.packageName = parsedSource.packageName;
         parsedClass.isAbstract = isAbstract;
         parsedClass.isMixin = isMixin;
         parsedSource.classes.add(parsedClass);
