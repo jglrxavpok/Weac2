@@ -26,4 +26,8 @@ class Interval {
         }
         return inRange && isValue;
     }
+
+    Interval by(Double step) {
+        return new Interval(start, end, step);
+    }
 }

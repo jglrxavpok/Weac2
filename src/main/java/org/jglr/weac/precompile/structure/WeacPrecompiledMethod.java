@@ -6,6 +6,7 @@ import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 import org.jglr.weac.utils.WeacType;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class WeacPrecompiledMethod {
@@ -17,12 +18,12 @@ public class WeacPrecompiledMethod {
     /**
      * The types of the arguments
      */
-    public List<Identifier> argumentTypes;
+    public final List<Identifier> argumentTypes;
 
     /**
      * The names of the arguments
      */
-    public List<Identifier> argumentNames;
+    public final List<Identifier> argumentNames;
 
     /**
      * Is this method abstract?
@@ -39,7 +40,14 @@ public class WeacPrecompiledMethod {
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
 
-    public List<WeacAnnotation> annotations;
+    public final List<WeacAnnotation> annotations;
 
-    public List<WeacPrecompiledInsn> instructions;
+    public final List<List<WeacPrecompiledInsn>> instructions;
+
+    public WeacPrecompiledMethod() {
+        instructions = new LinkedList<>();
+        annotations = new LinkedList<>();
+        argumentNames = new LinkedList<>();
+        argumentTypes = new LinkedList<>();
+    }
 }

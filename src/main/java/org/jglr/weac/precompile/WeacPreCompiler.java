@@ -6,6 +6,8 @@ import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
 import org.jglr.weac.parse.structure.WeacParsedSource;
 import org.jglr.weac.precompile.insn.*;
+import org.jglr.weac.precompile.patterns.WeacInstructionPattern;
+import org.jglr.weac.precompile.patterns.WeacIntervalPattern;
 import org.jglr.weac.precompile.structure.*;
 import org.jglr.weac.utils.EnumOperators;
 import org.jglr.weac.utils.Identifier;
@@ -20,6 +22,13 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toLowerCase()+
             "-_"
     ).toCharArray();
+
+    private final List<WeacInstructionPattern> patterns;
+
+    public WeacPreCompiler() {
+        patterns = new ArrayList<>();
+        patterns.add(new WeacIntervalPattern());
+    }
 
     @Override
     public WeacPrecompiledSource process(WeacParsedSource parsed) {
@@ -56,11 +65,126 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     }
 
     private List<WeacPrecompiledMethod> precompileMethods(List<WeacParsedMethod> methods) {
+        List<WeacPrecompiledMethod> precompiledMethods = new LinkedList<>();
+        methods.stream()
+                .map(this::compileSingleMethod)
+                .forEach(precompiledMethods::add);
+        return precompiledMethods;
+    }
+
+    private WeacPrecompiledMethod compileSingleMethod(WeacParsedMethod parsedMethod) {
+        WeacPrecompiledMethod method = new WeacPrecompiledMethod();
+        method.access = parsedMethod.access;
+        method.argumentNames.addAll(parsedMethod.argumentNames);
+        method.argumentTypes.addAll(parsedMethod.argumentTypes);
+        method.isAbstract = parsedMethod.isAbstract;
+        method.isConstructor = parsedMethod.isConstructor;
+        method.name = parsedMethod.name;
+        method.returnType = parsedMethod.returnType;
+
+        method.annotations.addAll(parsedMethod.annotations); // TODO: Handle arguments
+
+        method.instructions.addAll(flatten(compileCodeBlock(parsedMethod.methodSource)));
+
+        return method;
+    }
+
+    private List<List<WeacPrecompiledInsn>> flatten(WeacCodeBlock weacCodeBlock) {
+
         return Collections.emptyList();
     }
 
+    private WeacCodeBlock compileCodeBlock(String source) {
+        char[] chars = source.toCharArray();
+        StringBuilder buffer = new StringBuilder();
+        final WeacCodeBlock currentBlock = new WeacCodeBlock();
+
+        WeacCodeBlock previousBlock = new WeacCodeBlock();
+
+        List<List<WeacPrecompiledInsn>> instructions = currentBlock.getInstructions();
+        instructions.add(Collections.singletonList(new WeacLabelInsn(currentBlock.getStart())));
+
+        for(int i = 0;i<chars.length;i++) {
+            char c = chars[i];
+            if(c == '(') {
+                int offset = handleBuiltinMethod(buffer.toString(), chars, i, instructions, currentBlock, previousBlock);
+                if(offset == 0) {
+                    buffer.append(c);
+                } else {
+                    buffer.delete(0, buffer.length());
+                }
+                i += offset;
+            } else if(c == '{') {
+                if(buffer.toString().equals("else")) {
+                    // TODO
+                } else {
+                    String codeBlockSource = readCodeblock(chars, i+1);
+                    WeacCodeBlock block = compileCodeBlock(codeBlockSource);
+                    instructions.add(Collections.singletonList(new WeacBlockInsn(block)));
+                    i += codeBlockSource.length();
+                }
+                buffer.delete(0, buffer.length());
+            } else {
+                String instructionSource = readUntilInsnEnd(chars, i);
+                buffer.delete(0, buffer.length());
+                instructions.add(compileSingleInstruction(instructionSource));
+            }
+        }
+        instructions.add(Collections.singletonList(new WeacLabelInsn(currentBlock.getEnd())));
+        return currentBlock;
+    }
+
+    private int handleBuiltinMethod(String bufferContent, char[] chars, int index, List<List<WeacPrecompiledInsn>> instructions, WeacCodeBlock codeBlock, WeacCodeBlock previousBlock) {
+        String name = bufferContent.replace(" ", "");
+        int start = index;
+        switch (name) {
+            case "if":
+                index++;
+                String args = readArguments(chars, index);
+                String condition = readSingleArgument(args, 0, false);
+                List<WeacPrecompiledInsn> insns = precompileExpression(condition);
+
+                index += args.length()+1;
+                index += readUntilNot(chars, index).length();
+                // read code
+                if(chars[index] == '{') {
+                    index++;
+                    String codeBlockSource = readCodeblock(chars, index);
+                    index += codeBlockSource.length()+1;
+
+                    insns.add(new WeacLabelInsn());
+
+                    WeacCodeBlock conditionalBlock = compileCodeBlock(codeBlockSource);
+                    insns.add(new WeacBlockInsn(conditionalBlock));
+
+                    insns.add(new WeacIfNotJumpInsn(conditionalBlock.getEnd()));
+                } else {
+                    newError("Invalid code block after if conditional", -1);
+                }
+                return index-start;
+        }
+        return 0;
+    }
+
+    private List<WeacPrecompiledInsn> compileSingleInstruction(String instructionSource) {
+        List<WeacPrecompiledInsn> instruction = new LinkedList<>();
+
+        return instruction;
+    }
+
     private List<WeacPrecompiledField> precompileFields(List<WeacParsedField> fields) {
-        return Collections.emptyList();
+        List<WeacPrecompiledField> finalFields = new LinkedList<>();
+        for(WeacParsedField f : fields) {
+            WeacPrecompiledField precompiledField = new WeacPrecompiledField();
+            precompiledField.access = f.access;
+            precompiledField.name = f.name;
+            precompiledField.type = f.type;
+            precompiledField.defaultValue.addAll(precompileExpression(f.defaultValue));
+            finalFields.add(precompiledField);
+
+            precompiledField.annotations.addAll(f.annotations); // TODO: Handle arguments
+        }
+        return finalFields;
     }
 
     private List<WeacPrecompiledEnumConstant> precompileEnumConstants(List<String> enumConstants) {
@@ -92,6 +216,9 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     }
 
     public List<WeacPrecompiledInsn> precompileExpression(String expression) {
+        if(expression == null) {
+            return Collections.emptyList();
+        }
         List<WeacPrecompiledInsn> insns = new LinkedList<>();
         char[] chars = expression.toCharArray();
         List<WeacToken> tokens = new LinkedList<>();
@@ -188,14 +315,34 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                 case DEFINE_ARRAY:
                     int length = Integer.parseInt(token.getContent());
-                    insns.add(new WeacCreateArray(length, null));
+                    insns.add(new WeacCreateArray(length, "unknown"));
                     for(int i = 0;i<length;i++)
                         insns.add(new WeacStoreArray(length-i-1));
                     break;
 
             }
         }
-        return insns;
+
+        return postProcessInstructions(insns);
+    }
+
+    private List<WeacPrecompiledInsn> postProcessInstructions(List<WeacPrecompiledInsn> insns) {
+        List<WeacPrecompiledInsn> finalInstructions = new LinkedList<>();
+        for(int i = 0;i<insns.size();i++) {
+            boolean matchFound = false;
+            for(WeacInstructionPattern p : patterns) {
+                if(p.matches(insns, i)) {
+                    p.output(insns, i, finalInstructions);
+                    i += p.consumeCount(insns, i);
+                }
+            }
+
+            if(!matchFound) {
+                finalInstructions.add(insns.get(i));
+            }
+
+        }
+        return finalInstructions;
     }
 
     /**

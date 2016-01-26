@@ -4,7 +4,10 @@ import org.jglr.weac.WeacCompileUtils;
 import org.jglr.weac.parse.EnumClassTypes;
 import org.jglr.weac.precompile.structure.WeacPrecompiledClass;
 import org.jglr.weac.resolve.structure.WeacResolvedClass;
+import org.jglr.weac.resolve.structure.WeacResolvedField;
+import org.jglr.weac.resolve.structure.WeacResolvedMethod;
 import org.jglr.weac.resolve.structure.WeacResolvedSource;
+import org.jglr.weac.utils.WeacModifierType;
 import org.objectweb.asm.*;
 
 import java.util.HashMap;
@@ -23,7 +26,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
 
             String signature = null;
             String superclass = Type.getInternalName(Object.class);
-            if(clazz.classType != EnumClassTypes.INTERFACE) {
+            if(clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION) {
                superclass = toInternal(clazz.parents.getSuperclass());
             }
             writer.visit(V1_8, convertAccessToASM(clazz), internalName, signature, superclass, convertToASM(clazz.parents.getInterfaces()));
@@ -35,11 +38,53 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             }
 
             writeStaticBlock(writer, type, clazz);
+
+            writeFields(writer, type, clazz);
+
+            writeMethods(writer, type, clazz);
             writer.visitEnd();
 
             compiledClasses.put(clazz.fullName, writer.toByteArray());
         }
         return compiledClasses;
+    }
+
+    private void writeMethods(ClassWriter writer, Type type, WeacResolvedClass clazz) {
+        for(WeacResolvedMethod method : clazz.methods) {
+            Type returnType = Type.getType(toDescriptor(toInternal(method.returnType.getIdentifier().getId())));
+            Type methodType = Type.getMethodType(returnType);
+            MethodVisitor mv = writer.visitMethod(getAccess(method.access), method.name.getId(), methodType.getDescriptor(), null, null);
+            mv.visitCode();
+            mv.visitInsn(RETURN);
+            mv.visitMaxs(0,0);
+            mv.visitEnd();
+        }
+    }
+
+    private void writeFields(ClassWriter writer, Type type, WeacResolvedClass clazz) {
+        for(WeacResolvedField field : clazz.fields) {
+            String desc = toDescriptor(toInternal(field.type.getIdentifier().getId()));
+            int acc = getAccess(field.access);
+            writer.visitField(acc, field.name.getId(), desc, null, null);
+        }
+    }
+
+    private int getAccess(WeacModifierType access) {
+        int acc = 0;
+        switch (access) {
+            case PRIVATE:
+                acc = ACC_PRIVATE;
+                break;
+
+            case PROTECTED:
+                acc = ACC_PROTECTED;
+                break;
+
+            case PUBLIC:
+                acc = ACC_PUBLIC;
+                break;
+        }
+        return acc;
     }
 
     private void writeGetter(ClassWriter writer, boolean isStatic, Type owner, Type fieldType, String fieldName) {
@@ -95,6 +140,10 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
         return fullName.replace(".", "/");
     }
 
+    private String toDescriptor(String internalName) {
+        return "L"+internalName+";";
+    }
+
     private int convertAccessToASM(WeacResolvedClass clazz) {
         int access;
         int type = 0;
@@ -119,7 +168,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
 
         switch (clazz.classType) {
             case ANNOTATION:
-                type = ACC_ANNOTATION;
+                type = ACC_ANNOTATION + ACC_INTERFACE;
                 break;
 
             case INTERFACE:

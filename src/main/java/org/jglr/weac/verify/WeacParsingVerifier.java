@@ -1,6 +1,7 @@
 package org.jglr.weac.verify;
 
 import org.jglr.weac.WeacCompilePhase;
+import org.jglr.weac.parse.EnumClassTypes;
 import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
@@ -23,6 +24,19 @@ public class WeacParsingVerifier extends WeacCompilePhase<WeacParsedSource, Weac
 
         for (WeacParsedMethod method : parsedClass.methods) {
             verifyValidName(method.name.getId(), method.startingLine);
+        }
+
+        if(parsedClass.classType == EnumClassTypes.OBJECT) {
+            parsedClass.methods.stream()
+                    .filter(method -> method.isConstructor)
+                    .filter(method -> !method.argumentNames.isEmpty())
+                    .forEach(method -> newError(method.name+": constructors in object must not have arguments", -1));
+        }
+
+        if(parsedClass.classType == EnumClassTypes.STRUCT) {
+            parsedClass.methods.stream()
+                    .filter(method -> !method.isConstructor)
+                    .forEach(method -> newError(method.name+": methods are not allowed in structs", -1));
         }
     }
 

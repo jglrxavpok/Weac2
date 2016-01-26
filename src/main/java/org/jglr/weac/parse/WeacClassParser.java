@@ -227,57 +227,10 @@ public class WeacClassParser extends WeacCompileUtils {
             method.methodSource = "";
             method.off = i - start;
         } else {
-            StringBuilder methodSource = new StringBuilder();
-            int codeStart = i+readUntil(chars, i, '{').length()+1;
-            codeStart+=readUntilNot(chars, codeStart, '\n').length();
-            int unclosedBrackets = 1;
-            boolean inString = false;
-            boolean inQuote = false;
-            boolean escaped = false;
-            int j = codeStart;
-            bracketLoop: for(;j<chars.length;j++) {
-                char c = chars[j];
-                boolean append = true;
-                switch (c) {
-                    case '{':
-                        unclosedBrackets++;
-                        break;
-
-                    case '}':
-                        unclosedBrackets--;
-                        if(unclosedBrackets == 0) {
-                            break bracketLoop;
-                        }
-                        break;
-
-                    case '"':
-                        if(!inQuote && !escaped)
-                            inString = !inString;
-                        if(escaped)
-                            escaped = false;
-                        break;
-
-                    case '\'':
-                        if(!inString && !escaped)
-                            inQuote = !inQuote;
-                        if(escaped)
-                            escaped = false;
-                        break;
-
-                    case '\\':
-                        if(!escaped) {
-                            append = false;
-                            escaped = true;
-                        }
-                        else
-                            escaped = false;
-                        break;
-                }
-                if(append)
-                    methodSource.append(c);
-            }
-            method.methodSource = methodSource.toString();
-            method.off = (j+1) - start;
+            int codeStart = i + readUntil(chars, i, '{').length()+1;
+            codeStart += readUntilNot(chars, codeStart, '\n').length();
+            method.methodSource = readCodeblock(chars, codeStart);
+            method.off = (method.methodSource.length()+1+codeStart)-start;
         }
         return method;
     }

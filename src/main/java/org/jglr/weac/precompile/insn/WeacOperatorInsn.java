@@ -19,4 +19,9 @@ public class WeacOperatorInsn extends WeacPrecompiledInsn {
     public EnumOperators getOperator() {
         return operator;
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + " "+ getOperator().name();
+    }
 }

@@ -2,7 +2,7 @@ package tests
 
 object HelloWorld > Application {
 
-    void main(String[] args) {
+    Void main(String[] args) {
         Console.println("Hello World!");
     }
 }

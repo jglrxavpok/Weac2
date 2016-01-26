@@ -11,4 +11,9 @@ public class WeacStoreArray extends WeacPrecompiledInsn {
     public int getIndex() {
         return index;
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + " "+index;
+    }
 }

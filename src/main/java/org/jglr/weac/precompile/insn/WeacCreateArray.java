@@ -17,4 +17,9 @@ public class WeacCreateArray extends WeacPrecompiledInsn {
     public int getLength() {
         return length;
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + ' ' + length+" ("+type+")";
+    }
 }

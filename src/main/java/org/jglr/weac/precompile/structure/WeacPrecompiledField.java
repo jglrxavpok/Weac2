@@ -5,6 +5,7 @@ import org.jglr.weac.utils.Identifier;
 import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -25,13 +26,18 @@ public class WeacPrecompiledField {
     /**
      * The default value of this field. Not yet resolved
      */
-    public List<WeacPrecompiledInsn> defaultValue;
+    public final List<WeacPrecompiledInsn> defaultValue;
 
     /**
      * The access modifier of this field
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
 
-    public List<WeacAnnotation> annotations;
+    public final List<WeacAnnotation> annotations;
+
+    public WeacPrecompiledField() {
+        annotations = new LinkedList<>();
+        defaultValue = new LinkedList<>();
+    }
 
 }

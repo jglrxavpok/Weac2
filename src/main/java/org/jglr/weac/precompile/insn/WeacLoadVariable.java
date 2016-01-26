@@ -11,4 +11,9 @@ public class WeacLoadVariable extends WeacPrecompiledInsn implements Opcodes {
     public String getName() {
         return name;
     }
+
+    @Override
+    public String toString() {
+        return super.toString()+" "+name;
+    }
 }

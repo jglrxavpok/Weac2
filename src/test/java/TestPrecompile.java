@@ -36,7 +36,7 @@ public class TestPrecompile extends Tests {
     private void precompile(WeacPreCompiler preCompiler, String s) {
         System.out.println("[=== START OF PRECOMPILE OF \""+s+"\" ===]");
         List<WeacPrecompiledInsn> insns = preCompiler.precompileExpression(s);
-        insns.forEach(i -> System.out.println(Opcodes.getName(i.getOpcode())));
+        insns.forEach(System.out::println);
         System.out.println("[=== END ===]");
     }
 }

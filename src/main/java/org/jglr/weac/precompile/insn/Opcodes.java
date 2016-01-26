@@ -17,7 +17,9 @@ public interface Opcodes {
             RETURN = 0x09,
             LOAD_STRING_CONSTANT = 0x0A,
             LOAD_CHARACTER_CONSTANT = 0x0B,
-            STORE_ARRAY = 0x0C
+            STORE_ARRAY = 0x0C,
+            JUMP_IF_NOT_TRUE = 0x0D,
+            LABEL = 0x0E
     ;
 
     HashMap<Integer, String> names = new HashMap<>();

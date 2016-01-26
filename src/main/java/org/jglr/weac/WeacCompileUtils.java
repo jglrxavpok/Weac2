@@ -290,4 +290,55 @@ public abstract class WeacCompileUtils {
         }
         return builder.toString();
     }
+
+    protected String readCodeblock(char[] chars, int codeStart) {
+        StringBuilder methodSource = new StringBuilder();
+        int unclosedBrackets = 1;
+        boolean inString = false;
+        boolean inQuote = false;
+        boolean escaped = false;
+        int j = codeStart;
+        bracketLoop: for(;j<chars.length;j++) {
+            char c = chars[j];
+            boolean append = true;
+            switch (c) {
+                case '{':
+                    unclosedBrackets++;
+                    break;
+
+                case '}':
+                    unclosedBrackets--;
+                    if(unclosedBrackets == 0) {
+                        break bracketLoop;
+                    }
+                    break;
+
+                case '"':
+                    if(!inQuote && !escaped)
+                        inString = !inString;
+                    if(escaped)
+                        escaped = false;
+                    break;
+
+                case '\'':
+                    if(!inString && !escaped)
+                        inQuote = !inQuote;
+                    if(escaped)
+                        escaped = false;
+                    break;
+
+                case '\\':
+                    if(!escaped) {
+                        append = false;
+                        escaped = true;
+                    }
+                    else
+                        escaped = false;
+                    break;
+            }
+            if(append)
+                methodSource.append(c);
+        }
+        return methodSource.toString();
+    }
 }

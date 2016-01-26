@@ -11,4 +11,9 @@ public class WeacPrecompiledInsn implements Opcodes {
     public int getOpcode() {
         return opcode;
     }
+
+    @Override
+    public String toString() {
+        return Opcodes.getName(opcode);
+    }
 }

@@ -11,4 +11,9 @@ public class WeacLoadNumberConstant extends WeacPrecompiledInsn implements Opcod
     public String getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return super.toString()+" "+value;
+    }
 }

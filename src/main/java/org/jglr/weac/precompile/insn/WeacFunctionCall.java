@@ -23,4 +23,9 @@ public class WeacFunctionCall extends WeacPrecompiledInsn {
     public String getName() {
         return name;
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + " "+name+", "+argCount+" arguments, shouldLookForInstance="+lookForInstance;
+    }
 }
