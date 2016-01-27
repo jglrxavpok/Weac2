@@ -32,5 +32,5 @@ public enum EnumClassTypes {
     /**
      * An annotation
      */
-    ANNOTATION
+    ANNOTATION,
 }

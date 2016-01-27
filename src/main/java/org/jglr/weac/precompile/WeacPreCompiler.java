@@ -266,9 +266,24 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             if(token.getType() == WeacTokenType.LITERAL && !iterator.hasNext()) {
                 token.setType(WeacTokenType.VARIABLE);
             }
+
             previous = token;
         }
         List<WeacToken> output = convertToRPN(expression, tokens);
+        output.forEach(t -> {
+            if(t.getType() == WeacTokenType.VARIABLE || t.getType() == WeacTokenType.LITERAL) {
+                switch (t.getContent()) {
+                    case "true":
+                    case "false":
+                        t.setType(WeacTokenType.BOOLEAN);
+                        break;
+
+                    case "this":
+                        t.setType(WeacTokenType.THIS);
+                        break;
+                }
+            }
+        });
 
         for(WeacToken token : output) {
             System.out.print(token.getType().name()+"("+token.getContent()+") ");
@@ -283,6 +298,10 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             switch (token.getType()) {
                 case NUMBER:
                     insns.add(new WeacLoadNumberConstant(token.getContent()));
+                    break;
+
+                case BOOLEAN:
+                    insns.add(new WeacLoadBooleanConstant(Boolean.parseBoolean(token.getContent())));
                     break;
 
                 case STRING:

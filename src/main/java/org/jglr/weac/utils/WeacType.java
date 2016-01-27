@@ -2,7 +2,7 @@ package org.jglr.weac.utils;
 
 public class WeacType {
 
-    public static final WeacType VOID_TYPE = new WeacType("void");
+    public static final WeacType VOID_TYPE = new WeacType("void", false);
     private final Identifier identifier;
     private boolean isArray;
     private boolean isValid;
@@ -12,8 +12,8 @@ public class WeacType {
     private WeacType arrayType;
     private final WeacType coreType;
 
-    public WeacType(String id) {
-        this(new Identifier(id));
+    public WeacType(String id, boolean fullName) {
+        this(new Identifier(id, fullName));
     }
 
     public WeacType(Identifier identifier) {
@@ -24,23 +24,24 @@ public class WeacType {
             if(id.endsWith("*")) {
                 isPointer = true;
                 id = id.substring(0, id.length()-1); // removes the '*' from the id
-                pointerType = new WeacType(id);
+                pointerType = new WeacType(id, true);
                 coreType = pointerType.getCoreType();
             } else if(id.endsWith("[]")) {
                 isArray = true;
                 id = id.substring(0, id.length()-2); // removes the '[]' from the id
-                arrayType = new WeacType(id);
+                arrayType = new WeacType(id, true);
                 coreType = arrayType.getCoreType();
             } else {
                 coreType = this;
             }
+
             if(id.contains("<")) {
                 int countLeft = count(id, '<');
                 int countRight = count(id, '>');
                 if(countLeft != countRight) { // unmatched
                     isValid = false;
                 } else {
-                    genericParameter = new WeacType(id.substring(id.indexOf('<')+1, id.lastIndexOf('>')));
+                    genericParameter = new WeacType(id.substring(id.indexOf('<')+1, id.lastIndexOf('>')), true);
                 }
             } else if(id.contains(">")) { // unmatched
                 isValid = false;

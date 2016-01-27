@@ -1,11 +1,11 @@
 package org.jglr.weac.precompile.patterns;
 
-import org.jglr.weac.precompile.insn.Opcodes;
+import org.jglr.weac.precompile.insn.PrecompileOpcodes;
 import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
 
 import java.util.List;
 
-public abstract class WeacInstructionPattern implements Opcodes {
+public abstract class WeacInstructionPattern implements PrecompileOpcodes {
 
     public abstract int[] getOpcodes();
 

@@ -1,8 +1,6 @@
 package org.jglr.weac.resolve.insn;
 
-import org.jglr.weac.precompile.insn.Opcodes;
-
-public class WeacResolvedInsn implements Opcodes {
+public class WeacResolvedInsn implements ResolveOpcodes {
 
     private final int opcode;
 
@@ -12,5 +10,10 @@ public class WeacResolvedInsn implements Opcodes {
 
     public int getOpcode() {
         return opcode;
+    }
+
+    @Override
+    public String toString() {
+        return ResolveOpcodes.getName(opcode);
     }
 }

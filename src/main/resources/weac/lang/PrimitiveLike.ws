@@ -1,13 +1,7 @@
 package weac.lang
 
 annotation PrimitiveLike {
-    private String primitiveType;
 
-    public PrimitiveLike(String primitiveType) {
-        this.primitiveType = primitiveType;
-    }
+    String value();
 
-    public String getPrimitiveType() {
-        return primitiveType;
-    }
 }

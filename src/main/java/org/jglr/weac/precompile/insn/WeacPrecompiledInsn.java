@@ -1,6 +1,6 @@
 package org.jglr.weac.precompile.insn;
 
-public class WeacPrecompiledInsn implements Opcodes {
+public class WeacPrecompiledInsn implements PrecompileOpcodes {
 
     private final int opcode;
 
@@ -14,6 +14,6 @@ public class WeacPrecompiledInsn implements Opcodes {
 
     @Override
     public String toString() {
-        return Opcodes.getName(opcode);
+        return PrecompileOpcodes.getName(opcode);
     }
 }

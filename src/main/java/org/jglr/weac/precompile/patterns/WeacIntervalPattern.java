@@ -1,6 +1,6 @@
 package org.jglr.weac.precompile.patterns;
 
-import org.jglr.weac.precompile.insn.Opcodes;
+import org.jglr.weac.precompile.insn.PrecompileOpcodes;
 import org.jglr.weac.precompile.insn.WeacOperatorInsn;
 import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
 import org.jglr.weac.utils.EnumOperators;
@@ -34,7 +34,7 @@ public class WeacIntervalPattern extends WeacInstructionPattern {
         int start = index;
         index += 2;
         for(;index < insns.size();index++) {
-            if(insns.get(index).getOpcode() != Opcodes.STORE_ARRAY)
+            if(insns.get(index).getOpcode() != PrecompileOpcodes.STORE_ARRAY)
                 break;
         }
         return index-start;

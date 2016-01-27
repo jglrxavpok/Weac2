@@ -27,6 +27,8 @@ public enum WeacTokenType {
     // Those three are created from the LITERAL value after analysing their context (parenthesis after it or not)
     VARIABLE,
     FUNCTION,
+    BOOLEAN,
+    THIS,
     TYPE,
 
     // Those two are created from the OPERATOR value after analysing their context (parenthesis before/after it or not)

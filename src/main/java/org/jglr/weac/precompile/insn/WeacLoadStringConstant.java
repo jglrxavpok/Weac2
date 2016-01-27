@@ -1,6 +1,6 @@
 package org.jglr.weac.precompile.insn;
 
-public class WeacLoadStringConstant extends WeacPrecompiledInsn implements Opcodes {
+public class WeacLoadStringConstant extends WeacPrecompiledInsn implements PrecompileOpcodes {
     private final String value;
 
     public WeacLoadStringConstant(String content) {

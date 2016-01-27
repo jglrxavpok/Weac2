@@ -22,6 +22,7 @@ public class Identifier {
     public static final Identifier INVALID = new Identifier("");
 
     public static final Identifier VOID = new Identifier("Void");
+    private final boolean fullName;
 
     /**
      * Creates a new instance of {@link Identifier}
@@ -29,7 +30,12 @@ public class Identifier {
      *          The raw id
      */
     public Identifier(String id) {
+        this(id, false);
+    }
+
+    public Identifier(String id, boolean fullName) {
         this.id = id;
+        this.fullName = fullName;
     }
 
     @Override
@@ -43,7 +49,7 @@ public class Identifier {
      *          <code>true</code> if this identifier is a valid one, <code>false</code> otherwise
      */
     public boolean isValid() {
-        return isValid(id);
+        return isValid(id, fullName);
     }
 
     /**
@@ -52,6 +58,10 @@ public class Identifier {
      *          <code>true</code> if the identifier is a valid one, <code>false</code> otherwise
      */
     public static boolean isValid(String potientialID) {
+        return isValid(potientialID, false);
+    }
+
+    public static boolean isValid(String potientialID, boolean fullName) {
         for(Keywords w : Keywords.values()) {
            if(w.toString().toLowerCase().equals(potientialID)) {
                return false;
@@ -59,20 +69,25 @@ public class Identifier {
         }
         if(potientialID.isEmpty())
             return false;
-        if(!Character.isJavaIdentifierStart(potientialID.charAt(0)))
+        if(!Character.isJavaIdentifierStart(potientialID.charAt(0))) {
             return false;
+        }
         for(int i = 1;i<potientialID.length();i++) {
             char c = potientialID.charAt(i);
-            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c))
+            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c, fullName)) {
                 return false;
+            }
         }
         return true;
     }
 
-    public static boolean isAllowedCharacter(char c) {
+    public static boolean isAllowedCharacter(char c, boolean fullName) {
+        if(c == '.' && fullName)
+            return true;
         for(char allowed : allowedCharacters) {
-            if(c == allowed)
+            if(c == allowed) {
                 return true;
+            }
         }
         return false;
     }
@@ -97,7 +112,7 @@ public class Identifier {
         builder.append(chars[start]);
         for(int i = start+1;i<chars.length;i++) {
             char c = chars[i];
-            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c)) {
+            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c, false)) {
                 break;
             }
             builder.append(c);

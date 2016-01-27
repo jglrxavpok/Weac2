@@ -1,5 +1,4 @@
 import org.jglr.weac.precompile.WeacPreCompiler;
-import org.jglr.weac.precompile.insn.Opcodes;
 import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
 import org.junit.Test;
 

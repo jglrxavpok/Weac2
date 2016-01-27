@@ -3,14 +3,18 @@ package org.jglr.weac.compile;
 import org.jglr.weac.WeacCompileUtils;
 import org.jglr.weac.parse.EnumClassTypes;
 import org.jglr.weac.precompile.structure.WeacPrecompiledClass;
+import org.jglr.weac.resolve.insn.*;
 import org.jglr.weac.resolve.structure.WeacResolvedClass;
 import org.jglr.weac.resolve.structure.WeacResolvedField;
 import org.jglr.weac.resolve.structure.WeacResolvedMethod;
 import org.jglr.weac.resolve.structure.WeacResolvedSource;
+import org.jglr.weac.utils.Identifier;
 import org.jglr.weac.utils.WeacModifierType;
+import org.jglr.weac.utils.WeacType;
 import org.objectweb.asm.*;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +30,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
 
             String signature = null;
             String superclass = Type.getInternalName(Object.class);
-            if(clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION) {
+            if(clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION && !clazz.isMixin) {
                superclass = toInternal(clazz.parents.getSuperclass());
             }
             writer.visit(V1_8, convertAccessToASM(clazz), internalName, signature, superclass, convertToASM(clazz.parents.getInterfaces()));
@@ -50,20 +54,115 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
     }
 
     private void writeMethods(ClassWriter writer, Type type, WeacResolvedClass clazz) {
+        int nConstructors = 0;
         for(WeacResolvedMethod method : clazz.methods) {
-            Type returnType = Type.getType(toDescriptor(toInternal(method.returnType.getIdentifier().getId())));
-            Type methodType = Type.getMethodType(returnType);
-            MethodVisitor mv = writer.visitMethod(getAccess(method.access), method.name.getId(), methodType.getDescriptor(), null, null);
-            mv.visitCode();
+            Type returnType = toJVMType(method.returnType);
+            Type methodType;
+            String name;
+            List<Type> argTypes = new LinkedList<>();
+            method.argumentTypes.stream()
+                    .map(this::toJVMType)
+                    .forEach(argTypes::add);
+            Type[] args = argTypes.toArray(new Type[argTypes.size()]);
+            if(method.isConstructor) {
+                name = "<init>";
+                methodType = Type.getMethodType(Type.VOID_TYPE, args);
+            } else {
+                methodType = Type.getMethodType(returnType, args);
+                name = method.name.getId();
+            }
+            MethodVisitor mv = writer.visitMethod(getAccess(method.access), name, methodType.getDescriptor(), null, null);
+            Label start = new Label();
+            Label end = new Label();
+
+            if(!method.isAbstract)
+                mv.visitCode();
+
+
+            int localIndex = 0;
+            localIndex++; // 'this'
+            List<Identifier> argumentNames = method.argumentNames;
+            for (int i = 0; i < argumentNames.size(); i++) {
+                Identifier argName = argumentNames.get(i);
+                Type argType = argTypes.get(i);
+                System.out.println("new local: "+argType.getClassName()+" "+argName);
+                mv.visitParameter(argName.getId(), ACC_FINAL);
+                mv.visitLocalVariable(argName.getId(), argType.getDescriptor(), null, new Label(), new Label(), localIndex++);
+            }
+            mv.visitLabel(start);
+            if(!method.isAbstract && method.isConstructor) {
+                clazz.fields.stream()
+                        .filter(f -> !f.defaultValue.isEmpty())
+                        .forEach(f -> {
+                            mv.visitLabel(new Label());
+                            mv.visitVarInsn(ALOAD, 0);
+                            this.compileSingleExpression(mv, f.defaultValue);
+                            mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
+                        });
+                nConstructors++;
+            }
             mv.visitInsn(RETURN);
+            mv.visitLabel(end);
+            mv.visitMaxs(0,0);
+            mv.visitEnd();
+        }
+        if(nConstructors == 0) {
+            MethodVisitor mv = writer.visitMethod(ACC_PRIVATE, "<init>", Type.getMethodType(Type.VOID_TYPE).getDescriptor(), null, null);
+            Label start = new Label();
+            Label end = new Label();
+
+            mv.visitCode();
+
+            int localIndex = 1; // 'this'
+            mv.visitLabel(start);
+            clazz.fields.stream()
+                    .filter(f -> !f.defaultValue.isEmpty())
+                    .forEach(f -> {
+                        mv.visitLabel(new Label());
+                        mv.visitVarInsn(ALOAD, 0);
+                        this.compileSingleExpression(mv, f.defaultValue);
+                        mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
+                    });
+            mv.visitInsn(RETURN);
+            mv.visitLabel(end);
             mv.visitMaxs(0,0);
             mv.visitEnd();
         }
     }
 
+    private void compileSingleExpression(MethodVisitor writer, List<WeacResolvedInsn> l) {
+        for (int i = 0; i < l.size(); i++) {
+            WeacResolvedInsn insn = l.get(i);
+            if(insn instanceof WeacLoadByteInsn) {
+                byte n = ((WeacLoadByteInsn) insn).getNumber();
+                writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadDoubleInsn) {
+                double n = ((WeacLoadDoubleInsn) insn).getNumber();
+                writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadFloatInsn) {
+                float n = ((WeacLoadFloatInsn) insn).getNumber();
+                writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadIntInsn) {
+                int n = ((WeacLoadIntInsn) insn).getNumber();
+                writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadLongInsn) {
+                long n = ((WeacLoadLongInsn) insn).getNumber();
+                writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadShortInsn) {
+                short n = ((WeacLoadShortInsn) insn).getNumber();
+                writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadBooleanInsn) {
+                boolean b = ((WeacLoadBooleanInsn) insn).getValue();
+                writer.visitInsn(b ? ICONST_1 : ICONST_0);
+            } else {
+                System.err.println("unknown: "+insn);
+            }
+        }
+    }
+
     private void writeFields(ClassWriter writer, Type type, WeacResolvedClass clazz) {
         for(WeacResolvedField field : clazz.fields) {
-            String desc = toDescriptor(toInternal(field.type.getIdentifier().getId()));
+            String desc = toJVMType(field.type).getDescriptor();
             int acc = getAccess(field.access);
             writer.visitField(acc, field.name.getId(), desc, null, null);
         }
@@ -136,12 +235,26 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
         return interfaceArray;
     }
 
-    private String toInternal(String fullName) {
-        return fullName.replace(".", "/");
+    private Type toJVMType(WeacType type) {
+        return Type.getType(toDescriptor(type));
     }
 
-    private String toDescriptor(String internalName) {
-        return "L"+internalName+";";
+    private String toDescriptor(WeacType type) {
+        if(type.equals(WeacType.VOID_TYPE)) {
+            return "V";
+        }
+        StringBuilder builder = new StringBuilder();
+        if(type.isArray()) {
+            builder.append("[");
+            builder.append(toDescriptor(type.getArrayType()));
+        } else {
+            builder.append("L").append(type.getIdentifier().getId()).append(";");
+        }
+        return builder.toString().replace(".", "/");
+    }
+
+    private String toInternal(String fullName) {
+        return fullName.replace(".", "/");
     }
 
     private int convertAccessToASM(WeacResolvedClass clazz) {
@@ -191,6 +304,10 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
 
         if(clazz.isAbstract) {
             abstractness = ACC_ABSTRACT;
+        }
+
+        if(clazz.isMixin) {
+            type = ACC_INTERFACE;
         }
 
         return access | type | abstractness;

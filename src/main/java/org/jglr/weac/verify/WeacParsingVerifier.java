@@ -38,6 +38,12 @@ public class WeacParsingVerifier extends WeacCompilePhase<WeacParsedSource, Weac
                     .filter(method -> !method.isConstructor)
                     .forEach(method -> newError(method.name+": methods are not allowed in structs", -1));
         }
+
+        if(parsedClass.isMixin) {
+            if(!parsedClass.fields.isEmpty()) {
+                newError("Mixins can not define fields", parsedClass.startingLine); // TODO: maybe add a workaround
+            }
+        }
     }
 
     private void verifyValidName(String name, int line) {

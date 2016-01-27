@@ -111,6 +111,7 @@ public class WeacClassParser extends WeacCompileUtils {
                     WeacParsedMethod function = readFunction(chars, i, parsedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
                     function.annotations = annotations;
                     function.startingLine = lineIndex+startingLine;
+                    function.isConstructor = true;
                     parsedClass.methods.add(function);
                     i += function.off;
 

@@ -138,6 +138,7 @@ public abstract class WeacCompileUtils {
                     WeacAnnotation annotation = new WeacAnnotation(token.substring(1));
                     out.add(new AnnotationModifier(WeacModifierType.ANNOTATION, annotation));
                     isValidToken = true;
+                    // TODO: read arguments
                 }
             }
             if(isValidToken)
