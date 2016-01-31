@@ -1,17 +1,13 @@
 package org.jglr.weac.precompile;
 
 import org.jglr.weac.WeacCompilePhase;
-import org.jglr.weac.parse.structure.WeacParsedClass;
-import org.jglr.weac.parse.structure.WeacParsedField;
-import org.jglr.weac.parse.structure.WeacParsedMethod;
-import org.jglr.weac.parse.structure.WeacParsedSource;
+import org.jglr.weac.parse.structure.*;
+import org.jglr.weac.patterns.WeacInstructionPattern;
 import org.jglr.weac.precompile.insn.*;
-import org.jglr.weac.precompile.patterns.WeacInstructionPattern;
 import org.jglr.weac.precompile.patterns.WeacIntervalPattern;
 import org.jglr.weac.precompile.structure.*;
 import org.jglr.weac.utils.EnumOperators;
 import org.jglr.weac.utils.Identifier;
-import org.jglr.weac.utils.WeacType;
 
 import java.util.*;
 
@@ -48,7 +44,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     private WeacPrecompiledClass precompile(WeacParsedClass c) {
         WeacPrecompiledClass clazz = new WeacPrecompiledClass();
         clazz.access = c.access;
-        clazz.annotations.addAll(c.annotations);
+        clazz.annotations.addAll(precompileAnnotations(c.annotations));
         clazz.classType = c.classType;
         clazz.enumConstants.addAll(precompileEnumConstants(c.enumConstants));
         clazz.fields.addAll(precompileFields(c.fields));
@@ -59,9 +55,24 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         clazz.motherClass = c.motherClass;
         clazz.name = c.name;
         clazz.packageName = c.packageName;
+        clazz.isCompilerSpecial = c.isCompilerSpecial;
 
         clazz.fullName = c.packageName == null || c.packageName.isEmpty() ? c.name : c.packageName+"."+c.name;
         return clazz;
+    }
+
+    private List<WeacPrecompiledAnnotation> precompileAnnotations(List<WeacParsedAnnotation> annotations) {
+        List<WeacPrecompiledAnnotation> precompiledAnnotations = new LinkedList<>();
+        for(WeacParsedAnnotation a : annotations) {
+            WeacPrecompiledAnnotation precompiled = new WeacPrecompiledAnnotation(a.getName());
+            a.getArgs().stream()
+                    .map(this::precompileExpression)
+                    .forEach(precompiled.getArgs()::add);
+
+            System.err.println("<<< 45 "+precompiled.getName()+" / "+ Arrays.toString(precompiled.args.toArray()));
+            precompiledAnnotations.add(precompiled);
+        }
+        return precompiledAnnotations;
     }
 
     private List<WeacPrecompiledMethod> precompileMethods(List<WeacParsedMethod> methods) {
@@ -82,14 +93,15 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         method.name = parsedMethod.name;
         method.returnType = parsedMethod.returnType;
 
-        method.annotations.addAll(parsedMethod.annotations); // TODO: Handle arguments
+        method.isCompilerSpecial = parsedMethod.isCompilerSpecial;
+        method.annotations.addAll(precompileAnnotations(parsedMethod.annotations));
 
         method.instructions.addAll(flatten(compileCodeBlock(parsedMethod.methodSource)));
 
         return method;
     }
 
-    private List<List<WeacPrecompiledInsn>> flatten(WeacCodeBlock weacCodeBlock) {
+    private List<WeacPrecompiledInsn> flatten(WeacCodeBlock weacCodeBlock) {
 
         return Collections.emptyList();
     }
@@ -179,10 +191,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             precompiledField.access = f.access;
             precompiledField.name = f.name;
             precompiledField.type = f.type;
+            precompiledField.isCompilerSpecial = f.isCompilerSpecial;
             precompiledField.defaultValue.addAll(precompileExpression(f.defaultValue));
             finalFields.add(precompiledField);
 
-            precompiledField.annotations.addAll(f.annotations); // TODO: Handle arguments
+            precompiledField.annotations.addAll(precompileAnnotations(f.annotations));
         }
         return finalFields;
     }

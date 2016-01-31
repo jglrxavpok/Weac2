@@ -1,5 +1,6 @@
 package weac.lang
 
-class Double {
+@PrimitiveLike("double")
+class Double > Number {
 
 }

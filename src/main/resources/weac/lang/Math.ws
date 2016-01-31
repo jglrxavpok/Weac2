@@ -24,4 +24,8 @@ object Math {
         return value % 1 == 0;
     }
 
+    Int fact(Int number) {
+
+    }
+
 }

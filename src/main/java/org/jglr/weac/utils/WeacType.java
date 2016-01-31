@@ -3,6 +3,12 @@ package org.jglr.weac.utils;
 public class WeacType {
 
     public static final WeacType VOID_TYPE = new WeacType("void", false);
+    public static final WeacType BOOLEAN_TYPE = new WeacType("weac.lang.Boolean", true);
+    public static final WeacType DOUBLE_TYPE = new WeacType("weac.lang.Double", true);
+    public static final WeacType FLOAT_TYPE = new WeacType("weac.lang.Float", true);
+    public static final WeacType INTEGER_TYPE = new WeacType("weac.lang.Int", true);
+    public static final WeacType LONG_TYPE = new WeacType("weac.lang.Long", true);
+    public static final WeacType SHORT_TYPE = new WeacType("weac.lang.Short", true);
     private final Identifier identifier;
     private boolean isArray;
     private boolean isValid;

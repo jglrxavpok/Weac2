@@ -1,5 +1,6 @@
 package weac.lang
 
-class Long {
+@PrimitiveLike("long")
+class Long > Number {
 
 }

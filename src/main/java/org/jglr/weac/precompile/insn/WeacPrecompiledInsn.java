@@ -1,6 +1,8 @@
 package org.jglr.weac.precompile.insn;
 
-public class WeacPrecompiledInsn implements PrecompileOpcodes {
+import org.jglr.weac.utils.WeacInsn;
+
+public class WeacPrecompiledInsn implements PrecompileOpcodes, WeacInsn {
 
     private final int opcode;
 

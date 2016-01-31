@@ -9,7 +9,7 @@ import java.util.List;
  */
 public class Identifier {
 
-    public static final char[] allowedCharacters = {'<', '>', '*', '[', ']'};
+    public static final char[] allowedCharacters = {'<', '>', '*', '[', ']', '_'};
 
     /**
      * The raw id
@@ -69,12 +69,12 @@ public class Identifier {
         }
         if(potientialID.isEmpty())
             return false;
-        if(!Character.isJavaIdentifierStart(potientialID.charAt(0))) {
+        if(!isIdentifierStart(potientialID.charAt(0))) {
             return false;
         }
         for(int i = 1;i<potientialID.length();i++) {
             char c = potientialID.charAt(i);
-            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c, fullName)) {
+            if(!isIdentifierPart(c, fullName)) {
                 return false;
             }
         }
@@ -106,18 +106,30 @@ public class Identifier {
      */
     public static Identifier read(char[] chars, int start) {
         StringBuilder builder = new StringBuilder();
-        if(!Character.isJavaIdentifierStart(chars[start])) {
+        if(!isIdentifierStart(chars[start])) {
             return INVALID;
         }
         builder.append(chars[start]);
         for(int i = start+1;i<chars.length;i++) {
             char c = chars[i];
-            if(!Character.isJavaIdentifierPart(c) && !isAllowedCharacter(c, false)) {
+            if(!isIdentifierPart(c)) {
                 break;
             }
             builder.append(c);
         }
         return new Identifier(builder.toString());
+    }
+
+    public static boolean isIdentifierStart(char c) {
+        return c == '_' || Character.isJavaIdentifierStart(c);
+    }
+
+    public static boolean isIdentifierPart(char c) {
+        return isIdentifierPart(c, false);
+    }
+
+    public static boolean isIdentifierPart(char c, boolean fullName) {
+        return Character.isJavaIdentifierStart(c)  || isAllowedCharacter(c, fullName) || (c >= '0' && c <= '9');
     }
 
     /**

@@ -45,6 +45,7 @@ public class WeaCC {
                     File[] children = standardLib.listFiles();
                     if(children != null) {
                         Collections.addAll(toCompile, children);
+                        System.out.println("Compiling standard lib: "+Arrays.toString(children));
                         String[] sources = read(toCompile, (String) options.valueOf("encoding"));
                         monolith.compile(sources);
                     } else {

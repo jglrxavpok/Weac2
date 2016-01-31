@@ -82,7 +82,7 @@ public class WeacPreProcessor extends WeacCompilePhase<String, String> {
         if(end < 0)
             end = command.length();
         String actualCommand = command.substring(0, end);
-        switch (actualCommand) {// todo
+        switch (actualCommand) {
             case "ifdef": if(conditions.peek()) {
                 String valueToCheck = command.replace(command+" ", "");
                 boolean result = compilerDefinitions.containsKey(valueToCheck);

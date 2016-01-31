@@ -1,10 +1,12 @@
 package org.jglr.weac;
 
+import org.jglr.weac.parse.structure.WeacParsedAnnotation;
 import org.jglr.weac.utils.AnnotationModifier;
-import org.jglr.weac.utils.WeacAnnotation;
+import org.jglr.weac.utils.Identifier;
 import org.jglr.weac.utils.WeacModifier;
 import org.jglr.weac.utils.WeacModifierType;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public abstract class WeacCompileUtils {
@@ -119,7 +121,6 @@ public abstract class WeacCompileUtils {
      */
     protected int readModifiers(char[] chars, int offset, List<WeacModifier> out) {
         int start = offset;
-        System.out.println(readUntilNot(chars, start, ' ', '\n'));
         offset += readUntilNot(chars, start, ' ', '\n').length();
         boolean isValidToken = true;
         while(isValidToken) {
@@ -135,10 +136,31 @@ public abstract class WeacCompileUtils {
             }
             if(!isValidToken) {
                 if(token.startsWith("@")) {
-                    WeacAnnotation annotation = new WeacAnnotation(token.substring(1));
+                    String name = Identifier.read(chars, offset+1).getId();
+                    WeacParsedAnnotation annotation = new WeacParsedAnnotation(name);
                     out.add(new AnnotationModifier(WeacModifierType.ANNOTATION, annotation));
-                    isValidToken = true;
-                    // TODO: read arguments
+                    int nameEnd = offset + name.length();
+                    if(nameEnd < chars.length) {
+                        isValidToken = true;
+                        if(chars[nameEnd+1] == '(') { // We have arguments, yay!
+                            String args = readArguments(chars, nameEnd+1);
+                            List<String> argList = new LinkedList<>();
+                            String arg;
+                            int argumentOffset = 0;
+                            do {
+                                arg = readSingleArgument(args, argumentOffset, false);
+                                argumentOffset += arg.length()+1;
+                                if(!arg.isEmpty()) {
+                                    System.out.println("NEW ARG! "+arg+ "in "+args);
+                                    argList.add(arg);
+                                }
+                            } while(!arg.isEmpty());
+                            annotation.args.addAll(argList);
+                            offset = nameEnd + args.length()+1;
+                            offset += readUntil(chars, offset, ')').length()+1;
+                            continue;
+                        }
+                    }
                 }
             }
             if(isValidToken)
@@ -147,6 +169,14 @@ public abstract class WeacCompileUtils {
         return offset-start;
     }
 
+    /***
+     * Reads a single argument inside a list of arguments separated by comas
+     * @param constantList
+     *
+     * @param offset
+     * @param isSemiColonValidSeparator
+     * @return
+     */
     protected String readSingleArgument(String constantList, int offset, boolean isSemiColonValidSeparator) {
         StringBuilder builder = new StringBuilder();
         boolean inString = false;

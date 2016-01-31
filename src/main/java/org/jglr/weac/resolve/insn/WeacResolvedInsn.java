@@ -1,6 +1,8 @@
 package org.jglr.weac.resolve.insn;
 
-public class WeacResolvedInsn implements ResolveOpcodes {
+import org.jglr.weac.utils.WeacInsn;
+
+public class WeacResolvedInsn implements ResolveOpcodes, WeacInsn {
 
     private final int opcode;
 

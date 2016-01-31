@@ -1,5 +1,6 @@
 package weac.lang
 
-class Boolean {
+@PrimitiveLike("boolean")
+class Boolean > Number {
 
 }

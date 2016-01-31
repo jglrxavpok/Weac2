@@ -43,8 +43,12 @@ public class WeacCompileWorker implements Runnable {
                 FileOutputStream out = new FileOutputStream(file);
                 byte[] bytecode = classesBytecode.get(className);
                 if(/*debug*/true) {
-                    PrintWriter pw = new PrintWriter(System.out);
-                    CheckClassAdapter.verify(new ClassReader(bytecode), true, pw);
+                    try {
+                        PrintWriter pw = new PrintWriter(System.out);
+                        CheckClassAdapter.verify(new ClassReader(bytecode), true, pw);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 out.write(bytecode);
                 out.flush();

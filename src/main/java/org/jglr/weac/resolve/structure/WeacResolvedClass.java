@@ -4,9 +4,13 @@ import org.jglr.weac.parse.EnumClassTypes;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
 import org.jglr.weac.resolve.ClassParents;
-import org.jglr.weac.utils.WeacAnnotation;
+import org.jglr.weac.resolve.insn.ResolveOpcodes;
+import org.jglr.weac.resolve.insn.WeacLoadBooleanInsn;
+import org.jglr.weac.resolve.insn.WeacResolvedInsn;
 import org.jglr.weac.utils.WeacModifierType;
+import org.jglr.weac.utils.WeacType;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class WeacResolvedClass {
@@ -53,7 +57,53 @@ public class WeacResolvedClass {
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
 
-    public List<WeacAnnotation> annotations;
+    public List<WeacResolvedAnnotation> annotations;
 
     public String fullName;
+    public boolean isCompilerSpecial;
+
+    public WeacResolvedClass() {
+        annotations = new LinkedList<>();
+        fields = new LinkedList<>();
+        methods = new LinkedList<>();
+        enumConstants = new LinkedList<>();
+    }
+
+    public boolean hasField(String name, WeacType type) {
+        return getField(name, type) != null;
+    }
+
+    public WeacResolvedField getField(String name, WeacType type) {
+        if(fields == null)
+            return null;
+        for(WeacResolvedField f : fields) {
+            if(f.name.getId().equals(name) && f.type.equals(type)) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    public boolean isAnnotationRuntimeVisible() {
+        if(classType == EnumClassTypes.ANNOTATION && hasField("__runtime", WeacType.BOOLEAN_TYPE)) {
+            WeacResolvedField field = getField("__runtime", WeacType.BOOLEAN_TYPE);
+            List<WeacResolvedInsn> insns = field.defaultValue;
+            if(!insns.isEmpty()) {
+                if(insns.size() != 1) {
+                    throw new RuntimeException("Runtime visibility must be set to a constant");
+                } else {
+                    WeacResolvedInsn in = insns.get(0);
+                    if(in.getOpcode() == ResolveOpcodes.LOAD_BOOL_CONSTANT) {
+                        WeacLoadBooleanInsn booleanInstruction = ((WeacLoadBooleanInsn) in);
+                        return booleanInstruction.getValue();
+                    } else {
+                        throw new RuntimeException("Runtime visibility must be set to a boolean value");
+                    }
+                }
+            } else {
+                throw new RuntimeException("Runtime visibility cannot be unset");
+            }
+        }
+        return classType == EnumClassTypes.ANNOTATION;
+    }
 }

@@ -17,6 +17,7 @@ public class WeacResolvedField {
     public final List<WeacResolvedInsn> defaultValue;
 
     public WeacModifierType access = WeacModifierType.PUBLIC;
+    public boolean isCompilerSpecial;
 
     public WeacResolvedField() {
         defaultValue = new LinkedList<>();

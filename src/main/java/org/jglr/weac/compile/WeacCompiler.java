@@ -4,21 +4,21 @@ import org.jglr.weac.WeacCompileUtils;
 import org.jglr.weac.parse.EnumClassTypes;
 import org.jglr.weac.precompile.structure.WeacPrecompiledClass;
 import org.jglr.weac.resolve.insn.*;
-import org.jglr.weac.resolve.structure.WeacResolvedClass;
-import org.jglr.weac.resolve.structure.WeacResolvedField;
-import org.jglr.weac.resolve.structure.WeacResolvedMethod;
-import org.jglr.weac.resolve.structure.WeacResolvedSource;
+import org.jglr.weac.resolve.structure.*;
 import org.jglr.weac.utils.Identifier;
 import org.jglr.weac.utils.WeacModifierType;
 import org.jglr.weac.utils.WeacType;
 import org.objectweb.asm.*;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class WeacCompiler extends WeacCompileUtils implements Opcodes {
+
+    private final WeacPseudoInterpreter pseudoInterpreter;
+
+    public WeacCompiler() {
+        pseudoInterpreter = new WeacPseudoInterpreter();
+    }
 
     public Map<String, byte[]> process(WeacResolvedSource source) {
         Map<String, byte[]> compiledClasses = new HashMap<>();
@@ -41,11 +41,14 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                 writeGetter(writer, true, type, type, "__instance__");
             }
 
+            Type primitiveType = writeClassAnnotations(clazz.annotations, clazz, type, writer);
+
             writeStaticBlock(writer, type, clazz);
 
-            writeFields(writer, type, clazz);
+            writeFields(writer, type, clazz, primitiveType);
 
-            writeMethods(writer, type, clazz);
+            writeMethods(writer, type, clazz, primitiveType);
+
             writer.visitEnd();
 
             compiledClasses.put(clazz.fullName, writer.toByteArray());
@@ -53,13 +56,92 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
         return compiledClasses;
     }
 
-    private void writeMethods(ClassWriter writer, Type type, WeacResolvedClass clazz) {
+    private Type writeClassAnnotations(List<WeacResolvedAnnotation> annotations, WeacResolvedClass clazz, Type type, ClassWriter writer) {
+        Type primitiveType = null;
+        for(WeacResolvedAnnotation annotation : annotations) {
+            boolean visible = annotation.getName().isAnnotationRuntimeVisible();
+            AnnotationVisitor av = writer.visitAnnotation(toDescriptor(new WeacType(annotation.getName().fullName, true)), visible);
+            WeacResolvedClass annotClass = annotation.getName();
+            annotClass.methods.forEach(m -> {
+                if(m.returnType.isArray()) {
+                    AnnotationVisitor arrayVisitor = av.visitArray(m.name.getId());
+                    // TODO
+                } else {
+                    String name = m.name.getId();
+                    av.visit(name, getValue(annotation.args.get(0)));
+                }
+            });
+            av.visitEnd();
+
+            if(annotation.getName().fullName.equals("weac.lang.PrimitiveLike")) {
+                Object value = getValue(annotation.getArgs().get(0));
+                if(value instanceof String) {
+                    switch ((String) value) {
+                        case "void":
+                            primitiveType = Type.VOID_TYPE;
+                            break;
+
+                        case "boolean":
+                            primitiveType = Type.BOOLEAN_TYPE;
+                            break;
+
+                        case "char":
+                            primitiveType = Type.CHAR_TYPE;
+                            break;
+
+                        case "byte":
+                            primitiveType = Type.BYTE_TYPE;
+                            break;
+
+                        case "short":
+                            primitiveType = Type.SHORT_TYPE;
+                            break;
+
+                        case "int":
+                            primitiveType = Type.INT_TYPE;
+                            break;
+
+                        case "float":
+                            primitiveType = Type.FLOAT_TYPE;
+                            break;
+
+                        case "long":
+                            primitiveType = Type.LONG_TYPE;
+                            break;
+
+                        case "double":
+                            primitiveType = Type.DOUBLE_TYPE;
+                            break;
+                    }
+                } else {
+                    newError("INVALID value TYPE", -1); // todo: line
+                }
+            }
+        }
+        return primitiveType;
+    }
+
+    private Object getValue(List<WeacResolvedInsn> instructions) {
+        return pseudoInterpreter.interpret(instructions);
+    }
+
+    private void writeMethods(ClassWriter writer, Type type, WeacResolvedClass clazz, Type primitiveType) {
         int nConstructors = 0;
+        boolean convertInstanceMethodToStatic = false;
+        if(primitiveType != null) {
+            convertInstanceMethodToStatic = true;
+        }
         for(WeacResolvedMethod method : clazz.methods) {
+            if(method.isCompilerSpecial) {
+                continue;
+            }
             Type returnType = toJVMType(method.returnType);
             Type methodType;
             String name;
             List<Type> argTypes = new LinkedList<>();
+            if(convertInstanceMethodToStatic) {
+                argTypes.add(primitiveType);
+            }
             method.argumentTypes.stream()
                     .map(this::toJVMType)
                     .forEach(argTypes::add);
@@ -71,42 +153,55 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                 methodType = Type.getMethodType(returnType, args);
                 name = method.name.getId();
             }
-            MethodVisitor mv = writer.visitMethod(getAccess(method.access), name, methodType.getDescriptor(), null, null);
+
+            int access = getAccess(method.access);
+            if(convertInstanceMethodToStatic) {
+                access |= ACC_STATIC;
+            }
+            if(method.isAbstract || clazz.isMixin || clazz.classType == EnumClassTypes.INTERFACE || clazz.classType == EnumClassTypes.ANNOTATION) {
+                access |= ACC_ABSTRACT;
+            }
+            MethodVisitor mv = writer.visitMethod(access, name, methodType.getDescriptor(), null, null);
             Label start = new Label();
             Label end = new Label();
 
-            if(!method.isAbstract)
-                mv.visitCode();
-
-
             int localIndex = 0;
-            localIndex++; // 'this'
+            if(!convertInstanceMethodToStatic) {
+                localIndex++; // 'this'
+            } else {
+                mv.visitParameter("__value", ACC_FINAL);
+                mv.visitLocalVariable("__value", primitiveType.getDescriptor(), null, new Label(), new Label(), localIndex++);
+            }
             List<Identifier> argumentNames = method.argumentNames;
             for (int i = 0; i < argumentNames.size(); i++) {
                 Identifier argName = argumentNames.get(i);
                 Type argType = argTypes.get(i);
-                System.out.println("new local: "+argType.getClassName()+" "+argName);
                 mv.visitParameter(argName.getId(), ACC_FINAL);
                 mv.visitLocalVariable(argName.getId(), argType.getDescriptor(), null, new Label(), new Label(), localIndex++);
             }
-            mv.visitLabel(start);
-            if(!method.isAbstract && method.isConstructor) {
-                clazz.fields.stream()
-                        .filter(f -> !f.defaultValue.isEmpty())
-                        .forEach(f -> {
-                            mv.visitLabel(new Label());
-                            mv.visitVarInsn(ALOAD, 0);
-                            this.compileSingleExpression(mv, f.defaultValue);
-                            mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
-                        });
-                nConstructors++;
+
+            if(!method.isAbstract || !clazz.isMixin) {
+                mv.visitCode();
+                mv.visitLabel(start);
+                if(!method.isAbstract && method.isConstructor) {
+                    clazz.fields.stream()
+                            .filter(f -> !f.defaultValue.isEmpty())
+                            .forEach(f -> {
+                                mv.visitLabel(new Label());
+                                mv.visitVarInsn(ALOAD, 0);
+                                this.compileSingleExpression(mv, f.defaultValue);
+                                mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
+                            });
+                    nConstructors++;
+                }
+                mv.visitInsn(RETURN);
+                mv.visitLabel(end);
+                mv.visitMaxs(0,0);
             }
-            mv.visitInsn(RETURN);
-            mv.visitLabel(end);
-            mv.visitMaxs(0,0);
+
             mv.visitEnd();
         }
-        if(nConstructors == 0) {
+        if(nConstructors == 0 && primitiveType != null) {
             MethodVisitor mv = writer.visitMethod(ACC_PRIVATE, "<init>", Type.getMethodType(Type.VOID_TYPE).getDescriptor(), null, null);
             Label start = new Label();
             Label end = new Label();
@@ -160,8 +255,14 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
         }
     }
 
-    private void writeFields(ClassWriter writer, Type type, WeacResolvedClass clazz) {
+    private void writeFields(ClassWriter writer, Type type, WeacResolvedClass clazz, Type primitiveType) {
         for(WeacResolvedField field : clazz.fields) {
+            if(field.isCompilerSpecial)
+                continue;
+            if(primitiveType != null) {
+                newError("PrimitiveLike class cannot have fields", -1);
+                break;
+            }
             String desc = toJVMType(field.type).getDescriptor();
             int acc = getAccess(field.access);
             writer.visitField(acc, field.name.getId(), desc, null, null);
@@ -242,6 +343,10 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
     private String toDescriptor(WeacType type) {
         if(type.equals(WeacType.VOID_TYPE)) {
             return "V";
+        }
+        if(!type.isValid()) {
+            System.err.println("INV: "+type.getIdentifier());
+            return "I";
         }
         StringBuilder builder = new StringBuilder();
         if(type.isArray()) {

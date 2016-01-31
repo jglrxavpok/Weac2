@@ -2,7 +2,6 @@ package org.jglr.weac.precompile.structure;
 
 import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
 import org.jglr.weac.utils.Identifier;
-import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.LinkedList;
@@ -33,7 +32,9 @@ public class WeacPrecompiledField {
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
 
-    public final List<WeacAnnotation> annotations;
+    public final List<WeacPrecompiledAnnotation> annotations;
+
+    public boolean isCompilerSpecial;
 
     public WeacPrecompiledField() {
         annotations = new LinkedList<>();

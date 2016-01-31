@@ -1,5 +1,9 @@
 package weac.lang
 
-class Int {
+@PrimitiveLike("int")
+class Int > Number {
 
+    Int factorial() {
+        return Math.fact(this);
+    }
 }

@@ -2,6 +2,8 @@ package weac.lang
 
 annotation PrimitiveLike {
 
-    String value();
+    String value()
+
+    compilerspecial Boolean __runtime = true;
 
 }

@@ -1,15 +1,17 @@
 package org.jglr.weac.utils;
 
+import org.jglr.weac.parse.structure.WeacParsedAnnotation;
+
 public class AnnotationModifier extends WeacModifier {
 
-    private final WeacAnnotation annotation;
+    private final WeacParsedAnnotation annotation;
 
-    public AnnotationModifier(WeacModifierType type, WeacAnnotation annotation) {
+    public AnnotationModifier(WeacModifierType type, WeacParsedAnnotation annotation) {
         super(type);
         this.annotation = annotation;
     }
 
-    public WeacAnnotation getAnnotation() {
+    public WeacParsedAnnotation getAnnotation() {
         return annotation;
     }
 }

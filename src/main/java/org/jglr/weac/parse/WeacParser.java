@@ -1,17 +1,15 @@
 package org.jglr.weac.parse;
 
 import org.jglr.weac.WeacCompilePhase;
+import org.jglr.weac.parse.structure.WeacParsedAnnotation;
 import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.utils.WeacImport;
 import org.jglr.weac.parse.structure.WeacParsedSource;
 import org.jglr.weac.utils.AnnotationModifier;
-import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifier;
 import org.jglr.weac.utils.WeacModifierType;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Parses a WeaC source file
@@ -39,8 +37,8 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
         parsedSource.imports = new ArrayList<>();
         parsedSource.classes = new ArrayList<>();
         source = removeComments(source);
-        analyseHeader(parsedSource, source);
         parsedSource.sourceCode = source;
+        analyseHeader(parsedSource, source);
         return parsedSource;
     }
 
@@ -93,9 +91,9 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                     WeacModifierType currentAccess = null;
                     boolean isAbstract = false;
                     boolean isMixin = false;
-                    List<WeacAnnotation> annotations = new ArrayList<>();
+                    boolean isCompilerSpecial = false;
+                    List<WeacParsedAnnotation> annotations = new ArrayList<>();
                     for(WeacModifier modif : modifiers) {
-                        // TODO: Abstract & mixins
                         if(modif.getType().isAccessModifier()) {
                             if(currentAccess != null) {
                                 newError("Cannot specify twice the access permissions", lineIndex);
@@ -107,7 +105,10 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                         } else if(modif.getType() == WeacModifierType.MIXIN) {
                             isMixin = true;
                         } else if(modif.getType() == WeacModifierType.ANNOTATION) {
+                            WeacParsedAnnotation annot = ((AnnotationModifier) modif).getAnnotation();
                             annotations.add(((AnnotationModifier) modif).getAnnotation());
+                        } else if(modif.getType() == WeacModifierType.COMPILERSPECIAL) {
+                            isCompilerSpecial = true;
                         }
                     }
                     modifiers.clear();
@@ -117,6 +118,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                     WeacParsedClass clazz = readClass(parsedSource, extractedClass, lineIndex, isAbstract, isMixin);
                     clazz.access = currentAccess;
                     clazz.annotations = annotations;
+                    clazz.isCompilerSpecial = isCompilerSpecial;
                     i+=extractedClass.length();
                     break;
             }
@@ -200,6 +202,9 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
      *                  The parsed class
      */
     private WeacParsedClass readClass(WeacParsedSource parsedSource, String classSource, int startingLine, boolean isAbstract, boolean isMixin) {
+        if(classSource.indexOf('{') < 0) {
+            System.err.println("fjd >>> "+parsedSource.sourceCode);
+        }
         WeacParsedClass parsedClass = classParser.parseClass(classSource, startingLine);
         parsedClass.packageName = parsedSource.packageName;
         parsedClass.isAbstract = isAbstract;

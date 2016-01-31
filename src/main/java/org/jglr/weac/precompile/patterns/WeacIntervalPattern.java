@@ -1,5 +1,6 @@
 package org.jglr.weac.precompile.patterns;
 
+import org.jglr.weac.patterns.WeacInstructionPattern;
 import org.jglr.weac.precompile.insn.PrecompileOpcodes;
 import org.jglr.weac.precompile.insn.WeacOperatorInsn;
 import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
@@ -7,19 +8,19 @@ import org.jglr.weac.utils.EnumOperators;
 
 import java.util.List;
 
-public class WeacIntervalPattern extends WeacInstructionPattern {
+public class WeacIntervalPattern extends WeacInstructionPattern<WeacPrecompiledInsn> {
 
     @Override
     public int[] getOpcodes() {
         return new int[] {
-            BINARY_OPERATOR, CREATE_ARRAY
+            PrecompileOpcodes.BINARY_OPERATOR, PrecompileOpcodes.CREATE_ARRAY
         };
     }
 
     @Override
     protected boolean isValid(WeacPrecompiledInsn insn, int expectedCode, int index) {
         if(super.isValid(insn, expectedCode, index)) {
-            if(expectedCode == BINARY_OPERATOR) {
+            if(expectedCode == PrecompileOpcodes.BINARY_OPERATOR) {
                 WeacOperatorInsn op = ((WeacOperatorInsn) insn);
                 return op.getOperator() == EnumOperators.INTERVAL_SEPARATOR;
             } else {

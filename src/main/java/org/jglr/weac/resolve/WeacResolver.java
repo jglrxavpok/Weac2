@@ -1,11 +1,9 @@
 package org.jglr.weac.resolve;
 
 import org.jglr.weac.WeacCompileUtils;
+import org.jglr.weac.patterns.WeacInstructionPattern;
 import org.jglr.weac.precompile.WeacPreCompiler;
-import org.jglr.weac.precompile.insn.PrecompileOpcodes;
-import org.jglr.weac.precompile.insn.WeacLoadBooleanConstant;
-import org.jglr.weac.precompile.insn.WeacLoadNumberConstant;
-import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
+import org.jglr.weac.precompile.insn.*;
 import org.jglr.weac.precompile.structure.*;
 import org.jglr.weac.resolve.insn.*;
 import org.jglr.weac.resolve.structure.*;
@@ -14,10 +12,17 @@ import org.jglr.weac.utils.WeacImport;
 import org.jglr.weac.utils.WeacType;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.*;
 
 public class WeacResolver extends WeacCompileUtils {
+
+    private final List<WeacInstructionPattern<WeacResolvedInsn>> patterns;
+    private final NumberResolver numberResolver;
+
+    public WeacResolver() {
+        patterns = new LinkedList<>();
+        numberResolver = new NumberResolver();
+    }
 
     public WeacResolvedSource process(WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
         WeacResolvedSource resolved = new WeacResolvedSource();
@@ -31,7 +36,7 @@ public class WeacResolver extends WeacCompileUtils {
     private WeacResolvedClass resolve(WeacPrecompiledSource source, WeacPrecompiledClass aClass, WeacPrecompiledClass[] sideClasses) {
         WeacResolvedClass resolvedClass = new WeacResolvedClass();
         resolvedClass.access = aClass.access;
-        resolvedClass.annotations = aClass.annotations;
+        resolvedClass.annotations.addAll(resolveAnnotations(aClass.annotations, source, sideClasses));
         resolvedClass.classType = aClass.classType;
         resolvedClass.parents = getInterfaces(aClass, aClass.interfacesImplemented, source, sideClasses);
         resolvedClass.fullName = getFullName(aClass);
@@ -39,12 +44,35 @@ public class WeacResolver extends WeacCompileUtils {
         resolvedClass.isAbstract = aClass.isAbstract;
         resolvedClass.isMixin = aClass.isMixin;
         resolvedClass.name = aClass.name;
+        resolvedClass.isCompilerSpecial = aClass.isCompilerSpecial;
 
         WeacMixedContentClass toMixIn = resolveMixins(resolvedClass, resolvedClass.parents.getMixins());
         resolvedClass.methods = resolveMethods(resolvedClass, aClass, source, sideClasses, toMixIn);
 
         resolvedClass.fields = resolveFields(resolvedClass, aClass, source, sideClasses, toMixIn);
         return resolvedClass;
+    }
+
+    private List<WeacResolvedAnnotation> resolveAnnotations(List<WeacPrecompiledAnnotation> annotations, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+        List<WeacResolvedAnnotation> resolvedAnnotations = new LinkedList<>();
+        for(WeacPrecompiledAnnotation a : annotations) {
+            WeacPrecompiledSource annotSource = new WeacPrecompiledSource();
+            WeacPrecompiledClass clazz = findClass(a.getName(), source, sideClasses);
+            annotSource.classes = new LinkedList<>();
+            annotSource.classes.add(clazz);
+            annotSource.classes.addAll(source.classes); // corner cases where the annotation uses the type it is describing
+
+            annotSource.imports = new LinkedList<>();
+            if(clazz == null)
+                throw new RuntimeException(":cc "+a.getName());
+            annotSource.packageName = clazz.packageName;
+            WeacResolvedAnnotation resolved = new WeacResolvedAnnotation(resolve(annotSource, clazz, sideClasses));
+            a.args.stream()
+                    .map(this::resolveSingleExpression)
+                    .forEach(resolved.getArgs()::add);
+            resolvedAnnotations.add(resolved);
+        }
+        return resolvedAnnotations;
     }
 
     private List<WeacResolvedField> resolveFields(WeacResolvedClass resolvedClass, WeacPrecompiledClass aClass, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses, WeacMixedContentClass toMixIn) {
@@ -62,6 +90,7 @@ public class WeacResolver extends WeacCompileUtils {
         WeacResolvedField resolvedField = new WeacResolvedField();
         resolvedField.name = field.name;
         resolvedField.access = field.access;
+        resolvedField.isCompilerSpecial = field.isCompilerSpecial;
         resolvedField.type = resolveType(field.type, source, sideClasses);
         resolvedField.defaultValue.addAll(resolveSingleExpression(field.defaultValue));
         return resolvedField;
@@ -78,27 +107,28 @@ public class WeacResolver extends WeacCompileUtils {
     private WeacResolvedMethod resolveSingleMethod(WeacPrecompiledMethod precompiledMethod, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
         WeacResolvedMethod method = new WeacResolvedMethod();
         method.access = precompiledMethod.access;
-        method.annotations.addAll(precompiledMethod.annotations);
+        method.annotations.addAll(resolveAnnotations(precompiledMethod.annotations, source, sideClasses));
         method.argumentNames.addAll(precompiledMethod.argumentNames);
         method.isAbstract = precompiledMethod.isAbstract;
         method.isConstructor = precompiledMethod.isConstructor;
         method.name = precompiledMethod.name;
+        method.isCompilerSpecial = precompiledMethod.isCompilerSpecial;
         method.returnType = resolveType(precompiledMethod.returnType, source, sideClasses);
+        resolveSingleExpression(precompiledMethod.instructions).forEach(method.instructions::add);
         precompiledMethod.argumentTypes.stream()
                 .map(t -> resolveType(t, source, sideClasses))
                 .forEach(method.argumentTypes::add);
-        method.name = precompiledMethod.name;
         return method;
     }
 
     private WeacType resolveType(Identifier type, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
         if(type.getId().equalsIgnoreCase("Void"))
             return WeacType.VOID_TYPE;
-        WeacType intermediateType = new WeacType(type);
+        WeacType intermediateType = new WeacType(type.getId(), true);
         String core = intermediateType.getCoreType().getIdentifier().getId();
         WeacPrecompiledClass typeClass = findClass(core, source, sideClasses);
         if(typeClass == null) {
-            newError("Invalid type: "+type.getId(), -1);
+            newError("Invalid type: "+type.getId()+" in "+source.classes.get(0).fullName, -1);
         }
         return new WeacType(typeClass.fullName+(type.getId().substring(core.length())), true);
     }
@@ -233,7 +263,6 @@ public class WeacResolver extends WeacCompileUtils {
             }
         }
 
-
         // test for base classes, because they are not necessarily imported
         for (WeacPrecompiledClass sideClass : sideClasses) {
             System.out.println(">>>>"+sideClass.fullName);
@@ -245,6 +274,18 @@ public class WeacResolver extends WeacCompileUtils {
                 return sideClass;
             }
         }
+
+        // try importing from java.lang
+        try {
+            Class<?> javaClass = Class.forName("java.lang."+inter, false, getClass().getClassLoader());
+            if(javaClass != null) {
+                return new JavaImportedClass(javaClass);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        System.err.println("NOT FOUND: \""+inter+"\"");
 
         return null;
     }
@@ -284,234 +325,16 @@ public class WeacResolver extends WeacCompileUtils {
             if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_NUMBER_CONSTANT) {
                 WeacLoadNumberConstant cst = ((WeacLoadNumberConstant) precompiledInsn);
                 String numberRepresentation = cst.getValue();
-                insns.add(resolveNumber(numberRepresentation));
+                insns.add(numberResolver.resolve(numberRepresentation));
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_BOOLEAN_CONSTANT) {
                 WeacLoadBooleanConstant cst = ((WeacLoadBooleanConstant) precompiledInsn);
                 insns.add(new WeacLoadBooleanInsn(cst.getValue()));
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_STRING_CONSTANT) {
+                WeacLoadStringConstant cst = ((WeacLoadStringConstant) precompiledInsn);
+                insns.add(new WeacLoadStringInsn(cst.getValue()));
             }
         }
         return insns;
-    }
-
-    private WeacResolvedInsn resolveNumber(String num) {
-        if(isInteger(num)) {
-            int base = getBase(num);
-            if(base > 0) {
-                int start = 0;
-                if(num.length() > 2) {
-                    if (isBaseCharacter(num.charAt(1))) {
-                        if(num.contains("#")) { // custom base, start after '#' symbol
-                            start = num.indexOf('#')+1;
-                        } else {
-                            start = 2; // skips "0a" where a is the base character
-                        }
-                    }
-                }
-                String actualNumber = num.substring(start);
-                String type = null;
-                long convertedNumber;
-                char[] chars = actualNumber.toCharArray();
-                if(!isDigit(chars[chars.length-1], base)) {
-                    type = deduceType(chars[chars.length-1]);
-                    actualNumber = actualNumber.substring(0, actualNumber.length()-1);
-                }
-                if(base == 10) {
-                    convertedNumber = Long.parseLong(actualNumber);
-                } else {
-                    convertedNumber = 0L;
-                    chars = actualNumber.toCharArray();
-                    for(int i = 0;i<chars.length;i++) {
-                        char c = chars[i];
-                        int power = chars.length-i-1;
-                        int digit;
-                        if(c >= '0' && c <= '9') {
-                            digit = c-'0';
-                        } else {
-                            if(base == 16) {
-                                c = Character.toUpperCase(c);
-                            }
-                            digit = Arrays.binarySearch(WeacPreCompiler.extraDigits, c)+10;
-                        }
-                        convertedNumber += digit * Math.pow(base, power);
-                        System.out.println(">> "+power+" / "+digit+" / "+convertedNumber+" / "+c);
-                    }
-                }
-                if(type == null) {
-                    // find type
-                    type = "long";
-                    if(convertedNumber <= Integer.MAX_VALUE) {
-                        type = "int";
-                    }
-                    if(convertedNumber <= Short.MAX_VALUE) {
-                        type = "short";
-                    }
-                    if(convertedNumber <= Byte.MAX_VALUE) {
-                        type = "byte";
-                    }
-                }
-
-                switch (type) {
-                    case "long":
-                        return new WeacLoadLongInsn(convertedNumber);
-
-                    case "int":
-                        return new WeacLoadIntInsn((int)convertedNumber);
-
-                    case "short":
-                        return new WeacLoadShortInsn((short)convertedNumber);
-
-                    case "byte":
-                        return new WeacLoadByteInsn((byte)convertedNumber);
-
-                    case "float":
-                        return new WeacLoadFloatInsn((float)convertedNumber);
-
-                    case "double":
-                        return new WeacLoadDoubleInsn((double)convertedNumber);
-                }
-            }
-            newError("Invalid base: "+base, -1); // TODO: line
-        } else {
-            String type = null;
-            char[] chars = num.toCharArray();
-            if(!isDigit(chars[chars.length-1], 10)) {
-                type = deduceType(chars[chars.length-1]);
-                num = num.substring(0, num.length()-1);
-            }
-
-            BigDecimal decimal = new BigDecimal(num);
-            if(type == null) {
-                if(decimal.compareTo(new BigDecimal(Float.MAX_VALUE)) <= 0) {
-                    return new WeacLoadFloatInsn(decimal.floatValue());
-                } else {
-                    return new WeacLoadDoubleInsn(decimal.doubleValue());
-                }
-            } else {
-                switch (type) {
-                    case "float":
-                        return new WeacLoadFloatInsn(decimal.floatValue());
-
-                    case "double":
-                        return new WeacLoadDoubleInsn(decimal.doubleValue());
-                }
-            }
-        }
-        return null;
-    }
-
-    private String deduceType(char c) {
-        switch (c) {
-            case 'f': // float
-            case 'F': // float
-                return "float";
-
-            case 'd': // double
-            case 'D': // double
-                return "double";
-
-            case 'l': // long
-            case 'L': // long
-                return "long";
-
-            case 's': // short
-            case 'S': // short
-                return "short";
-
-            case 'b': // byte
-            case 'B': // byte
-                return "byte";
-        }
-        return "double";
-    }
-
-    private boolean isInteger(String num) {
-        return !num.contains(".");
-    }
-
-    private boolean hasBase(String num) {
-        if(num.length() > 2) {
-            if(isBaseCharacter(num.charAt(1))) {
-                int base = getBase(num.charAt(1));
-                if (base == -10) { // custom base
-                    base = Integer.parseInt(readBase(num.toCharArray(), 2));
-                }
-                return base != -1;
-            }
-        }
-        return false;
-    }
-
-    private int getBase(String num) {
-        if(num.length() > 2) {
-            if(isBaseCharacter(num.charAt(1))) {
-                int base = getBase(num.charAt(1));
-                if(base == -10) { // custom base
-                    base = Integer.parseInt(readBase(num.toCharArray(), 2));
-                }
-                return base;
-            } else {
-                return 10;
-            }
-        }
-        return 10;
-    }
-
-    // TODO: copypasted from WeacPreCompiler
-    private boolean isBaseCharacter(char c) {
-        switch (c) {
-            case 'x':
-            case 'b':
-            case 'o':
-                return true;
-
-            case 'c':
-                return true;
-        }
-        return false;
-    }
-
-    private String readBase(char[] chars, int offset) {
-        StringBuilder builder = new StringBuilder();
-        for(int i = offset;i<chars.length;i++) {
-            char c = chars[i];
-            if(c == '#') {
-                break;
-            } else if(isDigit(c, 10)) {
-                builder.append(c);
-            } else {
-                newError("Invalid base character: "+c, -1); // TODO: find correct line
-                break;
-            }
-        }
-        return builder.toString();
-    }
-
-    private boolean isDigit(char c, int base) {
-        if (base == 10) {
-            return Character.isDigit(c);
-        } else if(base < 10) {
-            return Character.isDigit(c) && (c-'0') < base;
-        } else {
-            // ((c-'A')+10 < base) checks if the character is a valid digit character
-            return Character.isDigit(c) || ((c-'A')+10 < base && (c-'A')+10 > 0);
-        }
-    }
-
-    private int getBase(char c) {
-        switch (c) {
-            case 'x':
-                return 16;
-
-            case 'b':
-                return 2;
-
-            case 'o':
-                return 8;
-
-            case 'c':
-                return -10;
-        }
-        return -1;
     }
 
 }

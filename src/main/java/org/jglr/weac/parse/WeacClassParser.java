@@ -1,6 +1,7 @@
 package org.jglr.weac.parse;
 
 import org.jglr.weac.WeacCompileUtils;
+import org.jglr.weac.parse.structure.WeacParsedAnnotation;
 import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
@@ -19,7 +20,7 @@ public class WeacClassParser extends WeacCompileUtils {
 
     }
 
-    /**
+    /**-
      * Parses a single class from the given source
      * @param source
      *              The class code
@@ -65,10 +66,10 @@ public class WeacClassParser extends WeacCompileUtils {
             WeacModifierType currentAccess = null;
             boolean isAbstract = false;
             boolean isMixin = false;
+            boolean isCompilerSpecial = false;
 
-            List<WeacAnnotation> annotations = new ArrayList<>();
+            List<WeacParsedAnnotation> annotations = new ArrayList<>();
             for(WeacModifier modif : modifiers) {
-                // TODO: Abstract & mixins
                 if(modif.getType().isAccessModifier()) {
                     if(currentAccess != null) {
                         newError("Cannot specify twice the access permissions", lineIndex+startingLine);
@@ -81,21 +82,21 @@ public class WeacClassParser extends WeacCompileUtils {
                     isMixin = true;
                 } else if(modif.getType() == WeacModifierType.ANNOTATION) {
                     annotations.add(((AnnotationModifier) modif).getAnnotation());
+                } else if(modif.getType() == WeacModifierType.COMPILERSPECIAL) {
+                    isCompilerSpecial = true;
                 }
             }
             modifiers.clear();
             if(currentAccess == null)
                 currentAccess = WeacModifierType.PUBLIC;
-            i += readUntilNot(chars, i, ' ').length();
+            i += readUntilNot(chars, i, ' ', '\n').length();
             if(i >= chars.length)
                 break;
             if(parsedClass.classType == EnumClassTypes.ENUM) {
                 String constants = readUntilInsnEnd(chars, i);
-                // TODO: Read Enum constants
 
                 i += constants.length()+1;
                 i += readUntilNot(chars, i, ' ', '\n').length();
-                System.out.println(">> "+constants);
 
                 fillEnumConstants(constants, parsedClass.enumConstants);
 
@@ -109,6 +110,7 @@ public class WeacClassParser extends WeacCompileUtils {
                 if(chars[i] == '(') { // Constructor
 
                     WeacParsedMethod function = readFunction(chars, i, parsedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
+                    function.isCompilerSpecial = isCompilerSpecial;
                     function.annotations = annotations;
                     function.startingLine = lineIndex+startingLine;
                     function.isConstructor = true;
@@ -119,7 +121,7 @@ public class WeacClassParser extends WeacCompileUtils {
                     Identifier secondPart = Identifier.read(chars, i);
                     i+=secondPart.getId().length();
                     if(!secondPart.isValid()) {
-                        newError("Invalid identifier: "+secondPart.getId(), startingLine);
+                        newError("Invalid identifier: "+secondPart.getId()+" in "+parsedClass.packageName+"."+parsedClass.name, startingLine);
                     } else {
                         int potentialFunction = indexOf(chars, i, '(');
                         int potentialField = indexOf(chars, i, ';');
@@ -142,6 +144,7 @@ public class WeacClassParser extends WeacCompileUtils {
                         String start = read(chars, i, nameEnd);
                         if(isField) {
                             WeacParsedField field = new WeacParsedField();
+                            field.isCompilerSpecial = isCompilerSpecial;
                             field.annotations = annotations;
                             field.name = secondPart;
                             field.type = firstPart;
@@ -154,6 +157,7 @@ public class WeacClassParser extends WeacCompileUtils {
                             i = nameEnd+1;
                         } else {
                             WeacParsedMethod function = readFunction(chars, i, parsedClass, firstPart, secondPart, currentAccess, isAbstract);
+                            function.isCompilerSpecial = isCompilerSpecial;
                             function.annotations = annotations;
                             function.startingLine = lineIndex+startingLine;
                             parsedClass.methods.add(function);
@@ -162,7 +166,7 @@ public class WeacClassParser extends WeacCompileUtils {
                     }
                 }
             } else {
-                newError("Invalid identifier: " + firstPart.getId(), startingLine+lineIndex);
+                newError("Invalid identifier: " + firstPart.getId()+" in "+parsedClass.packageName+"."+parsedClass.name+" from "+new String(chars, i, chars.length-i), startingLine+lineIndex);
             }
         }
     }
@@ -223,9 +227,10 @@ public class WeacClassParser extends WeacCompileUtils {
         }
 
         i+=allArgs.length();
-        if(isAbstract || parsedClass.classType == EnumClassTypes.INTERFACE) {
+        if(isAbstract || parsedClass.classType == EnumClassTypes.INTERFACE || parsedClass.classType == EnumClassTypes.ANNOTATION) {
             i+=1;
             method.methodSource = "";
+            method.isAbstract = true;
             method.off = i - start;
         } else {
             int codeStart = i + readUntil(chars, i, '{').length()+1;
@@ -244,7 +249,9 @@ public class WeacClassParser extends WeacCompileUtils {
      *                  The header code
      */
     private void parseHeader(WeacParsedClass parsedClass, String header) {
-        String firstPart = readUntilSpace(header);
+        char[] chars = header.toCharArray();
+        int start = readUntilNot(chars, 0, ' ', '\t', '\n').length();
+        String firstPart = readUntil(chars, start, ' ');
         switch (firstPart) {
             case "class":
             case "struct":
@@ -257,7 +264,7 @@ public class WeacClassParser extends WeacCompileUtils {
                 break;
 
             default:
-                newError("Unknown token "+firstPart, parsedClass.startingLine);
+                newError("Unknown token \""+firstPart+"\" in "+header, parsedClass.startingLine);
                 break;
         }
     }
@@ -270,11 +277,14 @@ public class WeacClassParser extends WeacCompileUtils {
      *              The hierarchy code
      */
     private void readHierarchy(WeacParsedClass parsedClass, String s) {
-        String name = readUntilSpace(s);
-        parsedClass.name = name;
         char[] chars = s.toCharArray();
+        int start = readUntilNot(chars, 0, ' ', '\n').length();
+        String name = readUntil(chars, start, ' ', '\n');
+        parsedClass.name = name;
+        if(name.isEmpty())
+            System.out.println("!!!"+s.substring(start));
         StringBuilder buffer = new StringBuilder();
-        for(int i = name.length();i<s.length();i++) {
+        for(int i = name.length()+start;i<chars.length;i++) {
             char c = chars[i];
             if(c == '>') {
                 i++;

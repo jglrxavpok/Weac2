@@ -6,6 +6,7 @@ import org.jglr.weac.parse.structure.WeacParsedClass;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
 import org.jglr.weac.parse.structure.WeacParsedSource;
+import org.jglr.weac.utils.Identifier;
 
 public class WeacParsingVerifier extends WeacCompilePhase<WeacParsedSource, WeacParsedSource> {
     @Override
@@ -48,13 +49,13 @@ public class WeacParsingVerifier extends WeacCompilePhase<WeacParsedSource, Weac
 
     private void verifyValidName(String name, int line) {
         char[] chars = name.toCharArray();
-        if(!Character.isJavaIdentifierStart(chars[0])) {
-            newError("Invalid identifier start", line);
+        if(!Identifier.isIdentifierStart(chars[0])) {
+            newError("Invalid identifier start in name "+name, line);
             return;
         }
         for(int i = 1;i<chars.length;i++) {
-            if(!Character.isJavaIdentifierPart(chars[i])) {
-                newError("Invalid identifier start", line);
+            if(!Identifier.isIdentifierPart(chars[i])) {
+                newError("Invalid identifier part in name "+name, line);
                 return;
             }
         }

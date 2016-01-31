@@ -1,7 +1,7 @@
 package org.jglr.weac.resolve.structure;
 
+import org.jglr.weac.resolve.insn.WeacResolvedInsn;
 import org.jglr.weac.utils.Identifier;
-import org.jglr.weac.utils.WeacAnnotation;
 import org.jglr.weac.utils.WeacModifierType;
 import org.jglr.weac.utils.WeacType;
 
@@ -39,11 +39,16 @@ public class WeacResolvedMethod {
      */
     public WeacModifierType access = WeacModifierType.PUBLIC;
 
-    public final List<WeacAnnotation> annotations;
+    public final List<WeacResolvedAnnotation> annotations;
+
+    public final List<WeacResolvedInsn> instructions;
+
+    public boolean isCompilerSpecial;
 
     public WeacResolvedMethod() {
         annotations = new LinkedList<>();
         argumentNames = new LinkedList<>();
         argumentTypes = new LinkedList<>();
+        instructions = new LinkedList<>();
     }
 }

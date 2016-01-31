@@ -1,18 +1,19 @@
-package org.jglr.weac.precompile.patterns;
+package org.jglr.weac.patterns;
 
 import org.jglr.weac.precompile.insn.PrecompileOpcodes;
 import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
+import org.jglr.weac.utils.WeacInsn;
 
 import java.util.List;
 
-public abstract class WeacInstructionPattern implements PrecompileOpcodes {
+public abstract class WeacInstructionPattern<InsnType extends WeacInsn> {
 
     public abstract int[] getOpcodes();
 
-    public boolean matches(List<WeacPrecompiledInsn> insns, int index) {
+    public boolean matches(List<InsnType> insns, int index) {
         int localIndex = 0;
         for(int i = index;i<insns.size() && localIndex < getOpcodes().length; i++, localIndex++) {
-            WeacPrecompiledInsn insn = insns.get(i);
+            InsnType insn = insns.get(i);
             int expectedCode = getOpcodes()[localIndex];
             if(!isValid(insn, expectedCode, localIndex)) {
                 return false;
@@ -21,13 +22,13 @@ public abstract class WeacInstructionPattern implements PrecompileOpcodes {
         return localIndex == getOpcodes().length;
     }
 
-    public int consumeCount(List<WeacPrecompiledInsn> insns, int index) {
+    public int consumeCount(List<InsnType> insns, int index) {
         return getOpcodes().length;
     }
 
-    protected boolean isValid(WeacPrecompiledInsn insn, int expectedCode, int index) {
+    protected boolean isValid(InsnType insn, int expectedCode, int index) {
         return insn.getOpcode() == expectedCode;
     }
 
-    public abstract void output(List<WeacPrecompiledInsn> original, int i, List<WeacPrecompiledInsn> output);
+    public abstract void output(List<InsnType> original, int i, List<WeacPrecompiledInsn> output);
 }
