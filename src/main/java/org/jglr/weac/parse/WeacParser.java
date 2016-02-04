@@ -179,7 +179,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
             if(parts[1].equals("as")) {
                 parsedImport.usageName = parts[2];
             } else {
-                newError("Import statement not undertstood, should follow: 'import <name>' or 'import <name> as <usageName>''", lineIndex);
+                newError("Import statement not understood, should follow: 'import <name>' or 'import <name> as <usageName>''", lineIndex);
             }
         }
         parsedSource.imports.add(parsedImport);
@@ -202,9 +202,6 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
      *                  The parsed class
      */
     private WeacParsedClass readClass(WeacParsedSource parsedSource, String classSource, int startingLine, boolean isAbstract, boolean isMixin) {
-        if(classSource.indexOf('{') < 0) {
-            System.err.println("fjd >>> "+parsedSource.sourceCode);
-        }
         WeacParsedClass parsedClass = classParser.parseClass(classSource, startingLine);
         parsedClass.packageName = parsedSource.packageName;
         parsedClass.isAbstract = isAbstract;
