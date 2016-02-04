@@ -19,7 +19,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             "-_"
     ).toCharArray();
 
-    private final List<WeacInstructionPattern> patterns;
+    private final List<WeacInstructionPattern<WeacPrecompiledInsn>> patterns;
 
     public WeacPreCompiler() {
         patterns = new ArrayList<>();
@@ -69,7 +69,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     .map(this::precompileExpression)
                     .forEach(precompiled.getArgs()::add);
 
-            System.err.println("<<< 45 "+precompiled.getName()+" / "+ Arrays.toString(precompiled.args.toArray()));
             precompiledAnnotations.add(precompiled);
         }
         return precompiledAnnotations;
@@ -102,11 +101,15 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     }
 
     private List<WeacPrecompiledInsn> flatten(WeacCodeBlock weacCodeBlock) {
-
-        return Collections.emptyList();
+        // TODO
+        List<WeacPrecompiledInsn> out = new LinkedList<>();
+        weacCodeBlock.getInstructions().forEach(out::addAll);
+        return out;
     }
 
     private WeacCodeBlock compileCodeBlock(String source) {
+
+        // TODO: Support if, else, etc.
         char[] chars = source.toCharArray();
         StringBuilder buffer = new StringBuilder();
         final WeacCodeBlock currentBlock = new WeacCodeBlock();
@@ -116,7 +119,17 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         List<List<WeacPrecompiledInsn>> instructions = currentBlock.getInstructions();
         instructions.add(Collections.singletonList(new WeacLabelInsn(currentBlock.getStart())));
 
-        for(int i = 0;i<chars.length;i++) {
+        int offset = 0;
+        String instruction;
+        do {
+            instructions.add(Collections.singletonList(new WeacLabelInsn()));
+            offset += readUntilNot(chars, offset, ' ', '\n').length();
+            instruction = readUntilInsnEnd(chars, offset);
+            offset += instruction.length() + 1;
+            instructions.add(precompileExpression(instruction));
+        } while(!instruction.isEmpty());
+
+/*        for(int i = 0;i<chars.length;i++) {
             char c = chars[i];
             if(c == '(') {
                 int offset = handleBuiltinMethod(buffer.toString(), chars, i, instructions, currentBlock, previousBlock);
@@ -141,7 +154,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 buffer.delete(0, buffer.length());
                 instructions.add(compileSingleInstruction(instructionSource));
             }
-        }
+        }*/
         instructions.add(Collections.singletonList(new WeacLabelInsn(currentBlock.getEnd())));
         return currentBlock;
     }
@@ -280,6 +293,10 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 token.setType(WeacTokenType.VARIABLE);
             }
 
+            if(token.getType() == WeacTokenType.OPERATOR && previous == null) {
+                token.setType(WeacTokenType.UNARY_OPERATOR);
+            }
+
             previous = token;
         }
         List<WeacToken> output = convertToRPN(expression, tokens);
@@ -342,7 +359,12 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     break;
 
                 case UNARY_OPERATOR:
-                    insns.add(new WeacOperatorInsn(EnumOperators.get(token.getContent(), true)));
+                    EnumOperators operator = EnumOperators.get(token.getContent(), true);
+                    if(operator == EnumOperators.RETURN) {
+                        insns.add(new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
+                    } else {
+                        insns.add(new WeacOperatorInsn(operator));
+                    }
                     break;
 
                 case DEFINE_ARRAY:
@@ -362,7 +384,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         List<WeacPrecompiledInsn> finalInstructions = new LinkedList<>();
         for(int i = 0;i<insns.size();i++) {
             boolean matchFound = false;
-            for(WeacInstructionPattern p : patterns) {
+            for(WeacInstructionPattern<WeacPrecompiledInsn> p : patterns) {
                 if(p.matches(insns, i)) {
                     p.output(insns, i, finalInstructions);
                     i += p.consumeCount(insns, i);
@@ -432,34 +454,32 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             } else if(token.getType() == WeacTokenType.UNARY_OPERATOR || token.getType() == WeacTokenType.BINARY_OPERATOR) {
                 EnumOperators operator = EnumOperators.get(token.getContent(), token.getType() == WeacTokenType.UNARY_OPERATOR);
                 if(operator != null) {
-                    if (!stack.isEmpty()) {
-                        while (stack.peek().getType() == WeacTokenType.UNARY_OPERATOR || stack.peek().getType() == WeacTokenType.BINARY_OPERATOR) {
-                            WeacToken stackTop = stack.pop();
-                            EnumOperators operator2 = EnumOperators.get(stackTop.getContent(), stackTop.getType() == WeacTokenType.UNARY_OPERATOR);
-                            if (operator2 != null) {
-                                if (operator.associativity() == EnumOperators.Associativity.LEFT) {
-                                    if (operator.precedence() > operator2.precedence()) {
-                                        out.add(stackTop);
-                                        if(!operator2.unary()) {
-                                            argCount--;
-                                        }
-                                    } else {
-                                        break;
+                    while (!stack.isEmpty() && (stack.peek().getType() == WeacTokenType.UNARY_OPERATOR || stack.peek().getType() == WeacTokenType.BINARY_OPERATOR)) {
+                        WeacToken stackTop = stack.pop();
+                        EnumOperators operator2 = EnumOperators.get(stackTop.getContent(), stackTop.getType() == WeacTokenType.UNARY_OPERATOR);
+                        if (operator2 != null) {
+                            if (operator.associativity() == EnumOperators.Associativity.LEFT) {
+                                if (operator.precedence() > operator2.precedence()) {
+                                    out.add(stackTop);
+                                    if(!operator2.unary()) {
+                                        argCount--;
                                     }
                                 } else {
-                                    if (operator.precedence() >= operator2.precedence()) {
-                                        out.add(stackTop);
-                                        if(!operator2.unary()) {
-                                            argCount--;
-                                        }
-                                    } else {
-                                        break;
-                                    }
+                                    break;
                                 }
                             } else {
-                                newError("dzqdzqd", -1);
-                                break;
+                                if (operator.precedence() >= operator2.precedence()) {
+                                    out.add(stackTop);
+                                    if(!operator2.unary()) {
+                                        argCount--;
+                                    }
+                                } else {
+                                    break;
+                                }
                             }
+                        } else {
+                            newError("dzqdzqd", -1);
+                            break;
                         }
                     }
                     stack.push(token);
@@ -568,7 +588,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                     case '\'':
                         // read character
-
                         // is naming it Chara an Undertale reference? I don't know... Am I allowed to do it?
                         String chara = readCharacter(chars, i);
                         if (chara != null) {
@@ -613,9 +632,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 String literal = readLiteral(chars, i);
                 if(literal.isEmpty()) {
                     String operator = readOperator(chars, i);
-                    if(operator != null)
+                    if(operator != null && !operator.isEmpty())
                         return new WeacToken(operator, WeacTokenType.OPERATOR, operator.length());
                 } else {
+                    if(literal.isEmpty())
+                        return null;
                     // check if we did not read an operator by mistake
                     EnumOperators potentialOperator = EnumOperators.get(literal, false);
                     if(potentialOperator != null) {
@@ -677,11 +698,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                         builder.append('\\');
                     }
                 } else {
+                    if(escaped) {
+                        escaped = false;
+                        builder.append('\\');
+                    }
                     builder.append(c);
-                }
-
-                if(escaped) {
-                    escaped = false;
                 }
             }
             return builder.toString();

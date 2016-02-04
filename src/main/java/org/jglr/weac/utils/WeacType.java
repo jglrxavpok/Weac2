@@ -9,6 +9,7 @@ public class WeacType {
     public static final WeacType INTEGER_TYPE = new WeacType("weac.lang.Int", true);
     public static final WeacType LONG_TYPE = new WeacType("weac.lang.Long", true);
     public static final WeacType SHORT_TYPE = new WeacType("weac.lang.Short", true);
+    public static final WeacType CHAR_TYPE = new WeacType("weac.lang.Char", true);
     private final Identifier identifier;
     private boolean isArray;
     private boolean isValid;

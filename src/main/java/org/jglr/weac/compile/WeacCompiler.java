@@ -2,6 +2,8 @@ package org.jglr.weac.compile;
 
 import org.jglr.weac.WeacCompileUtils;
 import org.jglr.weac.parse.EnumClassTypes;
+import org.jglr.weac.precompile.WeacLabel;
+import org.jglr.weac.precompile.insn.WeacLabelInsn;
 import org.jglr.weac.precompile.structure.WeacPrecompiledClass;
 import org.jglr.weac.resolve.insn.*;
 import org.jglr.weac.resolve.structure.*;
@@ -194,6 +196,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                             });
                     nConstructors++;
                 }
+                compileSingleExpression(mv, method.instructions);
                 mv.visitInsn(RETURN);
                 mv.visitLabel(end);
                 mv.visitMaxs(0,0);
@@ -201,7 +204,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
 
             mv.visitEnd();
         }
-        if(nConstructors == 0 && primitiveType != null) {
+        if(nConstructors == 0) {
             MethodVisitor mv = writer.visitMethod(ACC_PRIVATE, "<init>", Type.getMethodType(Type.VOID_TYPE).getDescriptor(), null, null);
             Label start = new Label();
             Label end = new Label();
@@ -246,9 +249,23 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             } else if(insn instanceof WeacLoadShortInsn) {
                 short n = ((WeacLoadShortInsn) insn).getNumber();
                 writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadCharInsn) {
+                char n = ((WeacLoadCharInsn) insn).getNumber();
+                writer.visitLdcInsn(n);
+            } else if(insn instanceof WeacLoadStringInsn) {
+                String n = ((WeacLoadStringInsn) insn).getValue();
+                writer.visitLdcInsn(n);
             } else if(insn instanceof WeacLoadBooleanInsn) {
                 boolean b = ((WeacLoadBooleanInsn) insn).getValue();
                 writer.visitInsn(b ? ICONST_1 : ICONST_0);
+            } else if(insn instanceof WeacResolvedLabelInsn) {
+                WeacLabel b = ((WeacResolvedLabelInsn) insn).getLabel();
+                writer.visitLabel(new Label());
+            } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
+                int code = insn.getOpcode();
+                int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
+                int[] returnOpcodes = new int[] {RETURN, ARETURN, IRETURN, FRETURN, IRETURN, LRETURN, IRETURN, DRETURN};
+                writer.visitInsn(returnOpcodes[returnIndex]);
             } else {
                 System.err.println("unknown: "+insn);
             }

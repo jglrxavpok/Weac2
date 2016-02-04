@@ -30,6 +30,13 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "global(01)");
         precompile(preCompiler, "myVar.myMethod(\"My argument\", myVar2)");
         precompile(preCompiler, "myVar.myMethod(nestedMethod(\"My argument\", myVar2), \"MyString\".length(), constant.afield)");
+
+        // Test assigments
+        precompile(preCompiler, "String myValue = something");
+        precompile(preCompiler, "myValue >>= something");
+        precompile(preCompiler, "myValue /= something");
+        precompile(preCompiler, "myValue *= something");
+        precompile(preCompiler, "return 454");
     }
 
     private void precompile(WeacPreCompiler preCompiler, String s) {

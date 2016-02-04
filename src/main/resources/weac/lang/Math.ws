@@ -25,7 +25,7 @@ object Math {
     }
 
     Int fact(Int number) {
-
+        return 0;
     }
 
 }

@@ -101,7 +101,7 @@ public class WeacResolvedClass {
                     }
                 }
             } else {
-                throw new RuntimeException("Runtime visibility cannot be unset");
+                throw new RuntimeException("Runtime visibility cannot be unset in "+name);
             }
         }
         return classType == EnumClassTypes.ANNOTATION;

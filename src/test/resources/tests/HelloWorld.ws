@@ -15,10 +15,15 @@ object HelloWorld > Application + TestMixin {
     private Double fieldWithDefaultValue9 = 10000000L;
     private Boolean fieldWithDefaultValue10 = false;
     private Boolean fieldWithDefaultValue11 = true;
+    private String simpleField = "Test \n";
 
 
     Void main(String[] args) {
         Console.println("Hello World!");
+    }
+
+    String test() {
+        return "TEST";
     }
 }
 

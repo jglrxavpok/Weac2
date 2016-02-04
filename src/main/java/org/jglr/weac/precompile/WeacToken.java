@@ -54,4 +54,9 @@ public class WeacToken {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return type+" "+getContent();
+    }
 }

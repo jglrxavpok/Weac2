@@ -34,7 +34,21 @@ public enum EnumOperators {
     XOR("^", 11, LEFT),
     DOUBLE_AND("&&", 11, LEFT),
     INTERVAL_SEPARATOR("..", 11, LEFT),
-    DOUBLE_OR("||", 12, LEFT)
+    DOUBLE_OR("||", 12, LEFT),
+
+    // ASSIGNMENTS
+    SET_TO("=", 14, RIGHT),
+    INCREMENT_BY("+=", 14, RIGHT),
+    DECREMENT_BY("-=", 14, RIGHT),
+    MULTIPLY_BY("*=", 14, RIGHT),
+    DIVIDE_BY("/=", 14, RIGHT),
+    SET_MODULO("%=", 14, RIGHT),
+    APPLY_AND("&=", 14, RIGHT),
+    APPLY_XOR("^=", 14, RIGHT),
+    APPLY_OR("|=", 14, RIGHT),
+    APPLY_LSH("<<=", 14, RIGHT),
+    APPLY_RSH(">>=", 14, RIGHT),
+    APPLY_URSH(">>>=", 14, RIGHT),
     ;
 
     private final String raw;
