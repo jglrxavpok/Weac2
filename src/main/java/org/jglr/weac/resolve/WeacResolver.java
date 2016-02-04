@@ -24,116 +24,116 @@ public class WeacResolver extends WeacCompileUtils {
         stringResolver = new StringResolver();
     }
 
-    public WeacResolvedSource process(WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    public WeacResolvedSource process(WeacResolvingContext context) {
         WeacResolvedSource resolved = new WeacResolvedSource();
-        resolved.packageName = source.packageName;
+        resolved.packageName = context.getSource().packageName;
         resolved.classes = new ArrayList<>();
 
-        source.classes.forEach(s -> resolved.classes.add(resolve(source, s, sideClasses)));
+        context.getSource().classes.forEach(c -> resolved.classes.add(resolve(c, context)));
         return resolved;
     }
 
-    private WeacResolvedClass resolve(WeacPrecompiledSource source, WeacPrecompiledClass aClass, WeacPrecompiledClass[] sideClasses) {
+    private WeacResolvedClass resolve(WeacPrecompiledClass aClass, WeacResolvingContext context) {
         WeacResolvedClass resolvedClass = new WeacResolvedClass();
-        WeacType currentType = resolveType(new Identifier(aClass.name), source, sideClasses);
+        WeacType currentType = resolveType(new Identifier(aClass.name), context);
         resolvedClass.access = aClass.access;
-        resolvedClass.annotations.addAll(resolveAnnotations(aClass.annotations, currentType, source, sideClasses));
+        resolvedClass.annotations.addAll(resolveAnnotations(aClass.annotations, currentType, context));
         resolvedClass.classType = aClass.classType;
-        resolvedClass.parents = getInterfaces(aClass, aClass.interfacesImplemented, source, sideClasses);
+        resolvedClass.parents = getInterfaces(aClass, aClass.interfacesImplemented, context);
         resolvedClass.fullName = getFullName(aClass);
-        resolvedClass.enumConstants = resolveEnums(aClass.enumConstants, currentType, source, sideClasses);
+        resolvedClass.enumConstants = resolveEnums(aClass.enumConstants, currentType, context);
         resolvedClass.isAbstract = aClass.isAbstract;
         resolvedClass.isMixin = aClass.isMixin;
         resolvedClass.name = aClass.name;
         resolvedClass.isCompilerSpecial = aClass.isCompilerSpecial;
 
         WeacMixedContentClass toMixIn = resolveMixins(resolvedClass, resolvedClass.parents.getMixins());
-        resolvedClass.methods = resolveMethods(currentType, aClass, source, sideClasses, toMixIn);
+        resolvedClass.methods = resolveMethods(currentType, aClass, context, toMixIn);
 
-        resolvedClass.fields = resolveFields(resolvedClass, currentType, aClass, source, sideClasses, toMixIn);
+        resolvedClass.fields = resolveFields(resolvedClass, currentType, aClass, context, toMixIn);
         return resolvedClass;
     }
 
-    private List<WeacResolvedAnnotation> resolveAnnotations(List<WeacPrecompiledAnnotation> annotations, WeacType currentType, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    private List<WeacResolvedAnnotation> resolveAnnotations(List<WeacPrecompiledAnnotation> annotations, WeacType currentType, WeacResolvingContext context) {
         List<WeacResolvedAnnotation> resolvedAnnotations = new LinkedList<>();
         for(WeacPrecompiledAnnotation a : annotations) {
             WeacPrecompiledSource annotSource = new WeacPrecompiledSource();
-            WeacPrecompiledClass clazz = findClass(a.getName(), source, sideClasses);
+            WeacPrecompiledClass clazz = findClass(a.getName(), context);
             annotSource.classes = new LinkedList<>();
             annotSource.classes.add(clazz);
-            annotSource.classes.addAll(source.classes); // corner cases where the annotation uses the type it is describing
+            annotSource.classes.addAll(context.getSource().classes); // corner cases where the annotation uses the type it is describing
 
             annotSource.imports = new LinkedList<>();
             if(clazz == null)
                 throw new RuntimeException(":cc "+a.getName());
             annotSource.packageName = clazz.packageName;
 
-            WeacResolvedAnnotation resolved = new WeacResolvedAnnotation(resolve(annotSource, clazz, sideClasses));
+            WeacResolvedAnnotation resolved = new WeacResolvedAnnotation(resolve(clazz, context));
             a.args.stream()
-                    .map(l -> resolveSingleExpression(l, currentType, source, sideClasses, new VariableMap()))
+                    .map(l -> resolveSingleExpression(l, currentType, context, new VariableMap()))
                     .forEach(resolved.getArgs()::add);
             resolvedAnnotations.add(resolved);
         }
         return resolvedAnnotations;
     }
 
-    private List<WeacResolvedField> resolveFields(WeacResolvedClass resolvedClass, WeacType currentType, WeacPrecompiledClass aClass, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses, WeacMixedContentClass toMixIn) {
+    private List<WeacResolvedField> resolveFields(WeacResolvedClass resolvedClass, WeacType currentType, WeacPrecompiledClass aClass, WeacResolvingContext context, WeacMixedContentClass toMixIn) {
         if(resolvedClass.isMixin) {
             return Collections.emptyList();
         }
         List<WeacResolvedField> fields = new LinkedList<>();
         VariableMap fieldVarMap = new VariableMap();
-        toMixIn.fields.forEach(m -> addOrOverrideField(resolveSingleField(m, currentType, source, sideClasses, fieldVarMap), fields));
+        toMixIn.fields.forEach(m -> addOrOverrideField(resolveSingleField(m, currentType, context, fieldVarMap), fields));
 
-        aClass.fields.forEach(m -> addOrOverrideField(resolveSingleField(m, currentType, source, sideClasses, fieldVarMap), fields));
+        aClass.fields.forEach(m -> addOrOverrideField(resolveSingleField(m, currentType, context, fieldVarMap), fields));
         return fields;
     }
 
-    private WeacResolvedField resolveSingleField(WeacPrecompiledField field, WeacType currentType, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses, VariableMap fieldVarMap) {
+    private WeacResolvedField resolveSingleField(WeacPrecompiledField field, WeacType currentType, WeacResolvingContext context, VariableMap fieldVarMap) {
         WeacResolvedField resolvedField = new WeacResolvedField();
         resolvedField.name = field.name;
         resolvedField.access = field.access;
         resolvedField.isCompilerSpecial = field.isCompilerSpecial;
-        resolvedField.type = resolveType(field.type, source, sideClasses);
-        resolvedField.defaultValue.addAll(resolveSingleExpression(field.defaultValue, currentType, source, sideClasses, fieldVarMap));
+        resolvedField.type = resolveType(field.type, context);
+        resolvedField.defaultValue.addAll(resolveSingleExpression(field.defaultValue, currentType, context, fieldVarMap));
         return resolvedField;
     }
 
-    private List<WeacResolvedMethod> resolveMethods(WeacType currentType, WeacPrecompiledClass aClass, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses, WeacMixedContentClass toMixIn) {
+    private List<WeacResolvedMethod> resolveMethods(WeacType currentType, WeacPrecompiledClass aClass, WeacResolvingContext context, WeacMixedContentClass toMixIn) {
         List<WeacResolvedMethod> methods = new LinkedList<>();
-        toMixIn.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, source, sideClasses), methods));
+        toMixIn.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, context), methods));
 
-        aClass.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, source, sideClasses), methods));
+        aClass.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, context), methods));
         return methods;
     }
 
-    private WeacResolvedMethod resolveSingleMethod(WeacPrecompiledMethod precompiledMethod, WeacType currentType, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    private WeacResolvedMethod resolveSingleMethod(WeacPrecompiledMethod precompiledMethod, WeacType currentType, WeacResolvingContext context) {
         WeacResolvedMethod method = new WeacResolvedMethod();
         method.access = precompiledMethod.access;
-        method.annotations.addAll(resolveAnnotations(precompiledMethod.annotations, currentType, source, sideClasses));
+        method.annotations.addAll(resolveAnnotations(precompiledMethod.annotations, currentType, context));
         method.argumentNames.addAll(precompiledMethod.argumentNames);
         method.isAbstract = precompiledMethod.isAbstract;
         method.isConstructor = precompiledMethod.isConstructor;
         method.name = precompiledMethod.name;
         method.isCompilerSpecial = precompiledMethod.isCompilerSpecial;
-        method.returnType = resolveType(precompiledMethod.returnType, source, sideClasses);
+        method.returnType = resolveType(precompiledMethod.returnType, context);
 
         VariableMap localVariables = new VariableMap();
-        resolveSingleExpression(precompiledMethod.instructions, currentType, source, sideClasses, localVariables).forEach(method.instructions::add);
+        resolveSingleExpression(precompiledMethod.instructions, currentType, context, localVariables).forEach(method.instructions::add);
         precompiledMethod.argumentTypes.stream()
-                .map(t -> resolveType(t, source, sideClasses))
+                .map(t -> resolveType(t, context))
                 .forEach(method.argumentTypes::add);
         return method;
     }
 
-    private WeacType resolveType(Identifier type, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    private WeacType resolveType(Identifier type, WeacResolvingContext context) {
         if(type.getId().equalsIgnoreCase("Void"))
             return WeacType.VOID_TYPE;
         WeacType intermediateType = new WeacType(type.getId(), true);
         String core = intermediateType.getCoreType().getIdentifier().getId();
-        WeacPrecompiledClass typeClass = findClass(core, source, sideClasses);
+        WeacPrecompiledClass typeClass = findClass(core, context);
         if(typeClass == null) {
-            newError("Invalid type: "+type.getId()+" in "+source.classes.get(0).fullName, -1);
+            newError("Invalid type: "+type.getId()+" in "+context.getSource().classes.get(0).fullName, -1);
         }
         return new WeacType(typeClass.fullName+(type.getId().substring(core.length())), true);
     }
@@ -185,7 +185,7 @@ public class WeacResolver extends WeacCompileUtils {
         return (aClass.packageName == null || aClass.packageName.isEmpty()) ? aClass.name : aClass.packageName+"."+aClass.name;
     }
 
-    private ClassParents getInterfaces(WeacPrecompiledClass aClass, List<String> interfacesImplemented, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    private ClassParents getInterfaces(WeacPrecompiledClass aClass, List<String> interfacesImplemented, WeacResolvingContext context) {
         ClassParents parents = new ClassParents();
 
         List<String> interfaces = new ArrayList<>();
@@ -196,7 +196,7 @@ public class WeacResolver extends WeacCompileUtils {
 
         WeacPrecompiledClass superclass = null;
         for(String inter : interfaces) {
-            WeacPrecompiledClass clazz = findClass(inter, source, sideClasses);
+            WeacPrecompiledClass clazz = findClass(inter, context);
             if(clazz == null) {
                 newError("Class not found: "+inter, -1);
                 return parents;
@@ -237,19 +237,19 @@ public class WeacResolver extends WeacCompileUtils {
             }
         }
         if(superclass == null) {
-            superclass = findClass("weac.lang.WeacObject", source, sideClasses);
+            superclass = findClass("weac.lang.WeacObject", context);
         }
         parents.setSuperclass(superclass);
         return parents;
     }
 
-    private WeacPrecompiledClass findClass(String inter, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    private WeacPrecompiledClass findClass(String inter, WeacResolvingContext context) {
         WeacPseudoResolvedClass clazz = new WeacPseudoResolvedClass();
 
-        String transformedName = transform(inter, source.imports);
+        String transformedName = transform(inter, context.getSource().imports);
         System.out.println(inter+" transformed to "+transformedName);
         // check in source if can be found
-        for (WeacPrecompiledClass sourceClass : source.classes) {
+        for (WeacPrecompiledClass sourceClass : context.getSource().classes) {
             if(sourceClass.fullName.equals(transformedName)) {
                 return sourceClass;
             }
@@ -259,15 +259,14 @@ public class WeacResolver extends WeacCompileUtils {
             }
         }
 
-        for (WeacPrecompiledClass sideClass : sideClasses) {
+        for (WeacPrecompiledClass sideClass : context.getSideClasses()) {
             if(sideClass.fullName.equals(transformedName)) {
                 return sideClass;
             }
         }
 
         // test for base classes, because they are not necessarily imported
-        for (WeacPrecompiledClass sideClass : sideClasses) {
-            System.out.println(">>>>"+sideClass.fullName);
+        for (WeacPrecompiledClass sideClass : context.getSideClasses()) {
             if(sideClass.fullName.equals("weac.lang."+inter)) {
                 return sideClass;
             }
@@ -306,7 +305,7 @@ public class WeacResolver extends WeacCompileUtils {
         return name;
     }
 
-    private List<WeacResolvedEnumConstant> resolveEnums(List<WeacPrecompiledEnumConstant> enumConstants, WeacType currentType, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    private List<WeacResolvedEnumConstant> resolveEnums(List<WeacPrecompiledEnumConstant> enumConstants, WeacType currentType, WeacResolvingContext context) {
         List<WeacResolvedEnumConstant> resolvedConstants = new ArrayList<>();
         VariableMap enumVarMap = new VariableMap();
         for(WeacPrecompiledEnumConstant cst : enumConstants) {
@@ -318,7 +317,7 @@ public class WeacResolver extends WeacCompileUtils {
             resolved.name = cst.name;
 
             cst.parameters.stream()
-                    .map(m -> resolveSingleExpression(m, currentType, source, sideClasses, enumVarMap))
+                    .map(m -> resolveSingleExpression(m, currentType, context, enumVarMap))
                     .forEach(resolved.parameters::add);
 
             resolvedConstants.add(resolved);
@@ -326,7 +325,7 @@ public class WeacResolver extends WeacCompileUtils {
         return resolvedConstants;
     }
 
-    private List<WeacResolvedInsn> resolveSingleExpression(List<WeacPrecompiledInsn> precompiled, WeacType currentType, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses, VariableMap varMap) {
+    private List<WeacResolvedInsn> resolveSingleExpression(List<WeacPrecompiledInsn> precompiled, WeacType currentType, WeacResolvingContext context, VariableMap varMap) {
         List<WeacResolvedInsn> insns = new LinkedList<>();
         Stack<WeacResolvedInsn> stack = new Stack<>();
         Stack<WeacValue> valueStack = new Stack<>();
@@ -337,7 +336,8 @@ public class WeacResolver extends WeacCompileUtils {
                 String numberRepresentation = cst.getValue();
                 WeacResolvedInsn resolvedNumber = numberResolver.resolve(numberRepresentation);
 
-                WeacType numberType = null;
+                WeacType numberType = extractType(resolvedNumber);
+
                 valueStack.push(new WeacConstantValue(numberType));
 
                 stack.push(resolvedNumber);
@@ -375,7 +375,7 @@ public class WeacResolver extends WeacCompileUtils {
                 }
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.FUNCTION_CALL) {
                 WeacFunctionCall cst = ((WeacFunctionCall) precompiledInsn);
-                WeacType owner = findFunctionOwner(stack, currentType, cst, source, sideClasses);
+                WeacType owner = findFunctionOwner(stack, currentType, cst, context);
 
 
                 // TODO: find real method
@@ -390,7 +390,6 @@ public class WeacResolver extends WeacCompileUtils {
                 if(!returnType.equals(WeacType.VOID_TYPE))
                     valueStack.push(new WeacConstantValue(returnType));
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.RETURN) {
-                WeacPrecompiledInsn cst = ((WeacPrecompiledInsn) precompiledInsn);
                 if(valueStack.isEmpty()) {
                     insns.add(new WeacResolvedInsn(ResolveOpcodes.RETURN));
                 } else {
@@ -427,7 +426,28 @@ public class WeacResolver extends WeacCompileUtils {
         return insns;
     }
 
-    private WeacType findFunctionOwner(Stack<WeacResolvedInsn> stack, WeacType currentType, WeacFunctionCall cst, WeacPrecompiledSource source, WeacPrecompiledClass[] sideClasses) {
+    private WeacType extractType(WeacResolvedInsn number) {
+        switch (number.getOpcode()) {
+            case ResolveOpcodes.DOUBLE_RETURN:
+                return WeacType.DOUBLE_TYPE;
+
+            case ResolveOpcodes.FLOAT_RETURN:
+                return WeacType.FLOAT_TYPE;
+
+            case ResolveOpcodes.INT_RETURN:
+                return WeacType.INTEGER_TYPE;
+
+            case ResolveOpcodes.LONG_RETURN:
+                return WeacType.LONG_TYPE;
+
+            case ResolveOpcodes.SHORT_RETURN:
+                return WeacType.SHORT_TYPE;
+
+        }
+        return WeacType.VOID_TYPE;
+    }
+
+    private WeacType findFunctionOwner(Stack<WeacResolvedInsn> stack, WeacType currentType, WeacFunctionCall cst, WeacResolvingContext context) {
         if(cst.shouldLookForInstance()) {
 
         } else {

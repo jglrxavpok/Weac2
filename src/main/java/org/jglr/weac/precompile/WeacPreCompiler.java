@@ -390,6 +390,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 if(p.matches(insns, i)) {
                     p.output(insns, i, finalInstructions);
                     i += p.consumeCount(insns, i);
+                    matchFound = true;
                 }
             }
 
