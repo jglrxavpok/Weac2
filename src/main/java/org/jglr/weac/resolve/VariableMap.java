@@ -1,42 +1,65 @@
 package org.jglr.weac.resolve;
 
-import java.util.Comparator;
+import org.jglr.weac.utils.WeacType;
+
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Optional;
+import java.util.List;
+import java.util.Map;
 
 public class VariableMap {
 
-    private final HashMap<String, Integer> varIds;
-    private final HashMap<Integer, String> varNames;
+    private final Map<String, Integer> localIDs;
+    private final Map<String, WeacType> localTypes;
+    private final Map<Integer, String> localNames;
+    private final Map<String, WeacType> fieldTypes;
+    private int localIndex;
 
     public VariableMap() {
-        varIds = new HashMap<>();
-        varNames = new HashMap<>();
+        localTypes = new HashMap<>();
+        localIDs = new HashMap<>();
+        localNames = new HashMap<>();
+        fieldTypes = new HashMap<>();
     }
 
-    public int register(String name) {
-        int index = getCurrentLocalIndex()+1;
-        varIds.put(name, index);
-        varNames.put(index, name);
+    public void registerField(String name, WeacType type) {
+        fieldTypes.put(name, type);
+    }
+
+    public int registerLocal(String name, WeacType type) {
+        int index = getCurrentLocalIndex();
+        localIDs.put(name, index);
+        localNames.put(index, name);
+        localTypes.put(name, type);
+        localIndex++;
         return index;
     }
 
     public int getCurrentLocalIndex() {
-        Optional<Integer> op = varNames.keySet().stream()
-                .sorted(Comparator.reverseOrder())
-                .findFirst();
-        return op.orElse(0);
+        return localIndex;
     }
 
-    public boolean exists(String name) {
-        return getIndex(name) != -1;
+    public boolean localExists(String name) {
+        return getLocalIndex(name) != -1;
     }
 
-    public String getName(int index) {
-        return varNames.getOrDefault(index, "$INVALID ID$");
+    public boolean fieldExists(String name) {
+        return fieldTypes.containsKey(name);
     }
 
-    public int getIndex(String name) {
-        return varIds.getOrDefault(name, -1);
+    public String getLocalName(int index) {
+        return localNames.getOrDefault(index, "$INVALID ID$");
+    }
+
+    public WeacType getLocalType(String name) {
+        return localTypes.getOrDefault(name, WeacType.VOID_TYPE);
+    }
+
+    public WeacType getFieldType(String name) {
+        return fieldTypes.getOrDefault(name, WeacType.VOID_TYPE);
+    }
+
+    public int getLocalIndex(String name) {
+        return localIDs.getOrDefault(name, -1);
     }
 }

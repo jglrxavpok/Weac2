@@ -18,8 +18,9 @@ object HelloWorld > Application + TestMixin {
     private String simpleField = "Test \n";
 
 
-    Void main(String[] args) {
-        Console.println("Hello World!");
+    Void start(String[] args) {
+        Console.writeLine("Hello World!");
+        Math.sin(Math.random());
     }
 
     String test() {
@@ -30,6 +31,6 @@ object HelloWorld > Application + TestMixin {
 mixin class TestMixin {
     void myMethodMixin() {
         // some code
-        Console.println("Test");
+        Console.writeLine("Test");
     }
 }

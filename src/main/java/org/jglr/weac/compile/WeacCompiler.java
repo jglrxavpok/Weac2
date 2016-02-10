@@ -3,7 +3,6 @@ package org.jglr.weac.compile;
 import org.jglr.weac.WeacCompileUtils;
 import org.jglr.weac.parse.EnumClassTypes;
 import org.jglr.weac.precompile.WeacLabel;
-import org.jglr.weac.precompile.insn.WeacLabelInsn;
 import org.jglr.weac.precompile.structure.WeacPrecompiledClass;
 import org.jglr.weac.resolve.insn.*;
 import org.jglr.weac.resolve.structure.*;
@@ -61,8 +60,8 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
     private Type writeClassAnnotations(List<WeacResolvedAnnotation> annotations, WeacResolvedClass clazz, Type type, ClassWriter writer) {
         Type primitiveType = null;
         for(WeacResolvedAnnotation annotation : annotations) {
-            boolean visible = annotation.getName().isAnnotationRuntimeVisible();
-            AnnotationVisitor av = writer.visitAnnotation(toDescriptor(new WeacType(annotation.getName().fullName, true)), visible);
+            boolean visible = annotation.getName().isAnnotationRuntimeVisible(pseudoInterpreter);
+            AnnotationVisitor av = writer.visitAnnotation(toDescriptor(new WeacType(null, annotation.getName().fullName, true)), visible);
             WeacResolvedClass annotClass = annotation.getName();
             annotClass.methods.forEach(m -> {
                 if(m.returnType.isArray()) {
@@ -128,6 +127,9 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
     }
 
     private void writeMethods(ClassWriter writer, Type type, WeacResolvedClass clazz, Type primitiveType) {
+        if(clazz.classType == EnumClassTypes.OBJECT && clazz.parents.hasInterface("weac.lang.Application")) {
+            writeMainMethod(writer, type, clazz);
+        }
         int nConstructors = 0;
         boolean convertInstanceMethodToStatic = false;
         if(primitiveType != null) {
@@ -191,12 +193,12 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                             .forEach(f -> {
                                 mv.visitLabel(new Label());
                                 mv.visitVarInsn(ALOAD, 0);
-                                this.compileSingleExpression(mv, f.defaultValue);
+                                this.compileSingleExpression(type, mv, f.defaultValue);
                                 mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                             });
                     nConstructors++;
                 }
-                compileSingleExpression(mv, method.instructions);
+                compileSingleExpression(type, mv, method.instructions);
                 mv.visitInsn(RETURN);
                 mv.visitLabel(end);
                 mv.visitMaxs(0,0);
@@ -218,19 +220,41 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                     .forEach(f -> {
                         mv.visitLabel(new Label());
                         mv.visitVarInsn(ALOAD, 0);
-                        this.compileSingleExpression(mv, f.defaultValue);
+                        this.compileSingleExpression(type, mv, f.defaultValue);
                         mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                     });
-            mv.visitInsn(RETURN);
+            //mv.visitInsn(RETURN);
             mv.visitLabel(end);
             mv.visitMaxs(0,0);
             mv.visitEnd();
         }
     }
 
-    private void compileSingleExpression(MethodVisitor writer, List<WeacResolvedInsn> l) {
+    private void writeMainMethod(ClassWriter writer, Type type, WeacResolvedClass clazz) {
+        String mainDesc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String[].class));
+        MethodVisitor mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "main", mainDesc, null, null);
+        mv.visitCode();
+        mv.visitLabel(new Label());
+        mv.visitTypeInsn(NEW, type.getInternalName());
+        mv.visitInsn(DUP);
+        mv.visitInsn(DUP);
+        mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false); // call constructor
+
+        mv.visitMethodInsn(INVOKEVIRTUAL, type.getInternalName(), "start", mainDesc, true); // call Application::start(String[])
+        mv.visitLabel(new Label());
+        mv.visitInsn(RETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
+
+    private void compileSingleExpression(Type type, MethodVisitor writer, List<WeacResolvedInsn> l) {
+        System.out.println("=== INSNS "+type.getInternalName()+" ===");
+        l.forEach(System.out::println);
+        System.out.println("=============");
+        WeacResolvedInsn last = null;
         for (int i = 0; i < l.size(); i++) {
             WeacResolvedInsn insn = l.get(i);
+            last = insn;
             if(insn instanceof WeacLoadByteInsn) {
                 byte n = ((WeacLoadByteInsn) insn).getNumber();
                 writer.visitLdcInsn(n);
@@ -264,11 +288,37 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
                 int code = insn.getOpcode();
                 int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
-                int[] returnOpcodes = new int[] {RETURN, ARETURN, IRETURN, FRETURN, IRETURN, LRETURN, IRETURN, DRETURN};
+                int[] returnOpcodes = new int[] {RETURN, ARETURN, IRETURN, FRETURN, IRETURN, LRETURN, IRETURN, IRETURN, DRETURN};
                 writer.visitInsn(returnOpcodes[returnIndex]);
+            } else if(insn instanceof WeacStoreVarInsn) {
+                WeacStoreVarInsn varInsn = (WeacStoreVarInsn)insn;
+                int localIndex = varInsn.getLocalIndex();
+                writer.visitVarInsn(ASTORE, localIndex);
+            } else if(insn instanceof WeacStoreFieldInsn) {
+                WeacStoreFieldInsn fieldInsn = (WeacStoreFieldInsn)insn;
+                writer.visitFieldInsn(PUTFIELD, type.getInternalName(), fieldInsn.getName(), toDescriptor(fieldInsn.getType()));
+            } else if(insn instanceof WeacLoadFieldInsn) {
+                WeacLoadFieldInsn fieldInsn = (WeacLoadFieldInsn)insn;
+                writer.visitFieldInsn(fieldInsn.isStatic() ? GETSTATIC : GETFIELD, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getFieldName(), toDescriptor(fieldInsn.getType()));
+            } else if(insn instanceof WeacLoadVariableInsn) {
+                WeacLoadVariableInsn variableInsn = (WeacLoadVariableInsn)insn;
+                writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
+            } else if(insn instanceof WeacPopInsn) {
+                writer.visitInsn(POP);
+            } else if(insn instanceof WeacFunctionCallInsn) {
+                WeacFunctionCallInsn callInsn = (WeacFunctionCallInsn)insn;
+                Type[] argTypes = new Type[callInsn.getArgCount()];
+                for(int i0 = 0;i0<callInsn.getArgCount();i0++) {
+                    argTypes[i0] = toJVMType(callInsn.getArgTypes()[i0]);
+                }
+                String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
+                writer.visitMethodInsn(INVOKEVIRTUAL, toJVMType(callInsn.getOwner()).getInternalName(), callInsn.getName(), methodDesc, false);
             } else {
                 System.err.println("unknown: "+insn);
             }
+        }
+        if(last == null || !(last.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && last.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE)) {
+            writer.visitInsn(RETURN);
         }
     }
 

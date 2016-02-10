@@ -36,7 +36,8 @@ public interface ResolveOpcodes {
             LOAD_LOCAL_VARIABLE = 0x20,
             LOAD_FIELD = 0x21,
             STORE_LOCAL_VARIABLE = 0x22,
-            STORE_FIELD = 0x23
+            STORE_FIELD = 0x23,
+            POP = 0x24
 
     ;
 

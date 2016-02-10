@@ -3,6 +3,7 @@ package org.jglr.weac.precompile.structure;
 import org.jglr.weac.parse.EnumClassTypes;
 import org.jglr.weac.parse.structure.WeacParsedField;
 import org.jglr.weac.parse.structure.WeacParsedMethod;
+import org.jglr.weac.utils.WeacImport;
 import org.jglr.weac.utils.WeacModifierType;
 
 import java.util.LinkedList;
@@ -64,6 +65,7 @@ public class WeacPrecompiledClass {
     public String fullName;
 
     public boolean isCompilerSpecial;
+    public List<WeacImport> imports;
 
     public WeacPrecompiledClass() {
         annotations = new LinkedList<>();
@@ -71,5 +73,6 @@ public class WeacPrecompiledClass {
         enumConstants = new LinkedList<>();
         fields = new LinkedList<>();
         methods = new LinkedList<>();
+        imports = new LinkedList<>();
     }
 }

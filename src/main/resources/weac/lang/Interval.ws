@@ -1,6 +1,6 @@
 package weac.lang
 
-class Interval {
+Interval {
 
     private Double start;
     private Double end;

@@ -1,10 +1,8 @@
 package weac.lang
 
-import java.lang.String as JString
-
-mixin class Number {
+mixin Number {
 
     String toString() {
-        return JString.valueOf(this);
+        return String.valueOf(this);
     }
 }

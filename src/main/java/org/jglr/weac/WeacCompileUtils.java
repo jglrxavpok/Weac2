@@ -246,6 +246,7 @@ public abstract class WeacCompileUtils {
         boolean inString = false;
         boolean inQuote = false;
         boolean escaped = false;
+        int unclosedBrackets = 0;
         finalLoop: for(int i = offset;i<chars.length;i++) {
             char c = chars[i];
             boolean append = true;
@@ -253,6 +254,17 @@ public abstract class WeacCompileUtils {
                 case '"':
                     if(!inQuote && !escaped)
                         inString = !inString;
+                    break;
+
+                case '{':
+                    if(!inQuote && !inString)
+                        unclosedBrackets++;
+                    break;
+
+                case '}':
+                    if(!inQuote && !inString)
+                        unclosedBrackets--;
+
                     break;
 
                 case '\'':
@@ -268,7 +280,7 @@ public abstract class WeacCompileUtils {
                     break;
 
                 case ';':
-                    if(!inQuote && !inString)
+                    if(!inQuote && !inString && unclosedBrackets == 0)
                         break finalLoop;
             }
             if(append)

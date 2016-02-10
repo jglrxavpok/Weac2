@@ -7,7 +7,6 @@ import org.jglr.weac.precompile.insn.*;
 import org.jglr.weac.precompile.patterns.WeacIntervalPattern;
 import org.jglr.weac.precompile.structure.*;
 import org.jglr.weac.utils.EnumOperators;
-import org.jglr.weac.utils.Identifier;
 
 import java.util.*;
 
@@ -38,7 +37,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
         source.packageName = parsed.packageName;
 
-        parsed.classes.forEach(c -> source.classes.add(precompile(c)));
+        parsed.classes.forEach(c -> {
+            WeacPrecompiledClass clazz = precompile(c);
+            clazz.imports.addAll(source.imports);
+            source.classes.add(clazz);
+        });
 
         return source;
     }
@@ -134,7 +137,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 /*        for(int i = 0;i<chars.length;i++) {
             char c = chars[i];
             if(c == '(') {
-                int offset = handleBuiltinMethod(buffer.toString(), chars, i, instructions, currentBlock, previousBlock);
+                int offset = handleBuiltins(buffer.toString(), chars, i, instructions, currentBlock, previousBlock);
                 if(offset == 0) {
                     buffer.append(c);
                 } else {
@@ -159,44 +162,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         }*/
         instructions.add(Collections.singletonList(new WeacLabelInsn(currentBlock.getEnd())));
         return currentBlock;
-    }
-
-    private int handleBuiltinMethod(String bufferContent, char[] chars, int index, List<List<WeacPrecompiledInsn>> instructions, WeacCodeBlock codeBlock, WeacCodeBlock previousBlock) {
-        String name = bufferContent.replace(" ", "");
-        int start = index;
-        switch (name) {
-            case "if":
-                index++;
-                String args = readArguments(chars, index);
-                String condition = readSingleArgument(args, 0, false);
-                List<WeacPrecompiledInsn> insns = precompileExpression(condition);
-
-                index += args.length()+1;
-                index += readUntilNot(chars, index).length();
-                // read code
-                if(chars[index] == '{') {
-                    index++;
-                    String codeBlockSource = readCodeblock(chars, index);
-                    index += codeBlockSource.length()+1;
-
-                    insns.add(new WeacLabelInsn());
-
-                    WeacCodeBlock conditionalBlock = compileCodeBlock(codeBlockSource);
-                    insns.add(new WeacBlockInsn(conditionalBlock));
-
-                    insns.add(new WeacIfNotJumpInsn(conditionalBlock.getEnd()));
-                } else {
-                    newError("Invalid code block after if conditional", -1);
-                }
-                return index-start;
-        }
-        return 0;
-    }
-
-    private List<WeacPrecompiledInsn> compileSingleInstruction(String instructionSource) {
-        List<WeacPrecompiledInsn> instruction = new LinkedList<>();
-
-        return instruction;
     }
 
     private List<WeacPrecompiledField> precompileFields(List<WeacParsedField> fields) {
@@ -262,9 +227,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         Iterator<WeacToken> iterator = tokens.iterator();
         while(iterator.hasNext()) {
             WeacToken token = iterator.next();
-            if (token.getType() == WeacTokenType.WAITING_FOR_NEXT) {
+            if (token.getType() == WeacTokenType.WAITING_FOR_NEXT)
                 iterator.remove();
-            }
         }
 
         iterator = tokens.iterator();
@@ -301,9 +265,29 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
             previous = token;
         }
+        handleBuiltins(tokens);
+        tokens.forEach(t -> System.out.println("token: "+t));
+
+        // TODO: convert 'ELSE' + 'IF' to 'ELSE IF'
         List<WeacToken> output = convertToRPN(expression, tokens);
-        output.forEach(t -> {
-            if(t.getType() == WeacTokenType.VARIABLE || t.getType() == WeacTokenType.LITERAL) {
+
+        for(WeacToken token : output) {
+            System.out.print(token.getType().name()+"("+token.getContent()+") ");
+        }
+        System.out.println();
+        return toInstructions(output, insns);
+    }
+
+    private void handleBuiltins(List<WeacToken> tokens) {
+        ListIterator<WeacToken> it = tokens.listIterator();
+        while (it.hasNext()) {
+            WeacToken t = it.next();
+            if(t.getType() == WeacTokenType.FUNCTION) {
+                String name = t.getContent();
+                if(name.equals("if")) {
+                    t.setType(WeacTokenType.IF);
+                }
+            } else if(t.getType() == WeacTokenType.VARIABLE || t.getType() == WeacTokenType.LITERAL) {
                 switch (t.getContent()) {
                     case "true":
                     case "false":
@@ -313,21 +297,23 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     case "this":
                         t.setType(WeacTokenType.THIS);
                         break;
+
+                    case "else":
+                        t.setType(WeacTokenType.ELSE);
+                        break;
                 }
             }
-        });
-
-        for(WeacToken token : output) {
-            System.out.print(token.getType().name()+"("+token.getContent()+") ");
         }
-        System.out.println();
-        return toInstructions(output, insns);
     }
 
     private List<WeacPrecompiledInsn> toInstructions(List<WeacToken> output, List<WeacPrecompiledInsn> insns) {
         // TODO: Handle 'new' after function calls
         for(WeacToken token : output) {
             switch (token.getType()) {
+                case ARGUMENT_SEPARATOR:
+                    insns.add(new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR));
+                    break;
+
                 case NUMBER:
                     insns.add(new WeacLoadNumberConstant(token.getContent()));
                     break;
@@ -360,10 +346,37 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     insns.add(new WeacOperatorInsn(EnumOperators.get(token.getContent(), false)));
                     break;
 
+                case THIS:
+                    insns.add(new WeacPrecompiledLoadThis());
+                    break;
+
                 case UNARY_OPERATOR:
                     EnumOperators operator = EnumOperators.get(token.getContent(), true);
                     if(operator == EnumOperators.RETURN) {
                         insns.add(new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
+                    } else if(operator == EnumOperators.NEW) {
+                        WeacPrecompiledInsn prev = insns.remove(insns.size()-1);
+                        String typeName;
+                        int constructorArgCount = 0;
+                        if(prev.getOpcode() == PrecompileOpcodes.LOAD_VARIABLE) {
+                            WeacLoadVariable var = (WeacLoadVariable)prev;
+                            typeName = var.getName();
+                        } else if(prev.getOpcode() == PrecompileOpcodes.FUNCTION_CALL) {
+                            WeacFunctionCall call = (WeacFunctionCall)prev;
+                            typeName = call.getName();
+                            constructorArgCount = call.getArgCount();
+                            if(call.shouldLookForInstance()) {
+                                newError("Incorrect call to constructor", -1); // todo: line
+                            }
+                        } else {
+                            newError("Invalid token before constructor (opcode is "+prev.getOpcode()+")", -1); // todo: line
+                            typeName = "INVALID$$";
+                        }
+                        insns.add(new WeacInstanciateInsn(typeName));
+
+                        // look into the stack, as the value as just be added via the WeacInstanceInsn
+                        insns.add(new WeacFunctionCall("<init>", constructorArgCount, true));
+
                     } else {
                         insns.add(new WeacOperatorInsn(operator));
                     }
@@ -371,9 +384,13 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                 case DEFINE_ARRAY:
                     int length = Integer.parseInt(token.getContent());
-                    insns.add(new WeacCreateArray(length, "unknown"));
+                    insns.add(new WeacCreateArray(length, "$$unknown"));
                     for(int i = 0;i<length;i++)
                         insns.add(new WeacStoreArray(length-i-1));
+                    break;
+
+                default:
+                    System.err.println("Precompilation: unknown "+token);
                     break;
 
             }
@@ -384,6 +401,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
     private List<WeacPrecompiledInsn> postProcessInstructions(List<WeacPrecompiledInsn> insns) {
         List<WeacPrecompiledInsn> finalInstructions = new LinkedList<>();
+        finalInstructions.add(new WeacLabelInsn());
         for(int i = 0;i<insns.size();i++) {
             boolean matchFound = false;
             for(WeacInstructionPattern<WeacPrecompiledInsn> p : patterns) {
@@ -399,6 +417,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             }
 
         }
+        finalInstructions.add(new WeacLabelInsn());
         return finalInstructions;
     }
 
@@ -413,13 +432,19 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         Stack<WeacToken> stack = new Stack<>();
         int argCount = 0;
         Stack<Integer> argCountStack = new Stack<>();
+        Stack<Boolean> instanceStack = new Stack<>();
+        instanceStack.push(false);
         for(int i = 0;i<tokens.size();i++) {
             WeacToken token = tokens.get(i);
             if(token.getType() == WeacTokenType.NUMBER || token.getType() == WeacTokenType.STRING
-                    || token.getType() == WeacTokenType.SINGLE_CHARACTER || token.getType() == WeacTokenType.VARIABLE) {
+                    || token.getType() == WeacTokenType.SINGLE_CHARACTER || token.getType() == WeacTokenType.VARIABLE
+                    || token.getType() == WeacTokenType.BOOLEAN
+                    || token.getType() == WeacTokenType.THIS) {
                 if(i+2 < tokens.size()) {
                     if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
-                        if(tokens.get(i+2).getType() == WeacTokenType.VARIABLE) {
+                        WeacTokenType type = tokens.get(i + 2).getType();
+                        instanceStack.push(true);
+                        if(type == WeacTokenType.VARIABLE || type == WeacTokenType.THIS) {
                             out.add(token);
                             out.add(tokens.get(i+1));
                             out.add(tokens.get(i+2));
@@ -438,11 +463,12 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     out.add(token);
                     argCount++;
                 }
-            } else if(token.getType() == WeacTokenType.FUNCTION) {
+            } else if(token.getType() == WeacTokenType.FUNCTION || token.getType() == WeacTokenType.IF) {
                 stack.push(token);
                 argCountStack.push(argCount);
                 argCount = 0;
             } else if(token.getType() == WeacTokenType.ARGUMENT_SEPARATOR) {
+                out.add(token);
                 if(stack.isEmpty()) {
                     newError("Unmatched parenthesises, please fix", -1);
                     return Collections.EMPTY_LIST;
@@ -491,18 +517,16 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 }
             } else if(token.isOpeningBracketLike()) {
                 stack.push(token);
-                if(token.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
+                if(token.getType() == WeacTokenType.OPENING_CURLY_BRACKETS) {
+                    out.add(token);
+                } else if(token.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
                     argCountStack.push(argCount);
                     argCount = 0;
                 }
             } else if(token.isClosingBracketLike()) {
                 if(!stack.isEmpty()) {
                     while(!stack.peek().isOpposite(token)) {
-                        if(stack.peek().getType() == WeacTokenType.BINARY_OPERATOR || stack.peek().getType() == WeacTokenType.UNARY_OPERATOR) {
-                            out.add(stack.pop());
-                        } else {
-                            break;
-                        }
+                        out.add(stack.pop());
                     }
 
                     if(token.getType() == WeacTokenType.CLOSING_SQUARE_BRACKETS) {
@@ -521,25 +545,31 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                             } else {
                                 if(!stack.isEmpty()) {
                                     WeacToken top = stack.peek();
-                                    if(top.getType() == WeacTokenType.FUNCTION) {
+                                    if(top.getType() == WeacTokenType.FUNCTION || top.getType() == WeacTokenType.IF) {
                                         WeacToken originalToken = stack.pop();
                                         boolean shouldLookForInstance = false;
-                                        if(!stack.isEmpty()) {
+                                        /*if(!stack.isEmpty()) {
                                             if(stack.peek().getType() == WeacTokenType.MEMBER_ACCESSING) {
                                                 shouldLookForInstance = true;
                                                 stack.pop();
                                             }
                                         } else if(stack.isEmpty() && out.size()-argCount > 0) {
                                             shouldLookForInstance = true;
-                                        }
+                                        }*/
+                                        shouldLookForInstance = instanceStack.pop();
                                         // function name;argument count;true if we should look for the object to call it on in the stack
-                                        WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), WeacTokenType.FUNCTION, originalToken.length);
+                                        WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), top.getType(), originalToken.length);
                                         argCount = argCountStack.pop();
                                         argCount++;
                                         out.add(functionToken);
-
+                                    } else {
+                                        System.out.println("FREAKING OUT "+Arrays.toString(stack.toArray())+" / "+top+" / "+previous);
                                     }
                                 }
+                            }
+
+                            if(token.getType() == WeacTokenType.CLOSING_CURLY_BRACKETS) {
+                                out.add(token);
                             }
                         }
                     }
@@ -547,12 +577,14 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     newError("Unmatched parenthesises, please fix", -1);
                     return Collections.EMPTY_LIST;
                 }
+            } else if(token.getType() == WeacTokenType.IF || token.getType() == WeacTokenType.IF) {
+                out.add(token);
             }
         }
         while(!stack.isEmpty()) {
             WeacToken token = stack.pop();
             if(token.isOpeningBracketLike()) {
-                newError("Unmatched parenthesis in "+expr, -1);
+                newError("Unmatched parenthesis in "+expr+", found "+token+" instead of opening parenthesis", -1);
                 break;
             }
             out.add(token);

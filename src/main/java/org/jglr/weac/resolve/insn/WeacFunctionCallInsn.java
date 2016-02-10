@@ -24,7 +24,7 @@ public class WeacFunctionCallInsn extends WeacResolvedInsn {
         return name;
     }
 
-    public int getnArgs() {
+    public int getArgCount() {
         return nArgs;
     }
 
@@ -34,7 +34,7 @@ public class WeacFunctionCallInsn extends WeacResolvedInsn {
 
     @Override
     public String toString() {
-        return super.toString()+" "+owner.getIdentifier()+" "+nArgs+" ("+instanceInStack+")";
+        return super.toString()+" "+owner.getIdentifier()+" "+name+" "+nArgs+" ("+instanceInStack+")";
     }
 
     public WeacType getOwner() {

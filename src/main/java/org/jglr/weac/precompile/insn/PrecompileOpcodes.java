@@ -20,7 +20,9 @@ public interface PrecompileOpcodes {
             STORE_ARRAY = 0x0C,
             JUMP_IF_NOT_TRUE = 0x0D,
             LABEL = 0x0E,
-            LOAD_BOOLEAN_CONSTANT = 0x0F
+            LOAD_BOOLEAN_CONSTANT = 0x0F,
+            THIS = 0x10,
+            ARGUMENT_SEPARATOR = 0x11
     ;
 
     HashMap<Integer, String> names = new HashMap<>();

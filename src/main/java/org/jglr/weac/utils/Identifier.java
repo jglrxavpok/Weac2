@@ -140,4 +140,9 @@ public class Identifier {
     public String getId() {
         return id;
     }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }

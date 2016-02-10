@@ -2,14 +2,24 @@ package org.jglr.weac.utils;
 
 public class WeacType {
 
-    public static final WeacType VOID_TYPE = new WeacType("void", false);
-    public static final WeacType BOOLEAN_TYPE = new WeacType("weac.lang.Boolean", true);
-    public static final WeacType DOUBLE_TYPE = new WeacType("weac.lang.Double", true);
-    public static final WeacType FLOAT_TYPE = new WeacType("weac.lang.Float", true);
-    public static final WeacType INTEGER_TYPE = new WeacType("weac.lang.Int", true);
-    public static final WeacType LONG_TYPE = new WeacType("weac.lang.Long", true);
-    public static final WeacType SHORT_TYPE = new WeacType("weac.lang.Short", true);
-    public static final WeacType CHAR_TYPE = new WeacType("weac.lang.Char", true);
+    public static final WeacType JOBJECT_TYPE = new WeacType(null, "java.lang.Object", true);
+    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.WeacObject", true);
+    public static final WeacType NUMBER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Number", true);
+    public static final WeacType VOID_TYPE = new WeacType(null, "void", false);
+    public static final WeacType BOOLEAN_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Boolean", true);
+    public static final WeacType BYTE_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Byte", true);
+    public static final WeacType DOUBLE_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Double", true);
+    public static final WeacType FLOAT_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Float", true);
+    public static final WeacType INTEGER_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Int", true);
+    public static final WeacType LONG_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Long", true);
+    public static final WeacType SHORT_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Short", true);
+    public static final WeacType CHAR_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Char", true);
+
+    public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
+
+    public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "$$Pointer", true);
+    public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
+    private final WeacType superType;
     private final Identifier identifier;
     private boolean isArray;
     private boolean isValid;
@@ -19,11 +29,12 @@ public class WeacType {
     private WeacType arrayType;
     private final WeacType coreType;
 
-    public WeacType(String id, boolean fullName) {
-        this(new Identifier(id, fullName));
+    public WeacType(WeacType superType, String id, boolean fullName) {
+        this(superType, new Identifier(id, fullName));
     }
 
-    public WeacType(Identifier identifier) {
+    public WeacType(WeacType superType, Identifier identifier) {
+        this.superType = superType;
         this.identifier = identifier;
         if(identifier.isValid()) {
             isValid = true;
@@ -31,12 +42,12 @@ public class WeacType {
             if(id.endsWith("*")) {
                 isPointer = true;
                 id = id.substring(0, id.length()-1); // removes the '*' from the id
-                pointerType = new WeacType(id, true);
+                pointerType = new WeacType(POINTER_TYPE, id, true);
                 coreType = pointerType.getCoreType();
             } else if(id.endsWith("[]")) {
                 isArray = true;
                 id = id.substring(0, id.length()-2); // removes the '[]' from the id
-                arrayType = new WeacType(id, true);
+                arrayType = new WeacType(ARRAY_TYPE, id, true);
                 coreType = arrayType.getCoreType();
             } else {
                 coreType = this;
@@ -48,7 +59,7 @@ public class WeacType {
                 if(countLeft != countRight) { // unmatched
                     isValid = false;
                 } else {
-                    genericParameter = new WeacType(id.substring(id.indexOf('<')+1, id.lastIndexOf('>')), true);
+                    genericParameter = new WeacType(OBJECT_TYPE, id.substring(id.indexOf('<')+1, id.lastIndexOf('>')), true);
                 }
             } else if(id.contains(">")) { // unmatched
                 isValid = false;
@@ -76,6 +87,11 @@ public class WeacType {
                 return true;
         }
         return obj == this;
+    }
+
+    @Override
+    public int hashCode() {
+        return getIdentifier().hashCode();
     }
 
     public boolean isValid() {
@@ -108,5 +124,14 @@ public class WeacType {
 
     public WeacType getCoreType() {
         return coreType;
+    }
+
+    public WeacType getSuperType() {
+        return superType;
+    }
+
+    @Override
+    public String toString() {
+        return identifier.toString();
     }
 }

@@ -68,7 +68,9 @@ public class WeacClassParser extends WeacCompileUtils {
                 break;
 
             default:
-                newError("Unknown token \""+firstPart+"\" in "+header, parsedClass.startingLine);
+                // assume it's a class
+                parsedClass.classType = EnumClassTypes.CLASS;
+                readHierarchy(parsedClass, trimStartingSpace(header));
                 break;
         }
     }

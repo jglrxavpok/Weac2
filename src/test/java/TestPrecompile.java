@@ -24,6 +24,7 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "100 != 0xAC");
         precompile(preCompiler, "new Object()");
         precompile(preCompiler, "new Foo(bar)");
+        precompile(preCompiler, "new Foo");
         precompile(preCompiler, "bar instanceof Foo");
         precompile(preCompiler, "[1,2,5]");
         precompile(preCompiler, "[1..5].by(0.5f)");
@@ -37,6 +38,13 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "myValue /= something");
         precompile(preCompiler, "myValue *= something");
         precompile(preCompiler, "return 454");
+
+        precompile(preCompiler, "return false");
+        precompile(preCompiler, "return this");
+        precompile(preCompiler, "this(start, end, 0D)");
+        precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }");
+        precompile(preCompiler, "return new Object");
+        precompile(preCompiler, "Math.sin(Math.random())");
     }
 
     private void precompile(WeacPreCompiler preCompiler, String s) {

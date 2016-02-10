@@ -1,5 +1,5 @@
 package weac.lang
 
 interface Application {
-    void main(String[] args)
+    Void start(String[] args)
 }

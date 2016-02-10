@@ -25,11 +25,11 @@ public class WeacToken {
     }
 
     public boolean isClosingBracketLike() {
-        return type == WeacTokenType.CLOSING_PARENTHESIS || type == WeacTokenType.CLOSING_SQUARE_BRACKETS;
+        return type == WeacTokenType.CLOSING_PARENTHESIS || type == WeacTokenType.CLOSING_SQUARE_BRACKETS || type == WeacTokenType.CLOSING_CURLY_BRACKETS;
     }
 
     public boolean isOpeningBracketLike() {
-        return type == WeacTokenType.OPENING_PARENTHESIS || type == WeacTokenType.OPENING_SQUARE_BRACKETS;
+        return type == WeacTokenType.OPENING_PARENTHESIS || type == WeacTokenType.OPENING_SQUARE_BRACKETS || type == WeacTokenType.OPENING_CURLY_BRACKETS;
     }
 
     public boolean isOpposite(WeacToken token) {

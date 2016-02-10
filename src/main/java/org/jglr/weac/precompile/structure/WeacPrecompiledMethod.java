@@ -34,6 +34,8 @@ public class WeacPrecompiledMethod {
      */
     public boolean isConstructor;
 
+    public boolean isJavaImported;
+
     /**
      * The access modifier of the method
      */

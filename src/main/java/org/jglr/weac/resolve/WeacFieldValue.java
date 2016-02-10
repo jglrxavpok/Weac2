@@ -2,16 +2,14 @@ package org.jglr.weac.resolve;
 
 import org.jglr.weac.utils.WeacType;
 
-public class WeacVariableValue extends WeacValue {
+public class WeacFieldValue extends WeacValue {
     private final String name;
-    private final WeacType type;
-    private final int id;
+    private final WeacType owner;
 
-    public WeacVariableValue(String name, WeacType type, int id) {
+    public WeacFieldValue(String name, WeacType owner, WeacType type) {
         super(type);
         this.name = name;
-        this.type = type;
-        this.id = id;
+        this.owner = owner;
     }
 
     @Override
@@ -26,16 +24,20 @@ public class WeacVariableValue extends WeacValue {
 
     @Override
     public boolean isVariable() {
-        return true;
-    }
-
-    @Override
-    public boolean isField() {
         return false;
     }
 
     @Override
+    public boolean isField() {
+        return true;
+    }
+
+    @Override
     public int getLocalVariableIndex() {
-        return id;
+        return -1;
+    }
+
+    public WeacType getOwner() {
+        return owner;
     }
 }

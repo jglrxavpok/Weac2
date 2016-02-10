@@ -6,13 +6,13 @@ import org.jglr.weac.resolve.structure.WeacResolvedClass;
 import java.util.LinkedList;
 import java.util.List;
 
-public class ClassParents {
+public class ClassHierarchy {
 
     private WeacPrecompiledClass superclass;
     private List<WeacPrecompiledClass> interfaces;
     private List<WeacPrecompiledClass> mixins;
 
-    public ClassParents() {
+    public ClassHierarchy() {
         interfaces = new LinkedList<>();
         mixins = new LinkedList<>();
         superclass = null;
@@ -40,5 +40,9 @@ public class ClassParents {
 
     public void setSuperclass(WeacPrecompiledClass superclass) {
         this.superclass = superclass;
+    }
+
+    public boolean hasInterface(String fullName) {
+        return getInterfaces().stream().filter(i -> i.fullName.equals(fullName)).count() != 0;
     }
 }

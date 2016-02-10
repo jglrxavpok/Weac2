@@ -18,9 +18,9 @@ public abstract class WeacValue {
 
     public abstract boolean isConstant();
 
-    public boolean isVariable() {
-        return !isConstant();
-    }
+    public abstract boolean isVariable();
+
+    public abstract boolean isField();
 
     public abstract int getLocalVariableIndex();
 

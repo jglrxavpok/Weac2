@@ -1,9 +1,8 @@
 package org.jglr.weac.resolve.structure;
 
+import org.jglr.weac.compile.WeacPseudoInterpreter;
 import org.jglr.weac.parse.EnumClassTypes;
-import org.jglr.weac.parse.structure.WeacParsedField;
-import org.jglr.weac.parse.structure.WeacParsedMethod;
-import org.jglr.weac.resolve.ClassParents;
+import org.jglr.weac.resolve.ClassHierarchy;
 import org.jglr.weac.resolve.insn.ResolveOpcodes;
 import org.jglr.weac.resolve.insn.WeacLoadBooleanInsn;
 import org.jglr.weac.resolve.insn.WeacResolvedInsn;
@@ -38,7 +37,7 @@ public class WeacResolvedClass {
     /**
      * The interfaces and mixins this class implements
      */
-    public ClassParents parents;
+    public ClassHierarchy parents;
 
     /**
      * Empty if this class is not an enum, otherwise contains the names & instantiation of each of the enum constants
@@ -84,21 +83,16 @@ public class WeacResolvedClass {
         return null;
     }
 
-    public boolean isAnnotationRuntimeVisible() {
+    public boolean isAnnotationRuntimeVisible(WeacPseudoInterpreter pseudoInterpreter) {
         if(classType == EnumClassTypes.ANNOTATION && hasField("__runtime", WeacType.BOOLEAN_TYPE)) {
             WeacResolvedField field = getField("__runtime", WeacType.BOOLEAN_TYPE);
             List<WeacResolvedInsn> insns = field.defaultValue;
             if(!insns.isEmpty()) {
-                if(insns.size() != 1) {
-                    throw new RuntimeException("Runtime visibility must be set to a constant");
+                Object value = pseudoInterpreter.interpret(insns);
+                if(value != null && value instanceof Boolean) {
+                    return (boolean) value;
                 } else {
-                    WeacResolvedInsn in = insns.get(0);
-                    if(in.getOpcode() == ResolveOpcodes.LOAD_BOOL_CONSTANT) {
-                        WeacLoadBooleanInsn booleanInstruction = ((WeacLoadBooleanInsn) in);
-                        return booleanInstruction.getValue();
-                    } else {
-                        throw new RuntimeException("Runtime visibility must be set to a boolean value");
-                    }
+                    throw new RuntimeException("Runtime visibility must be set to a boolean value");
                 }
             } else {
                 throw new RuntimeException("Runtime visibility cannot be unset in "+name);

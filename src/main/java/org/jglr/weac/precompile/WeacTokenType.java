@@ -24,15 +24,17 @@ public enum WeacTokenType {
     DEFINE_ARRAY, // requires the size to be given inside the token
     INTERVAL_STEP,
 
-    // Those three are created from the LITERAL value after analysing their context (parenthesis after it or not)
+    // Those five are created from the LITERAL value after analysing their context (parenthesis after it or not)
     VARIABLE,
     FUNCTION,
     BOOLEAN,
     THIS,
     TYPE,
 
+    IF,
+
     // Those two are created from the OPERATOR value after analysing their context (parenthesis before/after it or not)
     BINARY_OPERATOR,
-    UNARY_OPERATOR
+    ELSE, UNARY_OPERATOR
 
 }
