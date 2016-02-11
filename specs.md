@@ -43,7 +43,7 @@ Numbers are tokens that start by a digit.
 Number are by default written in base 10. Multiple base are supported by WeaC, here are how they are recognized:
 
 | Base                           | Example               |
-| :---------------                |----------------------:|
+| :---------------               |----------------------:|
 | 2 (Binary)                     | 0b1010101             |
 | 16 (Hexadecimal)               | 0xCAFEBABE            |
 | 8 (Octal)                      | 0o17451354            |
