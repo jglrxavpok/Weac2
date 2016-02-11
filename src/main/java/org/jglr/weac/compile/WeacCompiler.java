@@ -240,7 +240,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
         mv.visitInsn(DUP);
         mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false); // call constructor
 
-        mv.visitMethodInsn(INVOKEVIRTUAL, type.getInternalName(), "start", mainDesc, true); // call Application::start(String[])
+        mv.visitMethodInsn(INVOKEINTERFACE, type.getInternalName(), "start", mainDesc, true); // call Application::start(String[])
         mv.visitLabel(new Label());
         mv.visitInsn(RETURN);
         mv.visitMaxs(0, 0);
