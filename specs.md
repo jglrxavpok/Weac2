@@ -12,7 +12,7 @@ ____
 
 Preface
 --------
-WeaC (Abbreviation of Weak C) is a language attempting to mix C, Java and Scala concepts with a as little and simple as possible syntax. The language is still an experiment in order to learn how to make a compiler. It runs on the Java Virtual Machine and is designed to be used along side Java classes.
+WeaC (Abbreviation of Weak C) is an object-oriented (only code wise, Java primitives types are just wrapped inside WeaC classes) language attempting to mix C, Java and Scala concepts with a as little and simple as possible syntax. The language is still an experiment in order to learn how to make a compiler. It runs on the Java Virtual Machine and is designed to be used along side Java classes.
 ____
 
 Syntax
