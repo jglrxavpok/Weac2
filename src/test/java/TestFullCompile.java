@@ -1,6 +1,4 @@
-import org.jglr.weac.WeacDefaultProcessor;
-import org.jglr.weac.WeacMonolith;
-import org.jglr.weac.parse.structure.WeacParsedSource;
+import org.jglrxavpok.weac.WeacMonolith;
 import org.junit.Test;
 
 import java.io.File;

@@ -1,6 +1,6 @@
-import org.jglr.weac.WeacPreProcessor;
-import org.jglr.weac.parse.structure.WeacParsedSource;
-import org.jglr.weac.parse.WeacParser;
+import org.jglrxavpok.weac.WeacPreProcessor;
+import org.jglrxavpok.weac.parse.structure.WeacParsedSource;
+import org.jglrxavpok.weac.parse.WeacParser;
 import org.junit.Test;
 
 import java.io.IOException;

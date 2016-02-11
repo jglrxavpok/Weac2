@@ -1,5 +1,5 @@
-import org.jglr.weac.precompile.WeacPreCompiler;
-import org.jglr.weac.precompile.insn.WeacPrecompiledInsn;
+import org.jglrxavpok.weac.precompile.WeacPreCompiler;
+import org.jglrxavpok.weac.precompile.insn.WeacPrecompiledInsn;
 import org.junit.Test;
 
 import java.util.List;

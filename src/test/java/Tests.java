@@ -1,9 +1,8 @@
-import org.jglr.weac.WeacDefaultProcessor;
+import org.jglrxavpok.weac.WeacDefaultProcessor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 
 public abstract class Tests {
 
