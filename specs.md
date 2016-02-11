@@ -42,13 +42,14 @@ class, struct, public, protected, private, import, as, return, this, super, obje
 Numbers are tokens that start by a digit.
 Number are by default written in base 10. Multiple base are supported by WeaC, here are how they are recognized:
 
-| Base                 | Example               |
-| ---------------      |----------------------:|
-| 2 (Binary)           | 0b1010101             |
-| 16 (Hexadecimal)     | 0xCAFEBABE            |
-| 8 (Octal)            | 0o17451354            |
-| C (Custom, up to 64) | 0c3#120102, 0c5#10445 |
-|                      | (Base 3, Base 5)      |
+| Base                           | Example               |
+| :---------------                |----------------------:|
+| 2 (Binary)                     | 0b1010101             |
+| 16 (Hexadecimal)               | 0xCAFEBABE            |
+| 8 (Octal)                      | 0o17451354            |
+| C (Custom, up to 64)           | 0c3#120102, 0c5#10445 |
+| (This limit will be modifiable)| (Base 3, Base 5)      |
+
 
 * **Operators and special characters**:
 ___
