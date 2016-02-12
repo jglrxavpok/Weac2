@@ -76,7 +76,18 @@ public class Identifier {
         for(int i = 1;i<potientialID.length();i++) {
             char c = potientialID.charAt(i);
             if(!isIdentifierPart(c, fullName)) {
-                return false;
+                String startString = potientialID.substring(0, i);
+                boolean isPotentialOperatorOverload = startString.equals("op_") || startString.equals("operator_") || startString.equals("unary_");
+                if(isPotentialOperatorOverload) {
+                    String operator = WeacCompileUtils.readOperator(potientialID.toCharArray(), i);
+                    if (operator != null && !operator.isEmpty()) {
+                        return true;
+                    } else {
+                        return false; // TODO: Custom operators
+                    }
+                } else {
+                    return false;
+                }
             }
         }
         return true;
@@ -115,7 +126,7 @@ public class Identifier {
             char c = chars[i];
             if(!isIdentifierPart(c)) {
                 String startString = builder.toString();
-                boolean isPotentialOperatorOverload = startString.equals("op_") || startString.equals("operator_");
+                boolean isPotentialOperatorOverload = startString.equals("op_") || startString.equals("operator_") || startString.equals("unary_");
                 if(isPotentialOperatorOverload) {
                     String operator = WeacCompileUtils.readOperator(chars, i);
                     if (operator != null && !operator.isEmpty()) {

@@ -1,16 +1,10 @@
 package tests
 
-class TestValue {
+TestValue {
 
-    Void operator_++() {
-
+    TestValue operator_++() {
+        // Do something
+        return this;
     }
 
-}
-
-mixin class TestMixin {
-    Void myMethodMixin() {
-        // some code
-        Console.writeLine("Test");
-    }
 }

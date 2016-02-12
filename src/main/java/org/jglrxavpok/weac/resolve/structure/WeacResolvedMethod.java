@@ -1,6 +1,7 @@
 package org.jglrxavpok.weac.resolve.structure;
 
 import org.jglrxavpok.weac.resolve.insn.WeacResolvedInsn;
+import org.jglrxavpok.weac.utils.EnumOperators;
 import org.jglrxavpok.weac.utils.Identifier;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 import org.jglrxavpok.weac.utils.WeacType;
@@ -44,6 +45,7 @@ public class WeacResolvedMethod {
     public final List<WeacResolvedInsn> instructions;
 
     public boolean isCompilerSpecial;
+    public EnumOperators overloadOperator;
 
     public WeacResolvedMethod() {
         annotations = new LinkedList<>();

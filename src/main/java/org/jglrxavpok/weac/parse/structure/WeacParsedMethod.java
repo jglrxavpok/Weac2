@@ -1,5 +1,6 @@
 package org.jglrxavpok.weac.parse.structure;
 
+import org.jglrxavpok.weac.code.WeacMember;
 import org.jglrxavpok.weac.utils.Identifier;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 
@@ -9,7 +10,7 @@ import java.util.List;
 /**
  * Represents a method extracted from the source file
  */
-public class WeacParsedMethod {
+public class WeacParsedMethod implements WeacMember {
 
     /**
      * The line at which the method starts
@@ -93,5 +94,20 @@ public class WeacParsedMethod {
             System.out.println(methodSource);
             System.out.println("}");
         }
+    }
+
+    @Override
+    public String getName() {
+        return name.getId();
+    }
+
+    @Override
+    public String getCanonicalName() {
+        return getName();
+    }
+
+    @Override
+    public WeacModifierType getAccess() {
+        return access;
     }
 }

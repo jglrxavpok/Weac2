@@ -1,5 +1,6 @@
 package org.jglrxavpok.weac.parse.structure;
 
+import org.jglrxavpok.weac.code.WeacMember;
 import org.jglrxavpok.weac.parse.EnumClassTypes;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 
@@ -8,7 +9,7 @@ import java.util.List;
 /**
  * Represents a class that has be extracted from the source code.
  */
-public class WeacParsedClass {
+public class WeacParsedClass implements WeacMember {
 
     /**
      * The line at which the class definition starts in the source file
@@ -102,5 +103,20 @@ public class WeacParsedClass {
         fields.forEach(WeacParsedField::echo);
         methods.forEach(WeacParsedMethod::echo);
         System.out.println("}");
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public String getCanonicalName() {
+        return getName();
+    }
+
+    @Override
+    public WeacModifierType getAccess() {
+        return access;
     }
 }

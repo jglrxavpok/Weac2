@@ -74,4 +74,12 @@ public class WeacPrecompiledClass {
         methods = new LinkedList<>();
         imports = new LinkedList<>();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof WeacPrecompiledClass) {
+            return fullName.equals(((WeacPrecompiledClass) obj).fullName);
+        }
+        return super.equals(obj);
+    }
 }

@@ -11,6 +11,8 @@ import java.util.Arrays;
 
 public class JavaImportedClass extends WeacPrecompiledClass {
 
+    private JavaImportedClass superclass;
+
     public JavaImportedClass(Class<?> clazz) {
         super();
         if(clazz.isInterface()) {
@@ -57,6 +59,15 @@ public class JavaImportedClass extends WeacPrecompiledClass {
             // TODO: default value
             fields.add(convertedField);
         }
+
+        if(clazz.getSuperclass() != null)
+            superclass = new JavaImportedClass(clazz.getSuperclass());
+        if(superclass != null)
+            motherClass = superclass.fullName;
+    }
+
+    public JavaImportedClass getSuperclass() {
+        return superclass;
     }
 
     public static WeacType toWeacType(String id) {

@@ -76,6 +76,8 @@ public class WeacClassBodyParser extends WeacCompileUtils {
                 if(i >= chars.length) // We might have reached end of file
                     break;
             }
+            if(parsedClass.classType == EnumClassTypes.INTERFACE)
+                isAbstract = true; // interfaces methods are always abstract
             Identifier firstPart = Identifier.read(chars, i);
             if(firstPart.isValid()) {
                 i += firstPart.getId().length();

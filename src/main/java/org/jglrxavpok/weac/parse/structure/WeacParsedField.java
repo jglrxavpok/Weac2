@@ -1,5 +1,6 @@
 package org.jglrxavpok.weac.parse.structure;
 
+import org.jglrxavpok.weac.code.WeacMember;
 import org.jglrxavpok.weac.utils.Identifier;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 
@@ -8,7 +9,7 @@ import java.util.List;
 /**
  * Represents a field that has be extracted from the source code.
  */
-public class WeacParsedField {
+public class WeacParsedField implements WeacMember {
 
     /**
      * The line in the file which holds this field
@@ -47,5 +48,20 @@ public class WeacParsedField {
             System.out.println(access.name().toLowerCase()+" "+type+" "+name+" = "+defaultValue);
         else
             System.out.println(access.name().toLowerCase()+" "+type+" "+name);
+    }
+
+    @Override
+    public String getName() {
+        return name.getId();
+    }
+
+    @Override
+    public String getCanonicalName() {
+        return getName();
+    }
+
+    @Override
+    public WeacModifierType getAccess() {
+        return access;
     }
 }

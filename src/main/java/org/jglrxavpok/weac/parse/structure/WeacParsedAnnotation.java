@@ -1,10 +1,13 @@
 package org.jglrxavpok.weac.parse.structure;
 
+import org.jglrxavpok.weac.code.WeacMember;
+import org.jglrxavpok.weac.utils.WeacModifierType;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-public class WeacParsedAnnotation {
+public class WeacParsedAnnotation implements WeacMember {
 
     private final String name;
     public List<String> args;
@@ -16,6 +19,16 @@ public class WeacParsedAnnotation {
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public String getCanonicalName() {
+        return getName();
+    }
+
+    @Override
+    public WeacModifierType getAccess() {
+        return WeacModifierType.PUBLIC;
     }
 
     public List<String> getArgs() {

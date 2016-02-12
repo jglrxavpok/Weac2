@@ -119,6 +119,11 @@ public class WeacResolver extends WeacCompileUtils {
         method.isAbstract = precompiledMethod.isAbstract;
         method.isConstructor = precompiledMethod.isConstructor;
         method.name = precompiledMethod.name;
+        String mName = method.name.getId();
+        if(mName.startsWith("op_") || mName.startsWith("operator_") || mName.startsWith("unary_")) {
+            boolean unary = mName.startsWith("unary_");
+            method.overloadOperator = EnumOperators.get(mName.substring(mName.indexOf("_")+1), unary);
+        }
         method.isCompilerSpecial = precompiledMethod.isCompilerSpecial;
         method.returnType = resolveType(precompiledMethod.returnType, context);
 
@@ -147,10 +152,18 @@ public class WeacResolver extends WeacCompileUtils {
     }
 
     private WeacType resolveType(Identifier type, WeacResolvingContext context) {
-        if(type.getId().equalsIgnoreCase("Void"))
-            return WeacType.VOID_TYPE;
+        WeacType primitiveType = getPotentialPrimitive(type);
+        if(primitiveType != null) {
+            return primitiveType;
+        }
+
         WeacType intermediateType = new WeacType(null, type.getId(), true);
         String core = intermediateType.getCoreType().getIdentifier().getId();
+
+        WeacType primitive = getPotentialPrimitive(new Identifier(core));
+        if(primitive != null) {
+            return new WeacType(WeacType.PRIMITIVE_TYPE, primitive.getIdentifier().getId()+(type.getId().substring(core.length())), true);
+        }
         WeacPrecompiledClass typeClass = findClass(core, context);
         if(typeClass == null) {
             newError("Invalid type: "+type.getId()+" in "+context.getSource().classes.get(0).fullName, -1);
@@ -168,6 +181,39 @@ public class WeacResolver extends WeacCompileUtils {
             }
         }
         return new WeacType(superclass, typeClass.fullName+(type.getId().substring(core.length())), true);
+    }
+
+    private WeacType getPotentialPrimitive(Identifier type) {
+
+        switch (type.getId()) {
+            case "void":
+                return WeacType.VOID_TYPE;
+
+            case "boolean":
+                return WeacType.BOOLEAN_TYPE;
+
+            case "byte":
+                return WeacType.BYTE_TYPE;
+
+            case "char":
+                return WeacType.CHAR_TYPE;
+
+            case "double":
+                return WeacType.DOUBLE_TYPE;
+
+            case "float":
+                return WeacType.FLOAT_TYPE;
+
+            case "int":
+                return WeacType.INTEGER_TYPE;
+
+            case "long":
+                return WeacType.LONG_TYPE;
+
+            case "short":
+                return WeacType.SHORT_TYPE;
+        }
+        return null;
     }
 
     private void addOrOverrideField(WeacResolvedField toAdd, List<WeacResolvedField> fieldList) {
@@ -234,7 +280,7 @@ public class WeacResolver extends WeacCompileUtils {
             newSource.classes = new LinkedList<>();
             newSource.classes.add(aClass);
 
-            newSource.imports = context.getSource().imports;
+            newSource.imports = aClass.imports;
             newSource.packageName = aClass.packageName;
             newContext = new WeacResolvingContext(newSource, context.getSideClasses());
         } else {
@@ -281,7 +327,7 @@ public class WeacResolver extends WeacCompileUtils {
                     break;
             }
         }
-        if(superclass == null && !(aClass instanceof JavaImportedClass)) {
+        if(superclass == null) {
             superclass = findClass("weac.lang.WeacObject", context);
         }
         parents.setSuperclass(superclass);
@@ -497,7 +543,6 @@ public class WeacResolver extends WeacCompileUtils {
                 WeacFunctionCall cst = ((WeacFunctionCall) precompiledInsn);
                 WeacValue owner;
                 String name;
-                System.err.println("Before "+cst+" / "+Arrays.toString(precompiled.toArray()));
                 if(cst.getName().equals("this")) { // call constructor
                     owner = new WeacThisValue(selfType);
                     name = selfType.getIdentifier().getId();
@@ -635,9 +680,11 @@ public class WeacResolver extends WeacCompileUtils {
                     for(int i = 0;i<argTypes.length;i++) {
                         WeacType argType = argTypes[i];
                         WeacType paramType = resolveType(m.argumentTypes.get(i), context);
-                        if(!isCastable(argType, paramType)) {
-                            System.out.println(argType+" != "+paramType);
+                        if(!isCastable(argType, paramType, context)) {
+                            System.out.println(argType+" NOT CAST "+paramType);
                             return false; // TODO: test castable
+                        } else {
+                            System.out.println(argType+" is castable to "+paramType);
                         }
                     }
                     // TODO: check if argument types match
@@ -693,11 +740,43 @@ public class WeacResolver extends WeacCompileUtils {
         return null;
     }
 
-    private boolean isCastable(WeacType from, WeacType to) {
+    private boolean isCastable(WeacType from, WeacType to, WeacResolvingContext context) {
+        if(from.isArray() || to.isArray()) {
+            return from.equals(to); // TODO: Implicit array casts?
+        }
         if(from.equals(to)) {
             return true;
         }
-        return false;
+        // try primitive types
+
+        WeacPrecompiledClass fromClass = findClass(from.getIdentifier().getId(), context);
+        WeacPrecompiledClass toClass = findClass(to.getIdentifier().getId(), context);
+        return isCastable(fromClass, toClass, context);
+    }
+
+    private boolean isCastable(WeacPrecompiledClass from, WeacPrecompiledClass to, WeacResolvingContext context) {
+        if(from.fullName.equals("java.lang.Object") && !to.fullName.equals("java.lang.Object"))
+            return false;
+        ClassHierarchy hierarchy = getHierarchy(from, from.interfacesImplemented, context);
+
+        // check superclass
+        if(hierarchy.getSuperclass().equals(to)) {
+            return true;
+        }
+
+        // check interfaces
+        for(WeacPrecompiledClass inter : hierarchy.getInterfaces()) {
+            if(inter.equals(to)) {
+                return true;
+            }
+        }
+
+        if(hierarchy.getSuperclass().equals(from)) {
+            return false; // we have reached the top of the hierarchy!
+        }
+
+        // check superclass hierarchy
+        return isCastable(hierarchy.getSuperclass(), to, context);
     }
 
     private WeacType extractType(WeacResolvedInsn number) {

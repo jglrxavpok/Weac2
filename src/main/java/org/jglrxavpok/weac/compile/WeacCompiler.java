@@ -178,6 +178,9 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             if(method.isConstructor) {
                 name = "<init>";
                 methodType = Type.getMethodType(Type.VOID_TYPE, args);
+            } else if(method.overloadOperator != null) {
+                name = "op_"+method.overloadOperator.name().toUpperCase(); // TODO: support custom operators?
+                methodType = Type.getMethodType(returnType, args);
             } else {
                 methodType = Type.getMethodType(returnType, args);
                 name = method.name.getId();
@@ -187,10 +190,11 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             if(convertInstanceMethodToStatic) {
                 access |= ACC_STATIC;
             }
+            boolean isAbstract = false;
             if(method.isAbstract || clazz.isMixin || clazz.classType == EnumClassTypes.INTERFACE || clazz.classType == EnumClassTypes.ANNOTATION) {
                 access |= ACC_ABSTRACT;
+                isAbstract = true;
             }
-            System.out.println("MTYPE: "+methodType.getDescriptor()+" for "+method.name);
             MethodVisitor mv = writer.visitMethod(access, name, methodType.getDescriptor(), null, null);
             Label start = new Label();
             Label end = new Label();
@@ -210,7 +214,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                 mv.visitLocalVariable(argName.getId(), argType.getDescriptor(), null, new Label(), new Label(), localIndex++);
             }
 
-            if(!method.isAbstract || !clazz.isMixin) {
+            if(!isAbstract) {
                 mv.visitCode();
                 mv.visitLabel(start);
                 if(!method.isAbstract && method.isConstructor) {
@@ -344,9 +348,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                     argTypes[i0] = toJVMType(callInsn.getArgTypes()[i0]);
                 }
                 String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
-                System.out.println(callInsn.getName()+" "+methodDesc+"("+callInsn.getReturnType()+")"+" "+Arrays.toString(argTypes)+" "+callInsn.getOwner());
                 writer.visitMethodInsn(INVOKEVIRTUAL, toJVMType(callInsn.getOwner()).getInternalName(), callInsn.getName(), methodDesc, false);
-                System.out.println("invokevirtual "+toJVMType(callInsn.getOwner()).getInternalName()+" "+callInsn.getName()+" "+methodDesc);
             } else {
                 System.err.println("unknown: "+insn);
             }
