@@ -1,6 +1,6 @@
 package weac.lang
 
-mixin Number {
+mixin Primitive {
 
     String toString() {
         return String.valueOf(this);

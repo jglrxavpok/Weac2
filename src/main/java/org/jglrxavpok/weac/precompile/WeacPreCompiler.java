@@ -61,6 +61,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         clazz.name = c.name;
         clazz.packageName = c.packageName;
         clazz.isCompilerSpecial = c.isCompilerSpecial;
+        clazz.isFinal = c.isFinal;
 
         clazz.fullName = c.packageName == null || c.packageName.isEmpty() ? c.name : c.packageName+"."+c.name;
         return clazz;
@@ -266,15 +267,15 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             previous = token;
         }
         handleBuiltins(tokens);
-        tokens.forEach(t -> System.out.println("token: "+t));
+        // tokens.forEach(t -> System.out.println("token: "+t));
 
         // TODO: convert 'ELSE' + 'IF' to 'ELSE IF'
         List<WeacToken> output = convertToRPN(expression, tokens);
 
         for(WeacToken token : output) {
-            System.out.print(token.getType().name()+"("+token.getContent()+") ");
+            //System.out.print(token.getType().name()+"("+token.getContent()+") ");
         }
-        System.out.println();
+        //System.out.println();
         return toInstructions(output, insns);
     }
 
@@ -296,6 +297,10 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                     case "this":
                         t.setType(WeacTokenType.THIS);
+                        break;
+
+                    case "null":
+                        t.setType(WeacTokenType.NULL);
                         break;
 
                     case "else":
@@ -348,6 +353,13 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
                 case THIS:
                     insns.add(new WeacPrecompiledLoadThis());
+                    break;
+
+                case NULL:
+                    insns.add(new WeacPrecompiledLoadNull());
+                    break;
+
+                case MEMBER_ACCESSING:
                     break;
 
                 case UNARY_OPERATOR:
@@ -436,10 +448,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         instanceStack.push(false);
         for(int i = 0;i<tokens.size();i++) {
             WeacToken token = tokens.get(i);
-            if(token.getType() == WeacTokenType.NUMBER || token.getType() == WeacTokenType.STRING
-                    || token.getType() == WeacTokenType.SINGLE_CHARACTER || token.getType() == WeacTokenType.VARIABLE
-                    || token.getType() == WeacTokenType.BOOLEAN
-                    || token.getType() == WeacTokenType.THIS) {
+            if(token.getType().isValue()) {
                 if(i+2 < tokens.size()) {
                     if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
                         WeacTokenType type = tokens.get(i + 2).getType();
@@ -450,7 +459,9 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                             out.add(tokens.get(i+2));
                             argCount++;
                             i+=2;
-                        } else { // it is a method
+                        } else if(type == WeacTokenType.NULL) {
+                            newError("Null has no members", -1); // todo line
+                        } else { // it is a method // it is a method
                             stack.push(tokens.get(i+1));
                             out.add(token);
                             i++; // skip the '.'

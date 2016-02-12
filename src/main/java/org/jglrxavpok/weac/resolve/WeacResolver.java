@@ -7,6 +7,7 @@ import org.jglrxavpok.weac.precompile.insn.*;
 import org.jglrxavpok.weac.precompile.structure.*;
 import org.jglrxavpok.weac.resolve.insn.*;
 import org.jglrxavpok.weac.resolve.structure.*;
+import org.jglrxavpok.weac.resolve.values.*;
 import org.jglrxavpok.weac.utils.EnumOperators;
 import org.jglrxavpok.weac.utils.Identifier;
 import org.jglrxavpok.weac.utils.WeacImport;
@@ -48,6 +49,7 @@ public class WeacResolver extends WeacCompileUtils {
         resolvedClass.isMixin = aClass.isMixin;
         resolvedClass.name = aClass.name;
         resolvedClass.isCompilerSpecial = aClass.isCompilerSpecial;
+        resolvedClass.isFinal = aClass.isFinal;
 
         WeacMixedContentClass toMixIn = resolveMixins(resolvedClass, resolvedClass.parents.getMixins());
         resolvedClass.methods = resolveMethods(currentType, aClass, context, toMixIn);
@@ -334,7 +336,7 @@ public class WeacResolver extends WeacCompileUtils {
                     return new JavaImportedClass(javaClass);
                 }
             } catch (ClassNotFoundException e1) {
-                e1.printStackTrace();
+                throw new RuntimeException(inter+" / "+context.getSource().classes.get(0).fullName, e1);
             }
         }
 
@@ -393,6 +395,7 @@ public class WeacResolver extends WeacCompileUtils {
         variableMaps.put(selfType, varMap);
 
         WeacType currentVarType = selfType;
+        boolean currentIsStatic = false;
         for(int i = 0;i<precompiled.size();i++) {
             WeacPrecompiledInsn precompiledInsn = precompiled.get(i);
             if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_NUMBER_CONSTANT) {
@@ -407,30 +410,35 @@ public class WeacResolver extends WeacCompileUtils {
                 insns.add(resolvedNumber);
 
                 currentVarType = numberType;
+                currentIsStatic = false;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_BOOLEAN_CONSTANT) {
                 WeacLoadBooleanConstant cst = ((WeacLoadBooleanConstant) precompiledInsn);
                 insns.add(new WeacLoadBooleanInsn(cst.getValue()));
 
                 valueStack.push(new WeacConstantValue(WeacType.BOOLEAN_TYPE));
                 currentVarType = WeacType.BOOLEAN_TYPE;
+                currentIsStatic = false;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_STRING_CONSTANT) {
                 WeacLoadStringConstant cst = ((WeacLoadStringConstant) precompiledInsn);
                 insns.add(stringResolver.resolve(cst.getValue()));
                 valueStack.push(new WeacConstantValue(WeacType.STRING_TYPE));
 
                 currentVarType = WeacType.STRING_TYPE;
+                currentIsStatic = false;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_CHARACTER_CONSTANT) {
                 WeacLoadCharacterConstant cst = ((WeacLoadCharacterConstant) precompiledInsn);
                 insns.add(new WeacLoadCharInsn(stringResolver.resolveSingleCharacter(cst.getValue().toCharArray(), 0)));
                 valueStack.push(new WeacConstantValue(WeacType.CHAR_TYPE));
 
                 currentVarType = WeacType.CHAR_TYPE;
+                currentIsStatic = false;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LABEL) {
                 WeacLabelInsn cst = ((WeacLabelInsn) precompiledInsn);
                 insns.add(new WeacResolvedLabelInsn(cst.getLabel()));
                 currentVarType = selfType;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.ARGUMENT_SEPARATOR) {
                 currentVarType = selfType;
+                currentIsStatic = false;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_VARIABLE) {
                 WeacLoadVariable ldVar = ((WeacLoadVariable) precompiledInsn);
                 String varName = ldVar.getName();
@@ -438,7 +446,7 @@ public class WeacResolver extends WeacCompileUtils {
                     insns.add(new WeacLoadThisInsn());
                     valueStack.push(new WeacThisValue(selfType));
                     currentVarType = selfType;
-                    System.err.println("THIS!!!");
+                    currentIsStatic = false;
                 } else {
                     // check if local variable
                     if(varMap.localExists(varName)) {
@@ -447,6 +455,7 @@ public class WeacResolver extends WeacCompileUtils {
                         WeacType localType = varMap.getLocalType(varName);
                         valueStack.push(new WeacVariableValue(varName, localType, index));
                         currentVarType = localType;
+                        currentIsStatic = false;
                     } else {
                         // check if field
                         if(!variableMaps.containsKey(currentVarType)) {
@@ -456,20 +465,22 @@ public class WeacResolver extends WeacCompileUtils {
                         if(variableMaps.get(currentVarType).fieldExists(varName)) {
                             System.out.println("PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             WeacType fieldType = variableMaps.get(currentVarType).getFieldType(varName);
-                            insns.add(new WeacLoadFieldInsn(varName, currentVarType, fieldType, false));
+                            insns.add(new WeacLoadFieldInsn(varName, currentVarType, fieldType, currentIsStatic));
                             valueStack.push(new WeacFieldValue(varName, currentVarType, fieldType));
                             currentVarType = fieldType;
+                            currentIsStatic = false;
                         } else {
                             // TODO: Check for objects
                             WeacPrecompiledClass clazz = findClass(varName, context);
                             if(clazz != null) {
                                 currentVarType = resolveType(new Identifier(clazz.fullName, true), context);
                                 if(clazz instanceof JavaImportedClass) {
-                                    //
+                                    currentIsStatic = true;
                                     valueStack.push(new WeacConstantValue(currentVarType));
                                 } else if(clazz.classType == EnumClassTypes.OBJECT) {
                                     insns.add(new WeacLoadFieldInsn("__instance__", currentVarType, currentVarType, true));
                                     valueStack.push(new WeacFieldValue("__instance__", currentVarType, currentVarType));
+                                    currentIsStatic = false;
                                 } else {
                                     newError(":cc2 "+context.getSource().classes.get(0).fullName+" / "+currentVarType.getIdentifier(), -1); // todo line
                                 }
@@ -498,12 +509,7 @@ public class WeacResolver extends WeacCompileUtils {
                     name = cst.getName();
                 }
 
-
-                // TODO: find real method
-
                 WeacType[] argTypes = new WeacType[cst.getArgCount()];
-
-                System.out.println(">>>> "+Arrays.toString(insns.toArray())+" / "+selfType.getIdentifier()+" / "+cst);
 
                 WeacPrecompiledMethod realMethod = findMethod(owner.getType(), name, cst.getArgCount(), valueStack, context);
 
@@ -511,7 +517,7 @@ public class WeacResolver extends WeacCompileUtils {
                     argTypes[i0] = resolveType(realMethod.argumentTypes.get(i0), context);
                 }
 
-                WeacType returnType = WeacType.BOOLEAN_TYPE; // TODO
+                WeacType returnType = resolveType(realMethod.returnType, context);
                 insns.add(new WeacFunctionCallInsn(name, owner.getType(), cst.getArgCount(), cst.shouldLookForInstance() && !realMethod.isJavaImported, argTypes, returnType));
                 int toPop = cst.getArgCount() + ((cst.shouldLookForInstance() && !realMethod.isJavaImported) ? 1 : 0);
                 if(valueStack.size() < toPop) {
@@ -553,6 +559,9 @@ public class WeacResolver extends WeacCompileUtils {
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.THIS) {
                 insns.add(new WeacLoadThisInsn());
                 valueStack.push(new WeacThisValue(selfType));
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_NULL) {
+                insns.add(new WeacLoadNullInsn());
+                valueStack.push(new WeacNullValue());
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LABEL) {
                 while(!valueStack.isEmpty()) {
                     valueStack.pop();
@@ -623,6 +632,14 @@ public class WeacResolver extends WeacCompileUtils {
                 .filter(m -> m.name.getId().equals(name) || (m.isConstructor && topType.getIdentifier().getId().endsWith(name)))
                 .filter(m -> m.argumentNames.size() == argCount)
                 .filter(m -> {
+                    for(int i = 0;i<argTypes.length;i++) {
+                        WeacType argType = argTypes[i];
+                        WeacType paramType = resolveType(m.argumentTypes.get(i), context);
+                        if(!isCastable(argType, paramType)) {
+                            System.out.println(argType+" != "+paramType);
+                            return false; // TODO: test castable
+                        }
+                    }
                     // TODO: check if argument types match
                     return true;
                 })
@@ -653,7 +670,6 @@ public class WeacResolver extends WeacCompileUtils {
         WeacPrecompiledClass superclass = hierarchy.getSuperclass();
         if(superclass != null && !superclass.fullName.equals(topClass.fullName)) {
             WeacType superType = resolveType(new Identifier(superclass.fullName, true), context);
-            System.out.println(">> "+superType+" / "+name+" / "+topType);
             WeacPrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, context);
             if(supermethod == null) {
                 // TODO: check interfaces
@@ -675,6 +691,13 @@ public class WeacResolver extends WeacCompileUtils {
         }
 
         return null;
+    }
+
+    private boolean isCastable(WeacType from, WeacType to) {
+        if(from.equals(to)) {
+            return true;
+        }
+        return false;
     }
 
     private WeacType extractType(WeacResolvedInsn number) {

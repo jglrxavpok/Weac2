@@ -25,6 +25,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
         Map<String, byte[]> compiledClasses = new HashMap<>();
 
         for(WeacResolvedClass clazz : source.classes) {
+            System.out.println("COMPILING "+clazz.fullName);
             ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
             String internalName = toInternal(clazz.fullName);
             Type type = Type.getType("L"+internalName+";");
@@ -74,7 +75,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             });
             av.visitEnd();
 
-            if(annotation.getName().fullName.equals("weac.lang.PrimitiveLike")) {
+            if(annotation.getName().fullName.equals("weac.lang.JavaPrimitive")) {
                 Object value = getValue(annotation.getArgs().get(0));
                 if(value instanceof String) {
                     switch ((String) value) {
@@ -122,6 +123,30 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
         return primitiveType;
     }
 
+    private Type getPrimitiveType(WeacType type) {
+        if(type.equals(WeacType.BOOLEAN_TYPE)) {
+            return Type.BOOLEAN_TYPE;
+        } else if(type.equals(WeacType.BYTE_TYPE)) {
+            return Type.BYTE_TYPE;
+        } else if(type.equals(WeacType.CHAR_TYPE)) {
+            return Type.CHAR_TYPE;
+        } else if(type.equals(WeacType.DOUBLE_TYPE)) {
+            return Type.DOUBLE_TYPE;
+        } else if(type.equals(WeacType.FLOAT_TYPE)) {
+            return Type.FLOAT_TYPE;
+        } else if(type.equals(WeacType.INTEGER_TYPE)) {
+            return Type.INT_TYPE;
+        } else if(type.equals(WeacType.LONG_TYPE)) {
+            return Type.LONG_TYPE;
+        } else if(type.equals(WeacType.SHORT_TYPE)) {
+            return Type.SHORT_TYPE;
+        } else if(type.equals(WeacType.VOID_TYPE)) {
+            return Type.VOID_TYPE;
+        }
+
+        return null;
+    }
+
     private Object getValue(List<WeacResolvedInsn> instructions) {
         return pseudoInterpreter.interpret(instructions);
     }
@@ -165,6 +190,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             if(method.isAbstract || clazz.isMixin || clazz.classType == EnumClassTypes.INTERFACE || clazz.classType == EnumClassTypes.ANNOTATION) {
                 access |= ACC_ABSTRACT;
             }
+            System.out.println("MTYPE: "+methodType.getDescriptor()+" for "+method.name);
             MethodVisitor mv = writer.visitMethod(access, name, methodType.getDescriptor(), null, null);
             Label start = new Label();
             Label end = new Label();
@@ -201,7 +227,11 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                 compileSingleExpression(type, mv, method.instructions);
                 mv.visitInsn(RETURN);
                 mv.visitLabel(end);
-                mv.visitMaxs(0,0);
+                try {
+                    mv.visitMaxs(0,0);
+                } catch (Exception e) {
+                    throw new RuntimeException("WARNING in "+method.name+" / "+type, e);
+                }
             }
 
             mv.visitEnd();
@@ -303,6 +333,8 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             } else if(insn instanceof WeacLoadVariableInsn) {
                 WeacLoadVariableInsn variableInsn = (WeacLoadVariableInsn)insn;
                 writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
+            } else if(insn instanceof WeacLoadNullInsn) {
+                writer.visitInsn(ACONST_NULL);
             } else if(insn instanceof WeacPopInsn) {
                 writer.visitInsn(POP);
             } else if(insn instanceof WeacFunctionCallInsn) {
@@ -312,7 +344,9 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                     argTypes[i0] = toJVMType(callInsn.getArgTypes()[i0]);
                 }
                 String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
+                System.out.println(callInsn.getName()+" "+methodDesc+"("+callInsn.getReturnType()+")"+" "+Arrays.toString(argTypes)+" "+callInsn.getOwner());
                 writer.visitMethodInsn(INVOKEVIRTUAL, toJVMType(callInsn.getOwner()).getInternalName(), callInsn.getName(), methodDesc, false);
+                System.out.println("invokevirtual "+toJVMType(callInsn.getOwner()).getInternalName()+" "+callInsn.getName()+" "+methodDesc);
             } else {
                 System.err.println("unknown: "+insn);
             }
@@ -404,6 +438,9 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
     }
 
     private Type toJVMType(WeacType type) {
+        Type primitiveType = getPrimitiveType(type);
+        if(primitiveType != null)
+            return primitiveType;
         return Type.getType(toDescriptor(type));
     }
 
@@ -476,6 +513,10 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
 
         if(clazz.isAbstract) {
             abstractness = ACC_ABSTRACT;
+        }
+
+        if(clazz.isFinal) {
+            abstractness = ACC_FINAL;
         }
 
         if(clazz.isMixin) {

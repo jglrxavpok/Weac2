@@ -1,6 +1,9 @@
 package org.jglrxavpok.weac.utils;
 
 import org.jglrxavpok.weac.Keywords;
+import org.jglrxavpok.weac.WeacCompileUtils;
+import org.jglrxavpok.weac.precompile.WeacToken;
+import org.jglrxavpok.weac.precompile.WeacTokenType;
 
 /**
  * A WeaC identifier, used for types, variable and method names
@@ -111,7 +114,18 @@ public class Identifier {
         for(int i = start+1;i<chars.length;i++) {
             char c = chars[i];
             if(!isIdentifierPart(c)) {
-                break;
+                String startString = builder.toString();
+                boolean isPotentialOperatorOverload = startString.equals("op_") || startString.equals("operator_");
+                if(isPotentialOperatorOverload) {
+                    String operator = WeacCompileUtils.readOperator(chars, i);
+                    if (operator != null && !operator.isEmpty()) {
+                        return new Identifier(startString+operator);
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
             }
             builder.append(c);
         }

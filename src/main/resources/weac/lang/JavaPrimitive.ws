@@ -1,6 +1,6 @@
 package weac.lang
 
-annotation PrimitiveLike {
+annotation JavaPrimitive {
 
     String value()
 

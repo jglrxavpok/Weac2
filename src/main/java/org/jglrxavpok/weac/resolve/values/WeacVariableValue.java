@@ -1,4 +1,4 @@
-package org.jglrxavpok.weac.resolve;
+package org.jglrxavpok.weac.resolve.values;
 
 import org.jglrxavpok.weac.utils.WeacType;
 

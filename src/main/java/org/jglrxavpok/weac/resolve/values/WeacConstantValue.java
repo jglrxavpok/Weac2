@@ -1,16 +1,15 @@
-package org.jglrxavpok.weac.resolve;
+package org.jglrxavpok.weac.resolve.values;
 
 import org.jglrxavpok.weac.utils.WeacType;
 
-public class WeacThisValue extends WeacValue {
-
-    public WeacThisValue(WeacType currentType) {
-        super(currentType);
+public class WeacConstantValue extends WeacValue {
+    public WeacConstantValue(WeacType type) {
+        super(type);
     }
 
     @Override
     public String getName() {
-        return "this";
+        return "constant of type "+getType();
     }
 
     @Override
@@ -30,6 +29,6 @@ public class WeacThisValue extends WeacValue {
 
     @Override
     public int getLocalVariableIndex() {
-        return 0;
+        return -1;
     }
 }

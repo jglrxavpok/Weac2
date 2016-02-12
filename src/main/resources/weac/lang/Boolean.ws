@@ -1,6 +1,6 @@
 package weac.lang
 
-@PrimitiveLike("boolean")
-Boolean > Number {
+@JavaPrimitive("boolean")
+final Boolean > Primitive {
 
 }

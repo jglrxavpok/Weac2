@@ -38,7 +38,6 @@ public abstract class WeacProcessor {
     public Object process(String source) {
         Object currentResult = source;
         for(WeacCompilePhase phase : toolchain) {
-            System.out.println("PROCESS: "+source);
             currentResult = phase.process(currentResult);
         }
         return currentResult;

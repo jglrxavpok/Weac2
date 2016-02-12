@@ -2,7 +2,7 @@ package org.jglrxavpok.weac.utils;
 
 public enum WeacModifierType {
     PUBLIC(true, false), PRIVATE(true, false), PROTECTED(true, false), ABSTRACT(false, true), MIXIN(false, true), ANNOTATION(false, true),
-    COMPILERSPECIAL(false, true);
+    COMPILERSPECIAL(false, true), FINAL(false, true);
 
     private final boolean accessModifier;
     private final boolean roleModifier;

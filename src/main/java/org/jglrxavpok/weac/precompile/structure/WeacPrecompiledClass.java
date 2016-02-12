@@ -64,6 +64,7 @@ public class WeacPrecompiledClass {
 
     public boolean isCompilerSpecial;
     public List<WeacImport> imports;
+    public boolean isFinal;
 
     public WeacPrecompiledClass() {
         annotations = new LinkedList<>();

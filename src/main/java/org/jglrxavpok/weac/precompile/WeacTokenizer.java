@@ -108,33 +108,6 @@ public class WeacTokenizer extends WeacCompileUtils {
         return Identifier.read(chars, i).getId();
     }
 
-    private String readOperator(char[] chars, int offset) {
-        List<EnumOperators> operators = new LinkedList<>();
-        Collections.addAll(operators, EnumOperators.values());
-        operators.remove(EnumOperators.UNARY_MINUS);
-        operators.remove(EnumOperators.UNARY_PLUS);
-        for(int i = offset;i<chars.length;i++) {
-            char c = chars[i];
-            int localIndex = i-offset;
-            Iterator<EnumOperators> iterator = operators.iterator();
-            while(iterator.hasNext()) {
-                EnumOperators operator = iterator.next();
-                if(operator.raw().length()+offset >= chars.length) {
-                    iterator.remove();
-                } else if(localIndex < operator.raw().length() && operator.raw().charAt(localIndex) != c) {
-                    iterator.remove();
-                } else if(localIndex > operator.raw().length()) {
-                    iterator.remove();
-                }
-            }
-
-            if(operators.size() == 1) {
-                return operators.get(0).raw();
-            }
-        }
-        return null;
-    }
-
     private String readInQuotes(char[] chars, int offset, char quote) {
         char first = chars[offset];
         if(first == quote) {

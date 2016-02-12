@@ -22,7 +22,8 @@ public interface PrecompileOpcodes {
             LABEL = 0x0E,
             LOAD_BOOLEAN_CONSTANT = 0x0F,
             THIS = 0x10,
-            ARGUMENT_SEPARATOR = 0x11
+            ARGUMENT_SEPARATOR = 0x11,
+            LOAD_NULL = 0x12
     ;
 
     HashMap<Integer, String> names = new HashMap<>();

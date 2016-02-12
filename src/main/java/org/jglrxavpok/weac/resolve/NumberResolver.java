@@ -49,7 +49,6 @@ public class NumberResolver extends WeacCompileUtils {
                             digit = Arrays.binarySearch(WeacPreCompiler.extraDigits, c)+10;
                         }
                         convertedNumber += digit * Math.pow(base, power);
-                        System.out.println(">> "+power+" / "+digit+" / "+convertedNumber+" / "+c);
                     }
                 }
                 if(type == null) {

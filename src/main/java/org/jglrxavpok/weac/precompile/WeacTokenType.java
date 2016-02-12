@@ -3,9 +3,9 @@ package org.jglrxavpok.weac.precompile;
 public enum WeacTokenType {
 
     WAITING_FOR_NEXT,
-    NUMBER,
-    SINGLE_CHARACTER,
-    STRING,
+    NUMBER(true),
+    SINGLE_CHARACTER(true),
+    STRING(true),
     LITERAL,
     OPERATOR,
     MEMBER_ACCESSING,
@@ -24,17 +24,31 @@ public enum WeacTokenType {
     DEFINE_ARRAY, // requires the size to be given inside the token
     INTERVAL_STEP,
 
-    // Those five are created from the LITERAL value after analysing their context (parenthesis after it or not)
-    VARIABLE,
+    // Those six are created from the LITERAL value after analysing their context (parenthesis after it or not)
+    VARIABLE(true),
     FUNCTION,
-    BOOLEAN,
-    THIS,
+    BOOLEAN(true),
+    THIS(true),
+    NULL(true),
     TYPE,
 
     IF,
 
     // Those two are created from the OPERATOR value after analysing their context (parenthesis before/after it or not)
     BINARY_OPERATOR,
-    ELSE, UNARY_OPERATOR
+    ELSE, UNARY_OPERATOR;
 
+    private final boolean isValue;
+
+    WeacTokenType() {
+        this(false);
+    }
+
+    WeacTokenType(boolean isValue) {
+        this.isValue = isValue;
+    }
+
+    public boolean isValue() {
+        return isValue;
+    }
 }

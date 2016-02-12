@@ -7,6 +7,7 @@ import org.jglrxavpok.weac.utils.WeacType;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
 
 public class JavaImportedClass extends WeacPrecompiledClass {
 
@@ -42,6 +43,8 @@ public class JavaImportedClass extends WeacPrecompiledClass {
                 convertedMethod.argumentTypes.add(argType.getIdentifier());
             }
             convertedMethod.isJavaImported = true;
+
+//            System.out.println("Imported method: "+convertedMethod.name+" / "+convertedMethod.returnType+" / "+ Arrays.toString(convertedMethod.argumentTypes.toArray()));
             methods.add(convertedMethod);
         }
 

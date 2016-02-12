@@ -92,6 +92,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                     boolean isAbstract = false;
                     boolean isMixin = false;
                     boolean isCompilerSpecial = false;
+                    boolean isFinal = false;
                     List<WeacParsedAnnotation> annotations = new ArrayList<>();
                     for(WeacModifier modif : modifiers) {
                         if(modif.getType().isAccessModifier()) {
@@ -104,6 +105,8 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                             isAbstract = true;
                         } else if(modif.getType() == WeacModifierType.MIXIN) {
                             isMixin = true;
+                        } else if(modif.getType() == WeacModifierType.FINAL) {
+                            isFinal = true;
                         } else if(modif.getType() == WeacModifierType.ANNOTATION) {
                             WeacParsedAnnotation annot = ((AnnotationModifier) modif).getAnnotation();
                             annotations.add(((AnnotationModifier) modif).getAnnotation());
@@ -119,6 +122,7 @@ public class WeacParser extends WeacCompilePhase<String, WeacParsedSource> {
                     clazz.access = currentAccess;
                     clazz.annotations = annotations;
                     clazz.isCompilerSpecial = isCompilerSpecial;
+                    clazz.isFinal = isFinal;
                     i+=extractedClass.length();
                     break;
             }

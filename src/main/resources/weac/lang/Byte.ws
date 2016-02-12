@@ -1,6 +1,6 @@
 package weac.lang
 
-@PrimitiveLike("byte")
-Byte > Number {
+@JavaPrimitive("byte")
+final Byte > Primitive {
 
 }

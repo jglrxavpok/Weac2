@@ -1,6 +1,6 @@
 package weac.lang
 
-@PrimitiveLike("long")
-Long > Number {
+@JavaPrimitive("long")
+final Long > Primitive {
 
 }

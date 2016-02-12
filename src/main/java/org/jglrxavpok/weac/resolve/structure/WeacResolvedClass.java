@@ -59,6 +59,8 @@ public class WeacResolvedClass {
     public String fullName;
     public boolean isCompilerSpecial;
 
+    public boolean isFinal;
+
     public WeacResolvedClass() {
         annotations = new LinkedList<>();
         fields = new LinkedList<>();

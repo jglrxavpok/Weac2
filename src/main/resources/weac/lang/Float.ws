@@ -1,6 +1,6 @@
 package weac.lang
 
-@PrimitiveLike("float")
-Float > Number {
+@JavaPrimitive("float")
+final Float > Primitive {
 
 }

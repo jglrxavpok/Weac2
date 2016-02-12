@@ -4,16 +4,16 @@ public class WeacType {
 
     public static final WeacType JOBJECT_TYPE = new WeacType(null, "java.lang.Object", true);
     public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.WeacObject", true);
-    public static final WeacType NUMBER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Number", true);
-    public static final WeacType VOID_TYPE = new WeacType(null, "void", false);
-    public static final WeacType BOOLEAN_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Boolean", true);
-    public static final WeacType BYTE_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Byte", true);
-    public static final WeacType DOUBLE_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Double", true);
-    public static final WeacType FLOAT_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Float", true);
-    public static final WeacType INTEGER_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Int", true);
-    public static final WeacType LONG_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Long", true);
-    public static final WeacType SHORT_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Short", true);
-    public static final WeacType CHAR_TYPE = new WeacType(NUMBER_TYPE, "weac.lang.Char", true);
+    public static final WeacType PRIMITIVE_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Primitive", true);
+    public static final WeacType VOID_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Void", false);
+    public static final WeacType BOOLEAN_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Boolean", true);
+    public static final WeacType BYTE_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Byte", true);
+    public static final WeacType DOUBLE_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Double", true);
+    public static final WeacType FLOAT_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Float", true);
+    public static final WeacType INTEGER_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Int", true);
+    public static final WeacType LONG_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Long", true);
+    public static final WeacType SHORT_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Short", true);
+    public static final WeacType CHAR_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Char", true);
 
     public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
 

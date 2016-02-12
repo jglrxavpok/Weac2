@@ -1,15 +1,15 @@
-package org.jglrxavpok.weac.resolve;
+package org.jglrxavpok.weac.resolve.values;
 
 import org.jglrxavpok.weac.utils.WeacType;
 
-public class WeacConstantValue extends WeacValue {
-    public WeacConstantValue(WeacType type) {
-        super(type);
+public class WeacNullValue extends WeacValue {
+    public WeacNullValue() {
+        super(WeacType.OBJECT_TYPE);
     }
 
     @Override
     public String getName() {
-        return "constant of type "+getType();
+        return "null";
     }
 
     @Override

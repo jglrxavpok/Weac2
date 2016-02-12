@@ -2,7 +2,7 @@ package weac.lang
 
 object Console {
 
-    void writeLine(String line) {
+    Void writeLine(String line) {
         System.out.println(line);
     }
 

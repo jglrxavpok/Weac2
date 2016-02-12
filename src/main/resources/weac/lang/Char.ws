@@ -1,6 +1,6 @@
 package weac.lang
 
-@PrimitiveLike("char")
-Char > Number {
+@JavaPrimitive("char")
+final Char > Primitive {
 
 }

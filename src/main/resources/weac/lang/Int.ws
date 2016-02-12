@@ -1,7 +1,7 @@
 package weac.lang
 
-@PrimitiveLike("int")
-Int > Number {
+@JavaPrimitive("int")
+final Int > Primitive {
 
     Int factorial() {
         return Math.fact(this);

@@ -19,6 +19,7 @@ public interface ResolveOpcodes {
             LOAD_STRING_CONSTANT = 0x09,
             LOAD_CHARACTER_CONSTANT = 0x0A,
             FUNCTION_CALL = 0x0B,
+            LOAD_NULL = 0x0C,
 
             RETURN = 0x10,
             OBJ_RETURN = 0x11,
@@ -49,7 +50,8 @@ public interface ResolveOpcodes {
             for(Field field : fields) {
                 if(field.getType() == Integer.TYPE) {
                     try {
-                        names.put(field.getInt(null), field.getName());
+                        if(!names.containsValue(field.getName()))
+                            names.put(field.getInt(null), field.getName());
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }

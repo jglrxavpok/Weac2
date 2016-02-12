@@ -183,9 +183,7 @@ public class WeacClassBodyParser extends WeacCompileUtils {
         method.name = name;
         method.isAbstract = isAbstract;
         method.access = access;
-        System.out.println(">>>! "+name);
         String allArgs = readArguments(chars, i);
-        System.out.println(">>> "+allArgs);
         String[] arguments = allArgs.split(",");
         for(String arg : arguments) {
             arg = trimStartingSpace(arg);

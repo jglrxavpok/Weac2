@@ -46,7 +46,7 @@ public class WeacCompileWorker implements Runnable {
                         PrintWriter pw = new PrintWriter(System.out);
                         CheckClassAdapter.verify(new ClassReader(bytecode), true, pw);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        throw new RuntimeException("Error while compiling "+className, e);
                     }
                 }
                 out.write(bytecode);

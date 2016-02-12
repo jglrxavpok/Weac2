@@ -23,13 +23,14 @@ object HelloWorld > Application + TestMixin {
         Math.sin(Math.random());
     }
 
-    String test() {
-        return "TEST";
+    String test(String a) {
+        return a;
     }
+
 }
 
 mixin class TestMixin {
-    void myMethodMixin() {
+    Void myMethodMixin() {
         // some code
         Console.writeLine("Test");
     }

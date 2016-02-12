@@ -67,6 +67,7 @@ public class WeacParsedClass {
     public List<WeacParsedAnnotation> annotations;
 
     public boolean isCompilerSpecial;
+    public boolean isFinal;
 
     /**
      * Prints this class to the console, intended for debug use only
