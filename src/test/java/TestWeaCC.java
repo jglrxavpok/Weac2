@@ -37,7 +37,7 @@ public class TestWeaCC extends Tests {
         File output = new File(".", "monolith");
         empty(new File(output, "tests"));
         WeaCC.main(new String[] {"--out", output.getPath(), "--stdl", "src/main/resources/weac/lang", "src/test/resources/tests/HelloWorld.ws"});
-        assertEquals(asList(new File("monolith/tests/HelloWorld.class")), asList(new File(output, "tests").listFiles()));
+        assertEquals(asList(new File(output, "tests/HelloWorld.class"), new File(output, "tests/TestMixin.class")), asList(new File(output, "tests").listFiles()));
     }
 
     @Test
@@ -45,7 +45,7 @@ public class TestWeaCC extends Tests {
         File output = new File(".", "monolith");
         empty(new File(output, "tests"));
         WeaCC.main(new String[] {"--out", output.getPath(), "--stdl", "src/main/resources/weac/lang", "src/test/resources/tests/HelloWorld.ws", "src/test/resources/tests/TestValue.ws"});
-        assertEquals(asList(new File(output, "tests/HelloWorld.class"), new File(output, "tests/TestValue.class")), asList(new File(output, "tests").listFiles()));
+        assertEquals(asList(new File(output, "tests/HelloWorld.class"), new File(output, "tests/TestMixin.class"), new File(output, "tests/TestValue.class")), asList(new File(output, "tests").listFiles()));
     }
 
     @Test

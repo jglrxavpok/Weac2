@@ -8,10 +8,7 @@ import org.jglrxavpok.weac.precompile.structure.*;
 import org.jglrxavpok.weac.resolve.insn.*;
 import org.jglrxavpok.weac.resolve.structure.*;
 import org.jglrxavpok.weac.resolve.values.*;
-import org.jglrxavpok.weac.utils.EnumOperators;
-import org.jglrxavpok.weac.utils.Identifier;
-import org.jglrxavpok.weac.utils.WeacImport;
-import org.jglrxavpok.weac.utils.WeacType;
+import org.jglrxavpok.weac.utils.*;
 
 import java.util.*;
 
@@ -334,7 +331,7 @@ public class WeacResolver extends WeacCompileUtils {
             }
         }
         if(superclass == null) {
-            superclass = findClass("weac.lang.WeacObject", context);
+            superclass = findClass(WeacConstants.BASE_CLASS, context);
         }
         parents.setSuperclass(superclass);
         return parents;
@@ -530,8 +527,8 @@ public class WeacResolver extends WeacCompileUtils {
                                     currentIsStatic = true;
                                     valueStack.push(new WeacConstantValue(currentVarType));
                                 } else if(clazz.classType == EnumClassTypes.OBJECT) {
-                                    insns.add(new WeacLoadFieldInsn("__instance__", currentVarType, currentVarType, true));
-                                    valueStack.push(new WeacFieldValue("__instance__", currentVarType, currentVarType));
+                                    insns.add(new WeacLoadFieldInsn(WeacConstants.SINGLETON_INSTANCE_FIELD, currentVarType, currentVarType, true));
+                                    valueStack.push(new WeacFieldValue(WeacConstants.SINGLETON_INSTANCE_FIELD, currentVarType, currentVarType));
                                     currentIsStatic = false;
                                 } else {
                                     newError(":cc2 "+context.getSource().classes.get(0).fullName+" / "+currentVarType.getIdentifier(), -1); // todo line
@@ -687,13 +684,9 @@ public class WeacResolver extends WeacCompileUtils {
                         WeacType argType = argTypes[i];
                         WeacType paramType = resolveType(m.argumentTypes.get(i), context);
                         if(!isCastable(argType, paramType, context)) {
-                            System.out.println(argType+" NOT CAST "+paramType);
-                            return false; // TODO: test castable
-                        } else {
-                            System.out.println(argType+" is castable to "+paramType);
+                            return false;
                         }
                     }
-                    // TODO: check if argument types match
                     return true;
                 })
                 .sorted((a, b) -> {
@@ -703,6 +696,10 @@ public class WeacResolver extends WeacCompileUtils {
                 .findFirst();
         if(foundMethod.isPresent()) {
             return foundMethod.get();
+        }
+
+        if(topClass.fullName.equals(Object.class.getCanonicalName())) {
+            return null; // We've reached the top, stop here
         }
 
         boolean isPresent = context.getSource().classes.stream().filter(c -> c.fullName.equals(topClass.fullName)).count() != 0L;
@@ -717,6 +714,7 @@ public class WeacResolver extends WeacCompileUtils {
         } else {
             newContext = context;
         }
+
 
         ClassHierarchy hierarchy = getHierarchy(topClass, topClass.interfacesImplemented, newContext);
 
@@ -753,7 +751,7 @@ public class WeacResolver extends WeacCompileUtils {
         if(from.equals(to)) {
             return true;
         }
-        // try primitive types
+        // TODO: primitive types
 
         WeacPrecompiledClass fromClass = findClass(from.getIdentifier().getId(), context);
         WeacPrecompiledClass toClass = findClass(to.getIdentifier().getId(), context);

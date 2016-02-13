@@ -6,6 +6,7 @@ import org.jglrxavpok.weac.precompile.WeacLabel;
 import org.jglrxavpok.weac.precompile.structure.WeacPrecompiledClass;
 import org.jglrxavpok.weac.resolve.structure.*;
 import org.jglrxavpok.weac.utils.Identifier;
+import org.jglrxavpok.weac.utils.WeacConstants;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 import org.jglrxavpok.weac.utils.WeacType;
 import org.jglrxavpok.weac.resolve.insn.*;
@@ -38,9 +39,9 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             writer.visit(V1_8, convertAccessToASM(clazz), internalName, signature, superclass, convertToASM(clazz.parents.getInterfaces()));
 
             if(clazz.classType == EnumClassTypes.OBJECT) {
-                writer.visitField(ACC_PUBLIC + ACC_STATIC, "__instance__", type.getDescriptor(), null, null);
+                writer.visitField(ACC_PUBLIC + ACC_STATIC, WeacConstants.SINGLETON_INSTANCE_FIELD, type.getDescriptor(), null, null);
 
-                writeGetter(writer, true, type, type, "__instance__");
+                writeGetter(writer, true, type, type, WeacConstants.SINGLETON_INSTANCE_FIELD);
             }
 
             Type primitiveType = writeClassAnnotations(clazz.annotations, clazz, type, writer);
@@ -75,7 +76,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             });
             av.visitEnd();
 
-            if(annotation.getName().fullName.equals("weac.lang.JavaPrimitive")) {
+            if(annotation.getName().fullName.equals(WeacConstants.JAVA_PRIMITIVE_ANNOTATION)) {
                 Object value = getValue(annotation.getArgs().get(0));
                 if(value instanceof String) {
                     switch ((String) value) {
@@ -152,7 +153,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
     }
 
     private void writeMethods(ClassWriter writer, Type type, WeacResolvedClass clazz, Type primitiveType) {
-        if(clazz.classType == EnumClassTypes.OBJECT && clazz.parents.hasInterface("weac.lang.Application")) {
+        if(clazz.classType == EnumClassTypes.OBJECT && clazz.parents.hasInterface(WeacConstants.APPLICATION_CLASS)) {
             writeMainMethod(writer, type, clazz);
         }
         int nConstructors = 0;
@@ -257,7 +258,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                         this.compileSingleExpression(type, mv, f.defaultValue);
                         mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                     });
-            //mv.visitInsn(RETURN);
+            mv.visitInsn(RETURN);
             mv.visitLabel(end);
             mv.visitMaxs(0,0);
             mv.visitEnd();
@@ -353,9 +354,6 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                 System.err.println("unknown: "+insn);
             }
         }
-        if(last == null || !(last.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && last.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE)) {
-            writer.visitInsn(RETURN);
-        }
     }
 
     private void writeFields(ClassWriter writer, Type type, WeacResolvedClass clazz, Type primitiveType) {
@@ -414,7 +412,7 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
             mv.visitInsn(DUP);
             mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
             // store it in the field
-            mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), "__instance__", type.getDescriptor());
+            mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), WeacConstants.SINGLETON_INSTANCE_FIELD, type.getDescriptor());
         }
         mv.visitLabel(new Label());
         mv.visitInsn(RETURN);

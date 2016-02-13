@@ -3,7 +3,7 @@ package org.jglrxavpok.weac.utils;
 public class WeacType {
 
     public static final WeacType JOBJECT_TYPE = new WeacType(null, "java.lang.Object", true);
-    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.WeacObject", true);
+    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, WeacConstants.BASE_CLASS, true);
     public static final WeacType PRIMITIVE_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Primitive", true);
     public static final WeacType VOID_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Void", false);
     public static final WeacType BOOLEAN_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Boolean", true);
