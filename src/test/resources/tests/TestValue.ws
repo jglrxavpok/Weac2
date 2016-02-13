@@ -2,7 +2,7 @@ package tests
 
 TestValue {
 
-    TestValue operator_++() {
+    TestValue operator++() {
         // Do something
         return this;
     }

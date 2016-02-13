@@ -77,7 +77,7 @@ public class Identifier {
             char c = potientialID.charAt(i);
             if(!isIdentifierPart(c, fullName)) {
                 String startString = potientialID.substring(0, i);
-                boolean isPotentialOperatorOverload = startString.equals("op_") || startString.equals("operator_") || startString.equals("unary_");
+                boolean isPotentialOperatorOverload = isValidOperatorOverloadStart(startString);
                 if(isPotentialOperatorOverload) {
                     String operator = WeacCompileUtils.readOperator(potientialID.toCharArray(), i);
                     if (operator != null && !operator.isEmpty()) {
@@ -126,7 +126,7 @@ public class Identifier {
             char c = chars[i];
             if(!isIdentifierPart(c)) {
                 String startString = builder.toString();
-                boolean isPotentialOperatorOverload = startString.equals("op_") || startString.equals("operator_") || startString.equals("unary_");
+                boolean isPotentialOperatorOverload = isValidOperatorOverloadStart(startString);
                 if(isPotentialOperatorOverload) {
                     String operator = WeacCompileUtils.readOperator(chars, i);
                     if (operator != null && !operator.isEmpty()) {
@@ -141,6 +141,10 @@ public class Identifier {
             builder.append(c);
         }
         return new Identifier(builder.toString());
+    }
+
+    public static boolean isValidOperatorOverloadStart(String start) {
+        return start.equals("operator") || start.equals("unary");
     }
 
     public static boolean isIdentifierStart(char c) {
@@ -168,4 +172,5 @@ public class Identifier {
     public int hashCode() {
         return id.hashCode();
     }
+
 }

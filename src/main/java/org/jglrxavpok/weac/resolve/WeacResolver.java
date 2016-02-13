@@ -120,9 +120,15 @@ public class WeacResolver extends WeacCompileUtils {
         method.isConstructor = precompiledMethod.isConstructor;
         method.name = precompiledMethod.name;
         String mName = method.name.getId();
-        if(mName.startsWith("op_") || mName.startsWith("operator_") || mName.startsWith("unary_")) {
-            boolean unary = mName.startsWith("unary_");
-            method.overloadOperator = EnumOperators.get(mName.substring(mName.indexOf("_")+1), unary);
+        if(mName.startsWith("operator") || mName.startsWith("unary")) {
+            boolean unary = mName.startsWith("unary");
+            int endIndex;
+            if(unary) {
+                endIndex = "unary".length();
+            } else {
+                endIndex = "operator".length();
+            }
+            method.overloadOperator = EnumOperators.get(mName.substring(endIndex), unary);
         }
         method.isCompilerSpecial = precompiledMethod.isCompilerSpecial;
         method.returnType = resolveType(precompiledMethod.returnType, context);
