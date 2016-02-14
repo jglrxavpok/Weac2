@@ -9,7 +9,7 @@ public class WeacConstantValue extends WeacValue {
 
     @Override
     public String getName() {
-        return "constant of type "+getType();
+        return "constant";
     }
 
     @Override

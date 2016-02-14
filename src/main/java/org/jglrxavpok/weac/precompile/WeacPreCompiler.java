@@ -359,7 +359,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     insns.add(new WeacPrecompiledLoadNull());
                     break;
 
-                case MEMBER_ACCESSING:
+                case FUNCTION_START:
+                    insns.add(new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START));
                     break;
 
                 case UNARY_OPERATOR:
@@ -449,21 +450,23 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         for(int i = 0;i<tokens.size();i++) {
             WeacToken token = tokens.get(i);
             if(token.getType().isValue()) {
+                instanceStack.push(true);
                 if(i+2 < tokens.size()) {
                     if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
                         WeacTokenType type = tokens.get(i + 2).getType();
-                        instanceStack.push(true);
+
                         if(type == WeacTokenType.VARIABLE || type == WeacTokenType.THIS) {
                             out.add(token);
-                            out.add(tokens.get(i+1));
+                            //out.add(tokens.get(i+1));
                             out.add(tokens.get(i+2));
                             argCount++;
                             i+=2;
                         } else if(type == WeacTokenType.NULL) {
                             newError("Null has no members", -1); // todo line
                         } else { // it is a method // it is a method
-                            stack.push(tokens.get(i+1));
+                            //stack.push(tokens.get(i+1));
                             out.add(token);
+                            argCount++;
                             i++; // skip the '.'
                         }
                     } else {
@@ -475,6 +478,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     argCount++;
                 }
             } else if(token.getType() == WeacTokenType.FUNCTION || token.getType() == WeacTokenType.IF) {
+                out.add(new WeacFunctionStartToken());
                 stack.push(token);
                 argCountStack.push(argCount);
                 argCount = 0;
@@ -538,10 +542,14 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 if(!stack.isEmpty()) {
                     while(!stack.peek().isOpposite(token)) {
                         out.add(stack.pop());
+
+                        if(stack.isEmpty()) {
+                            newError("Unclosed parenthesis in "+expr, -1);
+                        }
                     }
 
+                    WeacToken previous = stack.pop(); // pop opening bracket
                     if(token.getType() == WeacTokenType.CLOSING_SQUARE_BRACKETS) {
-                        stack.pop(); // pop opening bracket
                         out.add(new WeacToken(""+argCount, WeacTokenType.DEFINE_ARRAY, -1));
                         argCount = argCountStack.pop();
                         argCount++;
@@ -550,7 +558,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                             newError("Unmatched parenthesises, please fix", -1);
                             return Collections.EMPTY_LIST;
                         } else {
-                            WeacToken previous = stack.pop();
                             if(previous.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
                                 argCount++;
                             } else {
@@ -571,7 +578,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                                         // function name;argument count;true if we should look for the object to call it on in the stack
                                         WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), top.getType(), originalToken.length);
                                         argCount = argCountStack.pop();
-                                        argCount++;
+                                        if(!shouldLookForInstance)
+                                            argCount++;
                                         out.add(functionToken);
                                     } else {
                                         System.out.println("FREAKING OUT "+Arrays.toString(stack.toArray())+" / "+top+" / "+previous);

@@ -6,3 +6,6 @@ build/
 
 ## Gradle
 .gradle/
+
+## Tests
+monolith/

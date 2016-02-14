@@ -235,7 +235,11 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                 try {
                     mv.visitMaxs(0,0);
                 } catch (Exception e) {
-                    throw new RuntimeException("WARNING in "+method.name+" / "+type, e);
+                    try {
+                        throw new RuntimeException("WARNING in "+method.name+" "+method.argumentTypes.get(0)+" / "+type, e);
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
                 }
             }
 
@@ -348,8 +352,23 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
                 for(int i0 = 0;i0<callInsn.getArgCount();i0++) {
                     argTypes[i0] = toJVMType(callInsn.getArgTypes()[i0]);
                 }
-                String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
-                writer.visitMethodInsn(INVOKEVIRTUAL, toJVMType(callInsn.getOwner()).getInternalName(), callInsn.getName(), methodDesc, false);
+                int invokeType = INVOKEVIRTUAL;
+                if(callInsn.isStatic()) {
+                    invokeType = INVOKESTATIC;
+                }
+                WeacType owner = callInsn.getOwner();
+                if(owner.getSuperType() != null) {
+                    if(owner.getSuperType().equals(WeacType.PRIMITIVE_TYPE)) {
+                        String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), toJVMType(owner, false));
+                        writer.visitMethodInsn(INVOKESTATIC, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
+                    } else {
+                        String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
+                        writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
+                    }
+                } else {
+                    String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
+                    writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
+                }
             } else {
                 System.err.println("unknown: "+insn);
             }
@@ -438,9 +457,15 @@ public class WeacCompiler extends WeacCompileUtils implements Opcodes {
     }
 
     private Type toJVMType(WeacType type) {
-        Type primitiveType = getPrimitiveType(type);
-        if(primitiveType != null)
-            return primitiveType;
+        return toJVMType(type, false);
+    }
+
+    private Type toJVMType(WeacType type, boolean isFunctionOwner) {
+        if(!isFunctionOwner) {
+            Type primitiveType = getPrimitiveType(type);
+            if(primitiveType != null)
+                return primitiveType;
+        }
         return Type.getType(toDescriptor(type));
     }
 

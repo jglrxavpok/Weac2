@@ -26,6 +26,6 @@ public abstract class WeacValue {
 
     @Override
     public String toString() {
-        return "WeacValue["+getName()+"]";
+        return "WeacValue["+getName()+" ("+getType()+")]";
     }
 }

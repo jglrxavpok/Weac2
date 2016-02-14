@@ -21,6 +21,7 @@ object HelloWorld > Application + TestMixin {
     Void start(String[] args) {
         Console.writeLine("Hello World!");
         Math.sin(Math.random());
+        Console.writeLine(fieldWithDefaultValue0.factorial());
     }
 
     String test(String a) {
@@ -33,5 +34,6 @@ mixin class TestMixin {
     Void myMethodMixin() {
         // some code
         Console.writeLine("Test");
+        Console.writeLine((10).toString());
     }
 }

@@ -9,8 +9,9 @@ public class WeacFunctionCallInsn extends WeacResolvedInsn {
     private final boolean instanceInStack;
     private final WeacType[] argTypes;
     private final WeacType returnType;
+    private final boolean isStatic;
 
-    public WeacFunctionCallInsn(String name, WeacType owner, int nArgs, boolean instanceInStack, WeacType[] argTypes, WeacType returnType) {
+    public WeacFunctionCallInsn(String name, WeacType owner, int nArgs, boolean instanceInStack, WeacType[] argTypes, WeacType returnType, boolean isStatic) {
         super(FUNCTION_CALL);
         this.name = name;
         this.owner = owner;
@@ -18,6 +19,7 @@ public class WeacFunctionCallInsn extends WeacResolvedInsn {
         this.instanceInStack = instanceInStack;
         this.argTypes = argTypes;
         this.returnType = returnType;
+        this.isStatic = isStatic;
     }
 
     public String getName() {
@@ -47,5 +49,9 @@ public class WeacFunctionCallInsn extends WeacResolvedInsn {
 
     public WeacType[] getArgTypes() {
         return argTypes;
+    }
+
+    public boolean isStatic() {
+        return isStatic;
     }
 }

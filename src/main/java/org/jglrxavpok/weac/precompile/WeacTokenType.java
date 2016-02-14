@@ -33,10 +33,14 @@ public enum WeacTokenType {
     TYPE,
 
     IF,
+    ELSE,
+
+    FUNCTION_START,
 
     // Those two are created from the OPERATOR value after analysing their context (parenthesis before/after it or not)
     BINARY_OPERATOR,
-    ELSE, UNARY_OPERATOR;
+
+    UNARY_OPERATOR;
 
     private final boolean isValue;
 

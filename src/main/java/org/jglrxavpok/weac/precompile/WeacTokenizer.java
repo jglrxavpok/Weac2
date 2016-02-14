@@ -173,7 +173,7 @@ public class WeacTokenizer extends WeacCompileUtils {
                         break;
                     }
                 } else if(c == '.') {
-                    if(!hasDecimalPoint) {
+                    if(!hasDecimalPoint && base == 10) {
                         if(i+1 < chars.length) {
                             char next = chars[i+1];
                             if(next == '.') {

@@ -45,6 +45,8 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }");
         precompile(preCompiler, "return new Object");
         precompile(preCompiler, "Math.sin(Math.random())");
+        precompile(preCompiler, "Console.writeLine((10).toString())");
+
     }
 
     private void precompile(WeacPreCompiler preCompiler, String s) {
