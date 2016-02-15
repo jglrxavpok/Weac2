@@ -24,7 +24,8 @@ public interface PrecompileOpcodes {
             THIS = 0x10,
             ARGUMENT_SEPARATOR = 0x11,
             LOAD_NULL = 0x12,
-            FUNCTION_START = 0x13
+            FUNCTION_START = 0x13,
+            CAST = 0x14
     ;
 
     HashMap<Integer, String> names = new HashMap<>();

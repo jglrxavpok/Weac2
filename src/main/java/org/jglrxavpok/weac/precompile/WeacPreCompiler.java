@@ -3,7 +3,9 @@ package org.jglrxavpok.weac.precompile;
 import org.jglrxavpok.weac.WeacCompilePhase;
 import org.jglrxavpok.weac.parse.structure.*;
 import org.jglrxavpok.weac.patterns.WeacInstructionPattern;
+import org.jglrxavpok.weac.precompile.patterns.WeacCastPattern;
 import org.jglrxavpok.weac.precompile.patterns.WeacIntervalPattern;
+import org.jglrxavpok.weac.precompile.patterns.WeacTokenPattern;
 import org.jglrxavpok.weac.precompile.structure.*;
 import org.jglrxavpok.weac.utils.EnumOperators;
 import org.jglrxavpok.weac.precompile.insn.*;
@@ -19,11 +21,16 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     ).toCharArray();
 
     private final List<WeacInstructionPattern<WeacPrecompiledInsn>> patterns;
+    private final List<WeacTokenPattern> tokenPatterns;
     private final WeacTokenizer tokenizer;
 
     public WeacPreCompiler() {
         patterns = new ArrayList<>();
         patterns.add(new WeacIntervalPattern());
+
+        tokenPatterns = new ArrayList<>();
+        tokenPatterns.add(new WeacCastPattern());
+
         tokenizer = new WeacTokenizer();
     }
 
@@ -266,6 +273,9 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
             previous = token;
         }
+
+        tokens = solvePatterns(tokens);
+
         handleBuiltins(tokens);
         // tokens.forEach(t -> System.out.println("token: "+t));
 
@@ -277,6 +287,26 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         }
         //System.out.println();
         return toInstructions(output, insns);
+    }
+
+    private List<WeacToken> solvePatterns(List<WeacToken> tokens) {
+        List<WeacToken> finalTokens = new LinkedList<>();
+        for(int i = 0;i<tokens.size();i++) {
+            boolean matchFound = false;
+            for(WeacTokenPattern p : tokenPatterns) {
+                if(p.matches(tokens, i)) {
+                    p.output(tokens, i, finalTokens);
+                    i += p.consumeCount(tokens, i);
+                    matchFound = true;
+                }
+            }
+
+            if(!matchFound) {
+                finalTokens.add(tokens.get(i));
+            }
+
+        }
+        return finalTokens;
     }
 
     private void handleBuiltins(List<WeacToken> tokens) {
@@ -315,6 +345,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         // TODO: Handle 'new' after function calls
         for(WeacToken token : output) {
             switch (token.getType()) {
+
+                case CAST:
+                    insns.add(new WeacCastPreInsn(token.getContent()));
+                    break;
+
                 case ARGUMENT_SEPARATOR:
                     insns.add(new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR));
                     break;
@@ -449,17 +484,17 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         instanceStack.push(false);
         for(int i = 0;i<tokens.size();i++) {
             WeacToken token = tokens.get(i);
-            if(token.getType().isValue()) {
+            if(token.getType().isValue() || token.getType() == WeacTokenType.CAST) {
                 instanceStack.push(true);
                 if(i+2 < tokens.size()) {
                     if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
                         WeacTokenType type = tokens.get(i + 2).getType();
-
-                        if(type == WeacTokenType.VARIABLE || type == WeacTokenType.THIS) {
+                        if(type == WeacTokenType.VARIABLE || type == WeacTokenType.THIS || type == WeacTokenType.CAST) {
                             out.add(token);
                             //out.add(tokens.get(i+1));
                             out.add(tokens.get(i+2));
-                            argCount++;
+                            if(type != WeacTokenType.CAST)
+                                argCount++;
                             i+=2;
                         } else if(type == WeacTokenType.NULL) {
                             newError("Null has no members", -1); // todo line
@@ -555,7 +590,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                         argCount++;
                     } else {
                         if(stack.isEmpty()) {
-                            newError("Unmatched parenthesises, please fix", -1);
+                            newError("Unmatched parenthesises, please fix in "+expr+" / "+Arrays.toString(tokens.toArray()), -1);
                             return Collections.EMPTY_LIST;
                         } else {
                             if(previous.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
@@ -593,10 +628,12 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                         }
                     }
                 } else {
-                    newError("Unmatched parenthesises, please fix", -1);
+                    newError("Unmatched parenthesises, please fix in "+expr, -1);
                     return Collections.EMPTY_LIST;
                 }
             } else if(token.getType() == WeacTokenType.IF || token.getType() == WeacTokenType.IF) {
+                out.add(token);
+            } else if(token.getType() == WeacTokenType.CAST) {
                 out.add(token);
             }
         }

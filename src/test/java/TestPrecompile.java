@@ -46,6 +46,9 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "return new Object");
         precompile(preCompiler, "Math.sin(Math.random())");
         precompile(preCompiler, "Console.writeLine((10).toString())");
+        precompile(preCompiler, "(((0)))");
+        precompile(preCompiler, "(Int)toCast");
+        precompile(preCompiler, "((Int) toCast).toString()");
 
     }
 

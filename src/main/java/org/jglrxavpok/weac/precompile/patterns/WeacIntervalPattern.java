@@ -18,7 +18,7 @@ public class WeacIntervalPattern extends WeacInstructionPattern<WeacPrecompiledI
     }
 
     @Override
-    protected boolean isValid(WeacPrecompiledInsn insn, int expectedCode, int index) {
+    protected boolean isValid(WeacPrecompiledInsn insn, Integer expectedCode, int index) {
         if(super.isValid(insn, expectedCode, index)) {
             if(expectedCode == PrecompileOpcodes.BINARY_OPERATOR) {
                 WeacOperatorInsn op = ((WeacOperatorInsn) insn);

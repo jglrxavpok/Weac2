@@ -5,29 +5,21 @@ import org.jglrxavpok.weac.utils.WeacInsn;
 
 import java.util.List;
 
-public abstract class WeacInstructionPattern<InsnType extends WeacInsn> {
+public abstract class WeacInstructionPattern<InsnType extends WeacInsn> extends WeacPattern<InsnType, Integer> {
 
     public abstract int[] getOpcodes();
 
-    public boolean matches(List<InsnType> insns, int index) {
-        int localIndex = 0;
-        for(int i = index;i<insns.size() && localIndex < getOpcodes().length; i++, localIndex++) {
-            InsnType insn = insns.get(i);
-            int expectedCode = getOpcodes()[localIndex];
-            if(!isValid(insn, expectedCode, localIndex)) {
-                return false;
-            }
+    @Override
+    public Integer[] getCategories() {
+        int[] ops = getOpcodes();
+        Integer[] categories = new Integer[ops.length];
+        for(int i = 0;i<categories.length;i++) {
+            categories[i] = ops[i];
         }
-        return localIndex == getOpcodes().length;
+        return categories;
     }
 
-    public int consumeCount(List<InsnType> insns, int index) {
-        return getOpcodes().length;
-    }
-
-    protected boolean isValid(InsnType insn, int expectedCode, int index) {
+    protected boolean isValid(InsnType insn, Integer expectedCode, int index) {
         return insn.getOpcode() == expectedCode;
     }
-
-    public abstract void output(List<InsnType> original, int i, List<WeacPrecompiledInsn> output);
 }

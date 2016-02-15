@@ -40,7 +40,7 @@ public enum WeacTokenType {
     // Those two are created from the OPERATOR value after analysing their context (parenthesis before/after it or not)
     BINARY_OPERATOR,
 
-    UNARY_OPERATOR;
+    UNARY_OPERATOR, CAST;
 
     private final boolean isValue;
 
