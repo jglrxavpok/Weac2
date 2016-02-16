@@ -86,6 +86,8 @@ public enum EnumOperators {
             }
         }
         for(EnumOperators op : values()) {
+            if(op == UNARY_MINUS || op == UNARY_PLUS)
+                continue;
             if(op.raw().equals(raw)) {
                 return op;
             }

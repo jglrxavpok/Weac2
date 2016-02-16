@@ -22,4 +22,15 @@ public class WeacCreateArray extends WeacPrecompiledInsn {
     public String toString() {
         return super.toString() + ' ' + length+" ("+type+")";
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacPrecompiledInsn) {
+            WeacCreateArray casted = ((WeacCreateArray) obj);
+            return casted.getType().equals(type) && casted.getLength() == length;
+        }
+        return false;
+    }
 }

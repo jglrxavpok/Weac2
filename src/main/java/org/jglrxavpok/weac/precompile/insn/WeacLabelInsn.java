@@ -20,4 +20,15 @@ public class WeacLabelInsn extends WeacPrecompiledInsn {
     public WeacLabel getLabel() {
         return label;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacPrecompiledInsn) {
+            WeacLabelInsn casted = ((WeacLabelInsn) obj);
+            return casted.getLabel().equals(label);
+        }
+        return false;
+    }
 }

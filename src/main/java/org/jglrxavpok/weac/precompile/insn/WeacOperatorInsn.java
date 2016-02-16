@@ -24,4 +24,15 @@ public class WeacOperatorInsn extends WeacPrecompiledInsn {
     public String toString() {
         return super.toString() + " "+ getOperator().name();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacOperatorInsn) {
+            WeacOperatorInsn casted = ((WeacOperatorInsn) obj);
+            return casted.getOperator() == operator && casted.isUnary() == unary;
+        }
+        return false;
+    }
 }

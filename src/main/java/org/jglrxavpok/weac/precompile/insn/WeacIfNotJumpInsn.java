@@ -13,4 +13,15 @@ public class WeacIfNotJumpInsn extends WeacPrecompiledInsn {
     public WeacLabel getJumpTo() {
         return jumpTo;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacPrecompiledInsn) {
+            WeacIfNotJumpInsn casted = ((WeacIfNotJumpInsn) obj);
+            return casted.jumpTo.equals(jumpTo);
+        }
+        return false;
+    }
 }

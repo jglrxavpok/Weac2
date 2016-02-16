@@ -217,6 +217,10 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     }
 
     public List<WeacPrecompiledInsn> precompileExpression(String expression) {
+        return precompileExpression(expression, false);
+    }
+
+    public List<WeacPrecompiledInsn> precompileExpression(String expression, boolean ditchLabels) {
         if(expression == null) {
             return Collections.emptyList();
         }
@@ -277,16 +281,21 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         tokens = solvePatterns(tokens);
 
         handleBuiltins(tokens);
-        // tokens.forEach(t -> System.out.println("token: "+t));
 
         // TODO: convert 'ELSE' + 'IF' to 'ELSE IF'
         List<WeacToken> output = convertToRPN(expression, tokens);
 
-        for(WeacToken token : output) {
-            //System.out.print(token.getType().name()+"("+token.getContent()+") ");
+        List<WeacPrecompiledInsn> instructions = toInstructions(output, insns);
+        if(ditchLabels) {
+            ListIterator<WeacPrecompiledInsn> insnIterator = instructions.listIterator();
+            while (insnIterator.hasNext()) {
+                WeacPrecompiledInsn insn = insnIterator.next();
+                if(insn instanceof WeacLabelInsn) {
+                    insnIterator.remove();
+                }
+            }
         }
-        //System.out.println();
-        return toInstructions(output, insns);
+        return instructions;
     }
 
     private List<WeacToken> solvePatterns(List<WeacToken> tokens) {
@@ -413,9 +422,9 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                             WeacFunctionCall call = (WeacFunctionCall)prev;
                             typeName = call.getName();
                             constructorArgCount = call.getArgCount();
-                            if(call.shouldLookForInstance()) {
-                                newError("Incorrect call to constructor", -1); // todo: line
-                            }
+                            //if(call.shouldLookForInstance()) {
+                            //    newError("Incorrect call to constructor "+prev, -1); // todo: line
+                            //}
                         } else {
                             newError("Invalid token before constructor (opcode is "+prev.getOpcode()+")", -1); // todo: line
                             typeName = "INVALID$$";
@@ -433,8 +442,10 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 case DEFINE_ARRAY:
                     int length = Integer.parseInt(token.getContent());
                     insns.add(new WeacCreateArray(length, "$$unknown"));
-                    for(int i = 0;i<length;i++)
-                        insns.add(new WeacStoreArray(length-i-1));
+                    for(int i = 0;i<length;i++) {
+                        insns.add(new WeacSimplePreInsn(PrecompileOpcodes.DUP));
+                        insns.add(new WeacStoreArray(length - i - 1));
+                    }
                     break;
 
                 default:
@@ -561,7 +572,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                             break;
                         }
                     }
-                    stack.push(token);
+                    stack.push(new WeacToken(operator.raw(), token.getType(), token.length));
                 } else {
                     newError("dzqdzqd", -1);
                 }
@@ -617,7 +628,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                                             argCount++;
                                         out.add(functionToken);
                                     } else {
-                                        System.out.println("FREAKING OUT "+Arrays.toString(stack.toArray())+" / "+top+" / "+previous);
+                                      //  System.out.println("FREAKING OUT "+Arrays.toString(stack.toArray())+" / "+top+" / "+previous);
                                     }
                                 }
                             }

@@ -18,4 +18,12 @@ public class WeacPrecompiledInsn implements PrecompileOpcodes, WeacInsn {
     public String toString() {
         return PrecompileOpcodes.getName(opcode);
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof WeacPrecompiledInsn) {
+            return ((WeacPrecompiledInsn) obj).getOpcode() == opcode;
+        }
+        return false;
+    }
 }

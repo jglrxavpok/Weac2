@@ -16,4 +16,12 @@ public class WeacCastPreInsn extends WeacPrecompiledInsn {
     public String toString() {
         return super.toString()+" "+type;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof WeacPrecompiledInsn) {
+            return ((WeacCastPreInsn) obj).getType().equals(type);
+        }
+        return false;
+    }
 }

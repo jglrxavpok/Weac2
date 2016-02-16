@@ -16,4 +16,15 @@ public class WeacStoreArray extends WeacPrecompiledInsn {
     public String toString() {
         return super.toString() + " "+index;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacPrecompiledInsn) {
+            WeacStoreArray casted = ((WeacStoreArray) obj);
+            return casted.getIndex() == index;
+        }
+        return false;
+    }
 }

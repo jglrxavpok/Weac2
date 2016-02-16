@@ -16,4 +16,15 @@ public class WeacLoadNumberConstant extends WeacPrecompiledInsn implements Preco
     public String toString() {
         return super.toString()+" "+value;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacLoadNumberConstant) {
+            WeacLoadNumberConstant casted = ((WeacLoadNumberConstant) obj);
+            return casted.getValue().equals(value);
+        }
+        return false;
+    }
 }

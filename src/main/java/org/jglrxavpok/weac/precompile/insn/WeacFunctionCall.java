@@ -28,4 +28,15 @@ public class WeacFunctionCall extends WeacPrecompiledInsn {
     public String toString() {
         return super.toString() + " "+name+", "+argCount+" arguments, shouldLookForInstance="+lookForInstance;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacPrecompiledInsn) {
+            WeacFunctionCall casted = ((WeacFunctionCall) obj);
+            return casted.getName().equals(name) && casted.getArgCount() == argCount && casted.shouldLookForInstance() == lookForInstance;
+        }
+        return false;
+    }
 }

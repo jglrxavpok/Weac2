@@ -16,4 +16,15 @@ public class WeacLoadBooleanConstant extends WeacPrecompiledInsn {
     public String toString() {
         return super.toString()+" "+value;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!super.equals(obj))
+            return false;
+        if(obj instanceof WeacLoadBooleanConstant) {
+            WeacLoadBooleanConstant casted = ((WeacLoadBooleanConstant) obj);
+            return casted.getValue() == value;
+        }
+        return false;
+    }
 }
