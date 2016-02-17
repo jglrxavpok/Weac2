@@ -7,9 +7,9 @@ public class WeacOperatorInsn extends WeacPrecompiledInsn {
     private final boolean unary;
 
     public WeacOperatorInsn(EnumOperators operator) {
-        super(operator.unary() ? UNARY_OPERATOR : BINARY_OPERATOR);
+        super(operator.isUnary() ? UNARY_OPERATOR : BINARY_OPERATOR);
         this.operator = operator;
-        this.unary = operator.unary();
+        this.unary = operator.isUnary();
     }
 
     public boolean isUnary() {

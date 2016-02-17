@@ -236,14 +236,14 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 break; // reached end of file
             }
         }
-        Iterator<WeacToken> iterator = tokens.iterator();
+        ListIterator<WeacToken> iterator = tokens.listIterator();
         while(iterator.hasNext()) {
             WeacToken token = iterator.next();
             if (token.getType() == WeacTokenType.WAITING_FOR_NEXT)
                 iterator.remove();
         }
 
-        iterator = tokens.iterator();
+        iterator = tokens.listIterator();
         WeacToken previous = null;
         while(iterator.hasNext()) {
             WeacToken token = iterator.next();
@@ -254,16 +254,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     } else {
                         previous.setType(WeacTokenType.VARIABLE);
                     }
-                } else if(previous.getType() == WeacTokenType.OPERATOR) {
-                    if(token.getType() == WeacTokenType.CLOSING_PARENTHESIS) {
-                        previous.setType(WeacTokenType.UNARY_OPERATOR);
-                    } else {
-                        previous.setType(WeacTokenType.BINARY_OPERATOR);
-                    }
-                } else if(token.getType() == WeacTokenType.OPERATOR) {
-                    if(previous.getType() == WeacTokenType.OPENING_PARENTHESIS) {
-                        token.setType(WeacTokenType.UNARY_OPERATOR);
-                    }
                 }
             }
 
@@ -271,12 +261,10 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 token.setType(WeacTokenType.VARIABLE);
             }
 
-            if(token.getType() == WeacTokenType.OPERATOR && previous == null) {
-                token.setType(WeacTokenType.UNARY_OPERATOR);
-            }
-
             previous = token;
         }
+
+        resolveOperators(tokens);
 
         tokens = solvePatterns(tokens);
 
@@ -296,6 +284,36 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             }
         }
         return instructions;
+    }
+
+    private void resolveOperators(List<WeacToken> tokens) {
+        ListIterator<WeacToken> iterator = tokens.listIterator();
+        while (iterator.hasNext()) {
+            WeacToken previous = null;
+            WeacToken next = null;
+            if(iterator.hasPrevious()) {
+                previous = tokens.get(iterator.previousIndex());
+            }
+            WeacToken token = iterator.next();
+            if(iterator.hasNext()) {
+                next = tokens.get(iterator.nextIndex());
+            }
+            if (token.getType() == WeacTokenType.OPERATOR) {
+                if(EnumOperators.isAmbiguous(token.getContent())) {
+                    if(next == null || previous == null) {
+                        token.setType(WeacTokenType.UNARY_OPERATOR);
+                    } else {
+                        if(!previous.isOpeningBracketLike() && !next.isClosingBracketLike()) {
+                            token.setType(WeacTokenType.BINARY_OPERATOR);
+                        } else {
+                            token.setType(WeacTokenType.UNARY_OPERATOR);
+                        }
+                    }
+                } else {
+                    token.setType(EnumOperators.get(token.getContent()).isUnary() ? WeacTokenType.UNARY_OPERATOR : WeacTokenType.BINARY_OPERATOR);
+                }
+            }
+        }
     }
 
     private List<WeacToken> solvePatterns(List<WeacToken> tokens) {
@@ -542,39 +560,46 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     }
                 }
             } else if(token.getType() == WeacTokenType.UNARY_OPERATOR || token.getType() == WeacTokenType.BINARY_OPERATOR) {
-                EnumOperators operator = EnumOperators.get(token.getContent(), token.getType() == WeacTokenType.UNARY_OPERATOR);
+                EnumOperators operator = EnumOperators.get(token.getContent());
                 if(operator != null) {
-                    while (!stack.isEmpty() && (stack.peek().getType() == WeacTokenType.UNARY_OPERATOR || stack.peek().getType() == WeacTokenType.BINARY_OPERATOR)) {
-                        WeacToken stackTop = stack.pop();
-                        EnumOperators operator2 = EnumOperators.get(stackTop.getContent(), stackTop.getType() == WeacTokenType.UNARY_OPERATOR);
-                        if (operator2 != null) {
-                            if (operator.associativity() == EnumOperators.Associativity.LEFT) {
-                                if (operator.precedence() > operator2.precedence()) {
-                                    out.add(stackTop);
-                                    if(!operator2.unary()) {
-                                        argCount--;
-                                    }
-                                } else {
+                    if(operator != EnumOperators.RETURN) {
+                        while (!stack.isEmpty() && (stack.peek().getType() == WeacTokenType.UNARY_OPERATOR || stack.peek().getType() == WeacTokenType.BINARY_OPERATOR)) {
+                            WeacToken stackTop = stack.pop();
+                            EnumOperators operator2 = EnumOperators.get(stackTop.getContent());
+                            if (operator2 != null) {
+                                if(operator2 == EnumOperators.RETURN) {
+                                    stack.push(stackTop);
                                     break;
+                                } else {
+                                    if (operator.associativity() == EnumOperators.Associativity.LEFT) {
+                                        if (operator.precedence() > operator2.precedence()) {
+                                            out.add(stackTop);
+                                            if(!operator2.isUnary()) {
+                                                argCount--;
+                                            }
+                                        } else {
+                                            break;
+                                        }
+                                    } else {
+                                        if (operator.precedence() >= operator2.precedence()) {
+                                            out.add(stackTop);
+                                            if(!operator2.isUnary()) {
+                                                argCount--;
+                                            }
+                                        } else {
+                                            break;
+                                        }
+                                    }
                                 }
                             } else {
-                                if (operator.precedence() >= operator2.precedence()) {
-                                    out.add(stackTop);
-                                    if(!operator2.unary()) {
-                                        argCount--;
-                                    }
-                                } else {
-                                    break;
-                                }
+                                newError("Null operator ? "+stackTop.getContent(), -1);
+                                break;
                             }
-                        } else {
-                            newError("dzqdzqd", -1);
-                            break;
                         }
                     }
                     stack.push(new WeacToken(operator.raw(), token.getType(), token.length));
                 } else {
-                    newError("dzqdzqd", -1);
+                    newError("Null operator ? "+token.getContent(), -1);
                 }
             } else if(token.isOpeningBracketLike()) {
                 stack.push(token);
@@ -589,9 +614,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     while(!stack.peek().isOpposite(token)) {
                         out.add(stack.pop());
 
-                        if(stack.isEmpty()) {
-                            newError("Unclosed parenthesis in "+expr, -1);
-                        }
+                    }
+
+                    if(stack.isEmpty()) {
+                        newError("Unmatched parenthesises0, please fix in "+expr+" / "+Arrays.toString(tokens.toArray()), -1);
+                        return Collections.EMPTY_LIST;
                     }
 
                     WeacToken previous = stack.pop(); // pop opening bracket
@@ -600,42 +627,37 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                         argCount = argCountStack.pop();
                         argCount++;
                     } else {
-                        if(stack.isEmpty()) {
-                            newError("Unmatched parenthesises, please fix in "+expr+" / "+Arrays.toString(tokens.toArray()), -1);
-                            return Collections.EMPTY_LIST;
+                        if(previous.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
+                            argCount++;
                         } else {
-                            if(previous.getType() == WeacTokenType.OPENING_SQUARE_BRACKETS) {
-                                argCount++;
-                            } else {
-                                if(!stack.isEmpty()) {
-                                    WeacToken top = stack.peek();
-                                    if(top.getType() == WeacTokenType.FUNCTION || top.getType() == WeacTokenType.IF) {
-                                        WeacToken originalToken = stack.pop();
-                                        boolean shouldLookForInstance = false;
-                                        /*if(!stack.isEmpty()) {
-                                            if(stack.peek().getType() == WeacTokenType.MEMBER_ACCESSING) {
-                                                shouldLookForInstance = true;
-                                                stack.pop();
-                                            }
-                                        } else if(stack.isEmpty() && out.size()-argCount > 0) {
+                            if(!stack.isEmpty()) {
+                                WeacToken top = stack.peek();
+                                if(top.getType() == WeacTokenType.FUNCTION || top.getType() == WeacTokenType.IF) {
+                                    WeacToken originalToken = stack.pop();
+                                    boolean shouldLookForInstance = false;
+                                    /*if(!stack.isEmpty()) {
+                                        if(stack.peek().getType() == WeacTokenType.MEMBER_ACCESSING) {
                                             shouldLookForInstance = true;
-                                        }*/
-                                        shouldLookForInstance = instanceStack.pop();
-                                        // function name;argument count;true if we should look for the object to call it on in the stack
-                                        WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), top.getType(), originalToken.length);
-                                        argCount = argCountStack.pop();
-                                        if(!shouldLookForInstance)
-                                            argCount++;
-                                        out.add(functionToken);
-                                    } else {
-                                      //  System.out.println("FREAKING OUT "+Arrays.toString(stack.toArray())+" / "+top+" / "+previous);
-                                    }
+                                            stack.pop();
+                                        }
+                                    } else if(stack.isEmpty() && out.size()-argCount > 0) {
+                                        shouldLookForInstance = true;
+                                    }*/
+                                    shouldLookForInstance = instanceStack.pop();
+                                    // function name;argument count;true if we should look for the object to call it on in the stack
+                                    WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), top.getType(), originalToken.length);
+                                    argCount = argCountStack.pop();
+                                    if(!shouldLookForInstance)
+                                        argCount++;
+                                    out.add(functionToken);
+                                } else {
+                                  //  System.out.println("FREAKING OUT "+Arrays.toString(stack.toArray())+" / "+top+" / "+previous);
                                 }
                             }
+                        }
 
-                            if(token.getType() == WeacTokenType.CLOSING_CURLY_BRACKETS) {
-                                out.add(token);
-                            }
+                        if(token.getType() == WeacTokenType.CLOSING_CURLY_BRACKETS) {
+                            out.add(token);
                         }
                     }
                 } else {

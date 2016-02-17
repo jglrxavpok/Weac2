@@ -15,7 +15,7 @@ public class WeacCastPattern extends WeacTokenPattern {
 
     @Override
     public void output(List<WeacToken> original, int i, List<WeacToken> output) {
-        output.add(original.get(3));
-        output.add(new WeacToken(original.get(1).getContent(), WeacTokenType.CAST, 0));
+        output.add(original.get(i+3));
+        output.add(new WeacToken(original.get(i+1).getContent(), WeacTokenType.CAST, 0));
     }
 }

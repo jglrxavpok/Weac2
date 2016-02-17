@@ -4,61 +4,63 @@ import static org.jglrxavpok.weac.utils.EnumOperators.Associativity.*;
 
 public enum EnumOperators {
 
-    RETURN("return", 2, RIGHT),
-    NEW("new", 2, RIGHT),
-    INCREMENT("++", 2, RIGHT),
-    DECREMENT("--", 2, RIGHT),
-    BITWISE_NOT("~", 2, RIGHT),
-    LOGICAL_NOT("!", 2, RIGHT),
-    MULTIPLY("*", 3, LEFT),
-    DIVIDE("/", 3, LEFT),
-    MOD("%", 3, LEFT),
+    RETURN("return", 100, RIGHT, true),
+    NEW("new", 2, RIGHT, true),
+    INCREMENT("++", 2, RIGHT, true),
+    DECREMENT("--", 2, RIGHT, true),
+    BITWISE_NOT("~", 2, RIGHT, true),
+    LOGICAL_NOT("!", 2, RIGHT, true),
+    MULTIPLY("*", 3, LEFT, false),
+    DIVIDE("/", 3, LEFT, false),
+    MOD("%", 3, LEFT, false),
 
-    UNARY_PLUS("+", 2, RIGHT),
-    UNARY_MINUS("-", 2, RIGHT),
+    UNARY_PLUS("+", 2, RIGHT, true),
+    UNARY_MINUS("-", 2, RIGHT, true),
 
-    PLUS("+", 4, LEFT),
-    MINUS("-", 4, LEFT),
-    LEFT_SHIFT("<<", 5, LEFT),
-    SIGNED_RIGHT_SHIFT(">>", 5, LEFT),
-    UNSIGNED_RIGHT_SHIFT(">>>", 5, LEFT),
-    LESS_THAN("<", 6, LEFT),
-    LESS_OR_EQUAL("<=", 6, LEFT),
-    GREATER_THAN(">", 6, LEFT),
-    GREATER_OR_EQUAL(">=", 6, LEFT),
-    INSTANCEOF("instanceof", 6, LEFT), // TODO: change away from the Java's instanceof
-    EQUAL("==", 7, LEFT),
-    NOTEQUAL("!=", 7, LEFT),
-    AND("&", 8, LEFT),
-    OR("|", 10, LEFT),
-    XOR("^", 11, LEFT),
-    DOUBLE_AND("&&", 11, LEFT),
-    INTERVAL_SEPARATOR("..", 11, LEFT),
-    DOUBLE_OR("||", 12, LEFT),
+    PLUS("+", 4, LEFT, false),
+    MINUS("-", 4, LEFT, false),
+    LEFT_SHIFT("<<", 5, LEFT, false),
+    SIGNED_RIGHT_SHIFT(">>", 5, LEFT, false),
+    UNSIGNED_RIGHT_SHIFT(">>>", 5, LEFT, false),
+    LESS_THAN("<", 6, LEFT, false),
+    LESS_OR_EQUAL("<=", 6, LEFT, false),
+    GREATER_THAN(">", 6, LEFT, false),
+    GREATER_OR_EQUAL(">=", 6, LEFT, false),
+    INSTANCEOF("instanceof", 6, LEFT, false), // TODO: change away from the Java's instanceof
+    EQUAL("==", 7, LEFT, false),
+    NOTEQUAL("!=", 7, LEFT, false),
+    AND("&", 8, LEFT, false),
+    OR("|", 10, LEFT, false),
+    XOR("^", 11, LEFT, false),
+    DOUBLE_AND("&&", 11, LEFT, false),
+    INTERVAL_SEPARATOR("..", 11, LEFT, false),
+    DOUBLE_OR("||", 12, LEFT, false),
 
     // ASSIGNMENTS
-    SET_TO("=", 14, RIGHT),
-    INCREMENT_BY("+=", 14, RIGHT),
-    DECREMENT_BY("-=", 14, RIGHT),
-    MULTIPLY_BY("*=", 14, RIGHT),
-    DIVIDE_BY("/=", 14, RIGHT),
-    SET_MODULO("%=", 14, RIGHT),
-    APPLY_AND("&=", 14, RIGHT),
-    APPLY_XOR("^=", 14, RIGHT),
-    APPLY_OR("|=", 14, RIGHT),
-    APPLY_LSH("<<=", 14, RIGHT),
-    APPLY_RSH(">>=", 14, RIGHT),
-    APPLY_URSH(">>>=", 14, RIGHT),
+    SET_TO("=", 14, RIGHT, false),
+    INCREMENT_BY("+=", 14, RIGHT, false),
+    DECREMENT_BY("-=", 14, RIGHT, false),
+    MULTIPLY_BY("*=", 14, RIGHT, false),
+    DIVIDE_BY("/=", 14, RIGHT, false),
+    SET_MODULO("%=", 14, RIGHT, false),
+    APPLY_AND("&=", 14, RIGHT, false),
+    APPLY_XOR("^=", 14, RIGHT, false),
+    APPLY_OR("|=", 14, RIGHT, false),
+    APPLY_LSH("<<=", 14, RIGHT, false),
+    APPLY_RSH(">>=", 14, RIGHT, false),
+    APPLY_URSH(">>>=", 14, RIGHT, false),
     ;
 
     private final String raw;
     private final int precedence;
+    private final boolean isUnary;
     private final Associativity associativity;
 
-    EnumOperators(String raw, int precedence, Associativity associativity) {
+    EnumOperators(String raw, int precedence, Associativity associativity, boolean isUnary) {
         this.associativity = associativity;
         this.raw = raw;
         this.precedence = precedence;
+        this.isUnary = isUnary;
     }
 
     public String raw() {
@@ -73,26 +75,29 @@ public enum EnumOperators {
         return associativity;
     }
 
-    public boolean unary() {
-        return this == UNARY_MINUS || this == UNARY_PLUS || this == NEW;
+    public static EnumOperators get(String raw) {
+        EnumOperators binary = get(raw, false);
+        if(binary == null) {
+            return get(raw, true);
+        }
+        return binary;
     }
 
     public static EnumOperators get(String raw, boolean unary) {
-        if(unary) {
-            if(raw.equals("+")) {
-                return UNARY_PLUS;
-            } else if(raw.equals("-")) {
-                return UNARY_MINUS;
-            }
-        }
         for(EnumOperators op : values()) {
-            if(op == UNARY_MINUS || op == UNARY_PLUS)
-                continue;
-            if(op.raw().equals(raw)) {
+            if(op.isUnary == unary && op.raw().equals(raw)) {
                 return op;
             }
         }
         return null;
+    }
+
+    public boolean isUnary() {
+        return isUnary;
+    }
+
+    public static boolean isAmbiguous(String content) {
+        return content.equals("+") || content.equals("-");
     }
 
     public enum Associativity {

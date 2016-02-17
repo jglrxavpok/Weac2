@@ -6,7 +6,7 @@ public enum WeacTokenType {
     NUMBER(true),
     SINGLE_CHARACTER(true),
     STRING(true),
-    LITERAL,
+    LITERAL(true),
     OPERATOR,
     MEMBER_ACCESSING,
     ARGUMENT_SEPARATOR,
@@ -40,7 +40,8 @@ public enum WeacTokenType {
     // Those two are created from the OPERATOR value after analysing their context (parenthesis before/after it or not)
     BINARY_OPERATOR,
 
-    UNARY_OPERATOR, CAST;
+    UNARY_OPERATOR,
+    CAST(true);
 
     private final boolean isValue;
 

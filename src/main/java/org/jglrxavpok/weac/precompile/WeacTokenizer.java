@@ -92,7 +92,7 @@ public class WeacTokenizer extends WeacCompileUtils {
                     if(literal.isEmpty())
                         return null;
                     // check if we did not read an operator by mistake
-                    EnumOperators potentialOperator = EnumOperators.get(literal, false);
+                    EnumOperators potentialOperator = EnumOperators.get(literal);
                     if(potentialOperator != null) {
                         return new WeacToken(potentialOperator.raw(), WeacTokenType.OPERATOR, potentialOperator.raw().length());
                     } else {
