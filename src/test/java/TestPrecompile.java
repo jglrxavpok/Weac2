@@ -5,7 +5,6 @@ import org.jglrxavpok.weac.precompile.insn.*;
 import org.jglrxavpok.weac.utils.EnumOperators;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.internal.ArrayComparisonFailure;
 
 import java.util.Arrays;
 import java.util.List;
@@ -23,17 +22,59 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testPrecompile() {
-        precompile(preCompiler, "myVar.myMethod(nestedMethod(\"My argument\", myVar2), \"MyString\".length(), constant.afield)");
-
-        // Test assigments
-        precompile(preCompiler, "String myValue = something");
-        precompile(preCompiler, "myValue >>= something");
-        precompile(preCompiler, "myValue /= something");
-        precompile(preCompiler, "myValue *= something");
-
-        precompile(preCompiler, "this(start, end, 0D)");
         precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }");
-        precompile(preCompiler, "Math.sin(Math.random())");
+    }
+
+    @Test
+    public void testComplexNestedMethods() {
+        precompile(preCompiler, "myVar.myMethod(nestedMethod(\"My argument\", myVar2), \"MyString\".length(), constant.afield)",
+                new WeacLoadVariable("myVar"), new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START),
+                new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START),
+                new WeacLoadStringConstant("My argument"), new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR), new WeacLoadVariable("myVar2"),
+                new WeacFunctionCall("nestedMethod", 2, false), new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR),
+                new WeacLoadStringConstant("MyString"), new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacFunctionCall("length", 0, true),
+                new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR),
+                new WeacLoadVariable("constant"), new WeacLoadVariable("afield"),
+                new WeacFunctionCall("myMethod", 3, true));
+    }
+
+    @Test
+    public void testSimpleNestedMethods() {
+        precompile(preCompiler, "Math.sin(Math.random())",
+                new WeacLoadVariable("Math"), new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START),
+                new WeacLoadVariable("Math"), new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START),
+                new WeacFunctionCall("random", 0, true),
+                new WeacFunctionCall("sin", 1, true));
+    }
+
+    @Test
+    public void testUnsignedRightShiftAssignment() {
+        precompile(preCompiler, "myValue >>>= something", new WeacLoadVariable("myValue"), new WeacLoadVariable("something"), new WeacOperatorInsn(EnumOperators.APPLY_URSH));
+    }
+
+    @Test
+    public void testDivideBy() {
+        precompile(preCompiler, "myValue /= something", new WeacLoadVariable("myValue"), new WeacLoadVariable("something"), new WeacOperatorInsn(EnumOperators.DIVIDE_BY));
+    }
+
+    @Test
+    public void testMultiplyBy() {
+        precompile(preCompiler, "myValue *= something", new WeacLoadVariable("myValue"), new WeacLoadVariable("something"), new WeacOperatorInsn(EnumOperators.MULTIPLY_BY));
+    }
+
+    @Test
+    public void testLeftShiftAssignment() {
+        precompile(preCompiler, "myValue <<= something", new WeacLoadVariable("myValue"), new WeacLoadVariable("something"), new WeacOperatorInsn(EnumOperators.APPLY_LSH));
+    }
+
+    @Test
+    public void testRightShiftAssignment() {
+        precompile(preCompiler, "myValue >>= something", new WeacLoadVariable("myValue"), new WeacLoadVariable("something"), new WeacOperatorInsn(EnumOperators.APPLY_RSH));
+    }
+
+    @Test
+    public void testLocalCreationAndSimpleAssignment() {
+        precompile(preCompiler, "String myValue = something", new WeacNewLocalVar("String", "myValue"), new WeacLoadVariable("myValue"), new WeacLoadVariable("something"), new WeacOperatorInsn(EnumOperators.SET_TO));
     }
 
     @Test
@@ -62,7 +103,7 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testFunctionCall() {
-        precompile(preCompiler, "global(01)", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadNumberConstant("01"), new WeacFunctionCall("global", 1, true));
+        precompile(preCompiler, "global(01)", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadNumberConstant("01"), new WeacFunctionCall("global", 1, false));
     }
 
     @Test
@@ -203,19 +244,6 @@ public class TestPrecompile extends Tests {
     private void precompile(WeacPreCompiler preCompiler, String s, WeacPrecompiledInsn... expected) {
         System.out.println("[=== START OF PRECOMPILE OF \""+s+"\" ===]");
         List<WeacPrecompiledInsn> insns = preCompiler.precompileExpression(s, true);
-        /*boolean match = true;
-        if(expected.length == insns.size()) {
-            match = false;
-        } else {
-            for(int i = 0;i<expected.length;i++) {
-                WeacPrecompiledInsn found = insns.get(i);
-                WeacPrecompiledInsn exp = expected[i];
-                if(!found.equals(exp)) {
-                    match = false;
-                    break;
-                }
-            }
-        }*/
         try {
             assertArrayEquals("Precompiled instructions and expected instructions do not match", expected, insns.toArray());
         } catch (AssertionError e) {

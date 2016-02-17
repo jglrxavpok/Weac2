@@ -37,6 +37,8 @@ public enum WeacTokenType {
 
     FUNCTION_START,
 
+    NEW_LOCAL,
+
     // Those two are created from the OPERATOR value after analysing their context (parenthesis before/after it or not)
     BINARY_OPERATOR,
 

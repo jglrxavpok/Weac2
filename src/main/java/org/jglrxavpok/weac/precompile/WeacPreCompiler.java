@@ -5,6 +5,7 @@ import org.jglrxavpok.weac.parse.structure.*;
 import org.jglrxavpok.weac.patterns.WeacInstructionPattern;
 import org.jglrxavpok.weac.precompile.patterns.WeacCastPattern;
 import org.jglrxavpok.weac.precompile.patterns.WeacIntervalPattern;
+import org.jglrxavpok.weac.precompile.patterns.WeacLocalCreationPattern;
 import org.jglrxavpok.weac.precompile.patterns.WeacTokenPattern;
 import org.jglrxavpok.weac.precompile.structure.*;
 import org.jglrxavpok.weac.utils.EnumOperators;
@@ -30,6 +31,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
         tokenPatterns = new ArrayList<>();
         tokenPatterns.add(new WeacCastPattern());
+        tokenPatterns.add(new WeacLocalCreationPattern());
 
         tokenizer = new WeacTokenizer();
     }
@@ -323,7 +325,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             for(WeacTokenPattern p : tokenPatterns) {
                 if(p.matches(tokens, i)) {
                     p.output(tokens, i, finalTokens);
-                    i += p.consumeCount(tokens, i);
+                    i += p.consumeCount(tokens, i)-1;
                     matchFound = true;
                 }
             }
@@ -372,6 +374,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         // TODO: Handle 'new' after function calls
         for(WeacToken token : output) {
             switch (token.getType()) {
+
+                case NEW_LOCAL:
+                    WeacNewLocalToken localToken = ((WeacNewLocalToken) token);
+                    insns.add(new WeacNewLocalVar(localToken.getLocalType(), localToken.getName()));
+                    break;
 
                 case CAST:
                     insns.add(new WeacCastPreInsn(token.getContent()));
@@ -513,7 +520,9 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         instanceStack.push(false);
         for(int i = 0;i<tokens.size();i++) {
             WeacToken token = tokens.get(i);
-            if(token.getType().isValue() || token.getType() == WeacTokenType.CAST) {
+            if(token.getType() == WeacTokenType.NEW_LOCAL) {
+              out.add(token);
+            } else if(token.getType().isValue() || token.getType() == WeacTokenType.CAST) {
                 instanceStack.push(true);
                 if(i+2 < tokens.size()) {
                     if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
@@ -652,8 +661,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                                     if(!shouldLookForInstance)
                                         argCount++;
                                     out.add(functionToken);
-                                } else {
-                                  //  System.out.println("FREAKING OUT "+Arrays.toString(stack.toArray())+" / "+top+" / "+previous);
                                 }
                             }
                         }
@@ -666,7 +673,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     newError("Unmatched parenthesises, please fix in "+expr, -1);
                     return Collections.EMPTY_LIST;
                 }
-            } else if(token.getType() == WeacTokenType.IF || token.getType() == WeacTokenType.IF) {
+            } else if(token.getType() == WeacTokenType.ELSE || token.getType() == WeacTokenType.IF) {
                 out.add(token);
             } else if(token.getType() == WeacTokenType.CAST) {
                 out.add(token);

@@ -26,7 +26,8 @@ public interface PrecompileOpcodes {
             LOAD_NULL = 0x12,
             FUNCTION_START = 0x13,
             CAST = 0x14,
-            DUP = 0x15
+            DUP = 0x15,
+            NEW_LOCAL = 0x16
     ;
 
     HashMap<Integer, String> names = new HashMap<>();
