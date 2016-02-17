@@ -643,6 +643,8 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                                     } else if(stack.isEmpty() && out.size()-argCount > 0) {
                                         shouldLookForInstance = true;
                                     }*/
+                                    /*for(int j = 0;j<argCount;i++)
+                                        instanceStack.pop();*/
                                     shouldLookForInstance = instanceStack.pop();
                                     // function name;argument count;true if we should look for the object to call it on in the stack
                                     WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), top.getType(), originalToken.length);

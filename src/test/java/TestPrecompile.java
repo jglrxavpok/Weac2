@@ -23,21 +23,6 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testPrecompile() {
-        precompile(preCompiler, "100 != 0xAC", new WeacLoadNumberConstant("100"), new WeacLoadNumberConstant("0xAC"), new WeacOperatorInsn(EnumOperators.NOTEQUAL));
-        precompile(preCompiler, "new Object()", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacInstanciateInsn("Object"), new WeacFunctionCall("<init>", 0, true));
-        precompile(preCompiler, "new Foo(bar)", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadVariable("bar"), new WeacInstanciateInsn("Foo"), new WeacFunctionCall("<init>", 1, true));
-        precompile(preCompiler, "new Foo", new WeacInstanciateInsn("Foo"), new WeacFunctionCall("<init>", 0, true));
-        precompile(preCompiler, "bar instanceof Foo", new WeacLoadVariable("bar"), new WeacLoadVariable("Foo"), new WeacOperatorInsn(EnumOperators.INSTANCEOF));
-        precompile(preCompiler, "[1,2,5]",
-                new WeacLoadNumberConstant("1"), new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR), new WeacLoadNumberConstant("2"), new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR), new WeacLoadNumberConstant("5"), new WeacCreateArray(3, "$$unknown"),
-                new WeacSimplePreInsn(PrecompileOpcodes.DUP), new WeacStoreArray(2),
-                new WeacSimplePreInsn(PrecompileOpcodes.DUP), new WeacStoreArray(1),
-                new WeacSimplePreInsn(PrecompileOpcodes.DUP), new WeacStoreArray(0));
-        precompile(preCompiler, "(1..5).by(0.5f)",
-                new WeacLoadNumberConstant("1"), new WeacLoadNumberConstant("5"), new WeacOperatorInsn(EnumOperators.INTERVAL_SEPARATOR),
-                new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadNumberConstant("0.5f"), new WeacFunctionCall("by", 1, true));
-        precompile(preCompiler, "global(01)");
-        precompile(preCompiler, "myVar.myMethod(\"My argument\", myVar2)");
         precompile(preCompiler, "myVar.myMethod(nestedMethod(\"My argument\", myVar2), \"MyString\".length(), constant.afield)");
 
         // Test assigments
@@ -45,17 +30,100 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "myValue >>= something");
         precompile(preCompiler, "myValue /= something");
         precompile(preCompiler, "myValue *= something");
-        precompile(preCompiler, "return 454");
 
-        precompile(preCompiler, "return false", new WeacLoadBooleanConstant(false), new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
-        precompile(preCompiler, "return this", new WeacPrecompiledLoadThis(), new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
         precompile(preCompiler, "this(start, end, 0D)");
         precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }");
-        precompile(preCompiler, "return new Object", new WeacInstanciateInsn("Object"), new WeacFunctionCall("<init>", 0, true), new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
         precompile(preCompiler, "Math.sin(Math.random())");
-        precompile(preCompiler, "Console.writeLine((10).toString())");
-        precompile(preCompiler, "(((0)))", new WeacLoadNumberConstant("0"));
+    }
 
+    @Test
+    public void testWriteNumberConvertedToString() {
+        precompile(preCompiler, "Console.writeLine((10).toString())",
+                new WeacLoadVariable("Console"),
+                new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START),
+                new WeacLoadNumberConstant("10"),
+                new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START),
+                new WeacFunctionCall("toString", 0, true),
+                new WeacFunctionCall("writeLine", 1, true));
+    }
+
+    @Test
+    public void testReturnNumber() {
+        precompile(preCompiler, "return 454", new WeacLoadNumberConstant("454"), new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
+    }
+
+    @Test
+    public void testFunctionCallWithArgument() {
+        precompile(preCompiler, "myVar.myMethod(\"My argument\", myVar2)",
+                new WeacLoadVariable("myVar"), new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START),
+                new WeacLoadStringConstant("My argument"), new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR),
+                new WeacLoadVariable("myVar2"), new WeacFunctionCall("myMethod", 2, true));
+    }
+
+    @Test
+    public void testFunctionCall() {
+        precompile(preCompiler, "global(01)", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadNumberConstant("01"), new WeacFunctionCall("global", 1, true));
+    }
+
+    @Test
+    public void testReturnThis() {
+        precompile(preCompiler, "return this", new WeacPrecompiledLoadThis(), new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
+    }
+
+    @Test
+    public void testReturnFalse() {
+        precompile(preCompiler, "return false", new WeacLoadBooleanConstant(false), new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
+    }
+
+    @Test
+    public void testReturnAfterConstructorCall() {
+        precompile(preCompiler, "return new Object", new WeacInstanciateInsn("Object"), new WeacFunctionCall("<init>", 0, true), new WeacSimplePreInsn(PrecompileOpcodes.RETURN));
+    }
+
+    @Test
+    public void testUselessBrackets() {
+        precompile(preCompiler, "(((0)))", new WeacLoadNumberConstant("0"));
+    }
+
+    @Test
+    public void testIntervalCreation() {
+        precompile(preCompiler, "(1..5).by(0.5f)",
+                new WeacLoadNumberConstant("1"), new WeacLoadNumberConstant("5"), new WeacOperatorInsn(EnumOperators.INTERVAL_SEPARATOR),
+                new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadNumberConstant("0.5f"), new WeacFunctionCall("by", 1, true));
+    }
+
+    @Test
+    public void testArrayCreation() {
+        precompile(preCompiler, "[1,2,5]",
+                new WeacLoadNumberConstant("1"), new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR), new WeacLoadNumberConstant("2"), new WeacSimplePreInsn(PrecompileOpcodes.ARGUMENT_SEPARATOR), new WeacLoadNumberConstant("5"), new WeacCreateArray(3, "$$unknown"),
+                new WeacSimplePreInsn(PrecompileOpcodes.DUP), new WeacStoreArray(2),
+                new WeacSimplePreInsn(PrecompileOpcodes.DUP), new WeacStoreArray(1),
+                new WeacSimplePreInsn(PrecompileOpcodes.DUP), new WeacStoreArray(0));
+    }
+
+    @Test
+    public void testInstanceof() {
+        precompile(preCompiler, "bar instanceof Foo", new WeacLoadVariable("bar"), new WeacLoadVariable("Foo"), new WeacOperatorInsn(EnumOperators.INSTANCEOF));
+    }
+
+    @Test
+    public void testConstructorCallWithNoArgument() {
+        precompile(preCompiler, "new Foo", new WeacInstanciateInsn("Foo"), new WeacFunctionCall("<init>", 0, true));
+    }
+
+    @Test
+    public void testConstructorCallWithArgument() {
+        precompile(preCompiler, "new Foo(bar)", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadVariable("bar"), new WeacInstanciateInsn("Foo"), new WeacFunctionCall("<init>", 1, true));
+    }
+
+    @Test
+    public void testSimpleConstructorCall() {
+        precompile(preCompiler, "new Object()", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacInstanciateInsn("Object"), new WeacFunctionCall("<init>", 0, true));
+    }
+
+    @Test
+    public void testInequality() {
+        precompile(preCompiler, "100 != 0xAC", new WeacLoadNumberConstant("100"), new WeacLoadNumberConstant("0xAC"), new WeacOperatorInsn(EnumOperators.NOTEQUAL));
     }
 
     @Test
