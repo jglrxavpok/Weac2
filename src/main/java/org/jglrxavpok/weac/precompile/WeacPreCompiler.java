@@ -10,6 +10,7 @@ import org.jglrxavpok.weac.precompile.patterns.WeacTokenPattern;
 import org.jglrxavpok.weac.precompile.structure.*;
 import org.jglrxavpok.weac.utils.EnumOperators;
 import org.jglrxavpok.weac.precompile.insn.*;
+import org.jglrxavpok.weac.utils.VariableTopStack;
 
 import java.util.*;
 
@@ -516,14 +517,14 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         Stack<WeacToken> stack = new Stack<>();
         int argCount = 0;
         Stack<Integer> argCountStack = new Stack<>();
-        Stack<Boolean> instanceStack = new Stack<>();
-        instanceStack.push(false);
+        VariableTopStack<Boolean> instanceStack = new VariableTopStack<>();
+        instanceStack.setCurrent(false).push();
         for(int i = 0;i<tokens.size();i++) {
             WeacToken token = tokens.get(i);
             if(token.getType() == WeacTokenType.NEW_LOCAL) {
               out.add(token);
             } else if(token.getType().isValue() || token.getType() == WeacTokenType.CAST) {
-                instanceStack.push(true);
+                instanceStack.setCurrent(true);
                 if(i+2 < tokens.size()) {
                     if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
                         WeacTokenType type = tokens.get(i + 2).getType();
@@ -557,6 +558,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 argCount = 0;
             } else if(token.getType() == WeacTokenType.ARGUMENT_SEPARATOR) {
                 out.add(token);
+                instanceStack.setCurrent(false);
                 if(stack.isEmpty()) {
                     newError("Unmatched parenthesises, please fix", -1);
                     return Collections.EMPTY_LIST;
@@ -611,6 +613,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     newError("Null operator ? "+token.getContent(), -1);
                 }
             } else if(token.isOpeningBracketLike()) {
+                instanceStack.push().setCurrent(false);
                 stack.push(token);
                 if(token.getType() == WeacTokenType.OPENING_CURLY_BRACKETS) {
                     out.add(token);
@@ -619,6 +622,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     argCount = 0;
                 }
             } else if(token.isClosingBracketLike()) {
+                boolean shouldLookForInstance = instanceStack.pop();
                 if(!stack.isEmpty()) {
                     while(!stack.peek().isOpposite(token)) {
                         out.add(stack.pop());
@@ -643,7 +647,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                                 WeacToken top = stack.peek();
                                 if(top.getType() == WeacTokenType.FUNCTION || top.getType() == WeacTokenType.IF) {
                                     WeacToken originalToken = stack.pop();
-                                    boolean shouldLookForInstance = false;
                                     /*if(!stack.isEmpty()) {
                                         if(stack.peek().getType() == WeacTokenType.MEMBER_ACCESSING) {
                                             shouldLookForInstance = true;
@@ -654,7 +657,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                                     }*/
                                     /*for(int j = 0;j<argCount;i++)
                                         instanceStack.pop();*/
-                                    shouldLookForInstance = instanceStack.pop();
                                     // function name;argument count;true if we should look for the object to call it on in the stack
                                     WeacToken functionToken = new WeacToken(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), top.getType(), originalToken.length);
                                     argCount = argCountStack.pop();
@@ -673,6 +675,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                     newError("Unmatched parenthesises, please fix in "+expr, -1);
                     return Collections.EMPTY_LIST;
                 }
+                instanceStack.setCurrent(true);
             } else if(token.getType() == WeacTokenType.ELSE || token.getType() == WeacTokenType.IF) {
                 out.add(token);
             } else if(token.getType() == WeacTokenType.CAST) {
