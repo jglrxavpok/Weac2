@@ -531,7 +531,7 @@ public class WeacResolver extends WeacCompileUtils {
                             currentVarType = fieldType;
                             currentIsStatic = false;
                         } else {
-                            System.out.println("Did not find field "+varName+" in "+currentVarType);
+                            System.out.println("Did not find field "+varName+" in "+currentVarType+" (self is "+selfType+")");
                             WeacPrecompiledClass clazz = findClass(varName, context);
                             if(clazz != null) {
                                 currentVarType = resolveType(new Identifier(clazz.fullName, true), context);
@@ -656,6 +656,10 @@ public class WeacResolver extends WeacCompileUtils {
                     default:
                         System.err.println("UNRESOLVED OP: "+op.name());
                 }
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NEW_LOCAL) {
+                WeacNewLocalVar localVar = ((WeacNewLocalVar) precompiledInsn);
+                WeacType type = resolveType(new Identifier(localVar.getType(), true), context);
+                varMap.registerLocal(localVar.getName(), type);
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }

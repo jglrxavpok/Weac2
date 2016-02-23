@@ -43,7 +43,7 @@ public enum WeacTokenType {
     BINARY_OPERATOR,
 
     UNARY_OPERATOR,
-    CAST(true);
+    CAST;
 
     private final boolean isValue;
 

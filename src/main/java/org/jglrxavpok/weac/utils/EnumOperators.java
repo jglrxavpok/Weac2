@@ -16,6 +16,7 @@ public enum EnumOperators {
 
     UNARY_PLUS("+", 2, RIGHT, true, false),
     UNARY_MINUS("-", 2, RIGHT, true, false),
+    CAST("", 2, RIGHT, true, false),
 
     PLUS("+", 4, LEFT, false, false),
     MINUS("-", 4, LEFT, false, false),
@@ -87,6 +88,8 @@ public enum EnumOperators {
 
     public static EnumOperators get(String raw, boolean unary) {
         for(EnumOperators op : values()) {
+            if(op == CAST)
+                continue; // We skip cast operator as it is found through patterns
             if(op.isUnary == unary && op.raw().equals(raw)) {
                 return op;
             }

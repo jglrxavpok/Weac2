@@ -376,6 +376,7 @@ public abstract class WeacCompileUtils {
         Collections.addAll(operators, EnumOperators.values());
         operators.remove(EnumOperators.UNARY_MINUS);
         operators.remove(EnumOperators.UNARY_PLUS);
+        operators.remove(EnumOperators.CAST);
         for(int i = offset;i<chars.length;i++) {
             char c = chars[i];
             int localIndex = i-offset;

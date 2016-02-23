@@ -103,7 +103,7 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testFunctionCall() {
-        precompile(preCompiler, "global(01)", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadNumberConstant("01"), new WeacFunctionCall("global", 1, false));
+        precompile(preCompiler, "-global(01)", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacLoadNumberConstant("01"), new WeacFunctionCall("global", 1, false), new WeacOperatorInsn(EnumOperators.UNARY_MINUS));
     }
 
     @Test
@@ -225,6 +225,16 @@ public class TestPrecompile extends Tests {
     @Test
     public void testLoadBinary() {
         precompile(preCompiler, "0b1010", new WeacLoadNumberConstant("0b1010"));
+    }
+
+    @Test
+    public void testInstanceMethodCast() {
+        precompile(preCompiler, "(Int) someInstance.toCast()", new WeacLoadVariable("someInstance"), new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacFunctionCall("toCast", 0, true), new WeacCastPreInsn("Int"));
+    }
+
+    @Test
+    public void testMethodCast() {
+        precompile(preCompiler, "(Int) toCast()", new WeacSimplePreInsn(PrecompileOpcodes.FUNCTION_START), new WeacFunctionCall("toCast", 0, false), new WeacCastPreInsn("Int"));
     }
 
     @Test

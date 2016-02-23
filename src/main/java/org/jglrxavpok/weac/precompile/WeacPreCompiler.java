@@ -523,17 +523,16 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             WeacToken token = tokens.get(i);
             if(token.getType() == WeacTokenType.NEW_LOCAL) {
               out.add(token);
-            } else if(token.getType().isValue() || token.getType() == WeacTokenType.CAST) {
+            } else if(token.getType().isValue()) {
                 instanceStack.setCurrent(true);
                 if(i+2 < tokens.size()) {
                     if(tokens.get(i+1).getType() == WeacTokenType.MEMBER_ACCESSING) {
                         WeacTokenType type = tokens.get(i + 2).getType();
-                        if(type == WeacTokenType.VARIABLE || type == WeacTokenType.THIS || type == WeacTokenType.CAST) {
+                        if(type == WeacTokenType.VARIABLE || type == WeacTokenType.THIS) {
                             out.add(token);
                             //out.add(tokens.get(i+1));
                             out.add(tokens.get(i+2));
-                            if(type != WeacTokenType.CAST)
-                                argCount++;
+                            argCount++;
                             i+=2;
                         } else if(type == WeacTokenType.NULL) {
                             newError("Null has no members", -1); // todo line
@@ -570,13 +569,19 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                         return Collections.EMPTY_LIST;
                     }
                 }
-            } else if(token.getType() == WeacTokenType.UNARY_OPERATOR || token.getType() == WeacTokenType.BINARY_OPERATOR) {
+            } else if(token.getType() == WeacTokenType.UNARY_OPERATOR || token.getType() == WeacTokenType.BINARY_OPERATOR || token.getType() == WeacTokenType.CAST) {
                 EnumOperators operator = EnumOperators.get(token.getContent());
+                if(operator == null && token.getType() == WeacTokenType.CAST) {
+                    operator = EnumOperators.CAST;
+                }
                 if(operator != null) {
                     if(operator != EnumOperators.RETURN) {
-                        while (!stack.isEmpty() && (stack.peek().getType() == WeacTokenType.UNARY_OPERATOR || stack.peek().getType() == WeacTokenType.BINARY_OPERATOR)) {
+                        while (!stack.isEmpty() && (stack.peek().getType() == WeacTokenType.UNARY_OPERATOR || stack.peek().getType() == WeacTokenType.BINARY_OPERATOR || stack.peek().getType() == WeacTokenType.CAST)) {
                             WeacToken stackTop = stack.pop();
                             EnumOperators operator2 = EnumOperators.get(stackTop.getContent());
+                            if(operator2 == null && stackTop.getType() == WeacTokenType.CAST) {
+                                operator2 = EnumOperators.CAST;
+                            }
                             if (operator2 != null) {
                                 if(operator2 == EnumOperators.RETURN) {
                                     stack.push(stackTop);
@@ -608,7 +613,11 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                             }
                         }
                     }
-                    stack.push(new WeacToken(operator.raw(), token.getType(), token.length));
+                    if(token.getType() == WeacTokenType.CAST) {
+                        stack.push(token);
+                    } else {
+                        stack.push(new WeacToken(operator.raw(), token.getType(), token.length));
+                    }
                 } else {
                     newError("Null operator ? "+token.getContent(), -1);
                 }
@@ -677,8 +686,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
                 }
                 instanceStack.setCurrent(true);
             } else if(token.getType() == WeacTokenType.ELSE || token.getType() == WeacTokenType.IF) {
-                out.add(token);
-            } else if(token.getType() == WeacTokenType.CAST) {
                 out.add(token);
             }
         }
