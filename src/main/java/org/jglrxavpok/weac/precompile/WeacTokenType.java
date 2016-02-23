@@ -34,6 +34,7 @@ public enum WeacTokenType {
 
     IF,
     ELSE,
+    ELSEIF,
 
     FUNCTION_START,
 

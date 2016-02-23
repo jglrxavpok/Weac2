@@ -22,7 +22,7 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testPrecompile() {
-        precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }");
+        precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }", null);
     }
 
     @Test

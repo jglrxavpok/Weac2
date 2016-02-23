@@ -3,10 +3,7 @@ package org.jglrxavpok.weac.precompile;
 import org.jglrxavpok.weac.WeacCompilePhase;
 import org.jglrxavpok.weac.parse.structure.*;
 import org.jglrxavpok.weac.patterns.WeacInstructionPattern;
-import org.jglrxavpok.weac.precompile.patterns.WeacCastPattern;
-import org.jglrxavpok.weac.precompile.patterns.WeacIntervalPattern;
-import org.jglrxavpok.weac.precompile.patterns.WeacLocalCreationPattern;
-import org.jglrxavpok.weac.precompile.patterns.WeacTokenPattern;
+import org.jglrxavpok.weac.precompile.patterns.*;
 import org.jglrxavpok.weac.precompile.structure.*;
 import org.jglrxavpok.weac.utils.EnumOperators;
 import org.jglrxavpok.weac.precompile.insn.*;
@@ -33,6 +30,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
         tokenPatterns = new ArrayList<>();
         tokenPatterns.add(new WeacCastPattern());
         tokenPatterns.add(new WeacLocalCreationPattern());
+        tokenPatterns.add(new WeacElseIfPattern());
 
         tokenizer = new WeacTokenizer();
     }
@@ -273,7 +271,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
         handleBuiltins(tokens);
 
-        // TODO: convert 'ELSE' + 'IF' to 'ELSE IF'
         List<WeacToken> output = convertToRPN(expression, tokens);
 
         List<WeacPrecompiledInsn> instructions = toInstructions(output, insns);
@@ -372,7 +369,7 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     }
 
     private List<WeacPrecompiledInsn> toInstructions(List<WeacToken> output, List<WeacPrecompiledInsn> insns) {
-        // TODO: Handle 'new' after function calls
+        // TODO: Handle 'if'/'else'
         for(WeacToken token : output) {
             switch (token.getType()) {
 
