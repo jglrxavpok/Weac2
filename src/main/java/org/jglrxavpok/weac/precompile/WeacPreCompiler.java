@@ -337,15 +337,13 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
     }
 
     private void handleBuiltins(List<WeacToken> tokens) {
-        ListIterator<WeacToken> it = tokens.listIterator();
-        while (it.hasNext()) {
-            WeacToken t = it.next();
-            if(t.getType() == WeacTokenType.FUNCTION) {
+        for (WeacToken t : tokens) {
+            if (t.getType() == WeacTokenType.FUNCTION) {
                 String name = t.getContent();
-                if(name.equals("if")) {
+                if (name.equals("if")) {
                     t.setType(WeacTokenType.IF);
                 }
-            } else if(t.getType() == WeacTokenType.VARIABLE || t.getType() == WeacTokenType.LITERAL) {
+            } else if (t.getType() == WeacTokenType.VARIABLE || t.getType() == WeacTokenType.LITERAL) {
                 switch (t.getContent()) {
                     case "true":
                     case "false":

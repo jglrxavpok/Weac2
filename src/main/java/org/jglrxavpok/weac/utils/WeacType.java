@@ -1,5 +1,7 @@
 package org.jglrxavpok.weac.utils;
 
+import org.jglrxavpok.weac.WeacCompileUtils;
+
 public class WeacType {
 
     public static final WeacType JOBJECT_TYPE = new WeacType(null, "java.lang.Object", true);
@@ -21,13 +23,14 @@ public class WeacType {
     public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
     private final WeacType superType;
     private final Identifier identifier;
+    private boolean isGeneric;
     private boolean isArray;
     private boolean isValid;
     private boolean isPointer;
     private WeacType pointerType;
-    private WeacType genericParameter;
+    private WeacType[] genericParameters;
     private WeacType arrayType;
-    private final WeacType coreType;
+    private WeacType coreType;
 
     public WeacType(WeacType superType, String id, boolean fullName) {
         this(superType, new Identifier(id, fullName));
@@ -59,7 +62,15 @@ public class WeacType {
                 if(countLeft != countRight) { // unmatched
                     isValid = false;
                 } else {
-                    genericParameter = new WeacType(OBJECT_TYPE, id.substring(id.indexOf('<')+1, id.lastIndexOf('>')), true);
+                    isGeneric = true;
+                    int start = id.indexOf('<');
+                    String genericParametersRaw = id.substring(start+1, id.lastIndexOf('>'));
+                    String[] params = genericParametersRaw.split(",");
+                    genericParameters = new WeacType[params.length];
+                    for (int i = 0; i < genericParameters.length; i++) {
+                        genericParameters[i] = new WeacType(OBJECT_TYPE, WeacCompileUtils.trimStartingSpace(params[i]), true);
+                    }
+                    coreType = new WeacType(OBJECT_TYPE, id.substring(0, start), true).getCoreType();
                 }
             } else if(id.contains(">")) { // unmatched
                 isValid = false;
@@ -106,8 +117,8 @@ public class WeacType {
         return pointerType;
     }
 
-    public WeacType getGenericParameter() {
-        return genericParameter;
+    public WeacType[] getGenericParameters() {
+        return genericParameters;
     }
 
     public Identifier getIdentifier() {
@@ -120,6 +131,10 @@ public class WeacType {
 
     public boolean isArray() {
         return isArray;
+    }
+
+    public boolean isGeneric() {
+        return isGeneric;
     }
 
     public WeacType getCoreType() {

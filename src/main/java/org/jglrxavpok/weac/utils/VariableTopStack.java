@@ -6,6 +6,7 @@ public class VariableTopStack<Type> {
 
     private final Stack<Type> stack;
     private Type current;
+    private int level;
 
     public VariableTopStack() {
         stack = new Stack<>();
@@ -16,12 +17,18 @@ public class VariableTopStack<Type> {
             throw new IllegalStateException("Cannot push value on stack if no value specified");
         }
         stack.push(current);
+        level++;
         return this;
+    }
+
+    public int getSize() {
+        return stack.size();
     }
 
     public Type pop() {
         Type popped = stack.pop();
         current = popped;
+        level--;
         return popped;
     }
 
@@ -32,5 +39,9 @@ public class VariableTopStack<Type> {
 
     public Type getCurrent() {
         return current;
+    }
+
+    public int getLevel() {
+        return level;
     }
 }

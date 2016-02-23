@@ -4,6 +4,7 @@ import org.jglrxavpok.weac.code.WeacMember;
 import org.jglrxavpok.weac.utils.Identifier;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -63,5 +64,10 @@ public class WeacParsedField implements WeacMember {
     @Override
     public WeacModifierType getAccess() {
         return access;
+    }
+
+    @Override
+    public List<String> getGenericParameterNames() {
+        return Collections.emptyList();
     }
 }

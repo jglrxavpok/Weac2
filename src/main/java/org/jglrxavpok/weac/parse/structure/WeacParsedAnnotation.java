@@ -4,6 +4,7 @@ import org.jglrxavpok.weac.code.WeacMember;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -29,6 +30,11 @@ public class WeacParsedAnnotation implements WeacMember {
     @Override
     public WeacModifierType getAccess() {
         return WeacModifierType.PUBLIC;
+    }
+
+    @Override
+    public List<String> getGenericParameterNames() {
+        return Collections.emptyList();
     }
 
     public List<String> getArgs() {

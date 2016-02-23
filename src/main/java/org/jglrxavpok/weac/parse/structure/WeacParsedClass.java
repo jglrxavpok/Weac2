@@ -4,6 +4,7 @@ import org.jglrxavpok.weac.code.WeacMember;
 import org.jglrxavpok.weac.parse.EnumClassTypes;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -118,5 +119,10 @@ public class WeacParsedClass implements WeacMember {
     @Override
     public WeacModifierType getAccess() {
         return access;
+    }
+
+    @Override
+    public List<String> getGenericParameterNames() {
+        return Collections.emptyList();
     }
 }
