@@ -1,11 +1,11 @@
 package weac.compiler.utils;
 
-import weac.compiler.WeacCompileUtils;
+import weac.compiler.CompileUtils;
 
 public class WeacType {
 
     public static final WeacType JOBJECT_TYPE = new WeacType(null, "java.lang.Object", true);
-    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, WeacConstants.BASE_CLASS, true);
+    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, Constants.BASE_CLASS, true);
     public static final WeacType PRIMITIVE_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Primitive", true);
     public static final WeacType VOID_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Void", false);
     public static final WeacType BOOLEAN_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Boolean", true);
@@ -68,7 +68,7 @@ public class WeacType {
                     String[] params = genericParametersRaw.split(",");
                     genericParameters = new WeacType[params.length];
                     for (int i = 0; i < genericParameters.length; i++) {
-                        genericParameters[i] = new WeacType(OBJECT_TYPE, WeacCompileUtils.trimStartingSpace(params[i]), true);
+                        genericParameters[i] = new WeacType(OBJECT_TYPE, CompileUtils.trimStartingSpace(params[i]), true);
                     }
                     coreType = new WeacType(OBJECT_TYPE, id.substring(0, start), true).getCoreType();
                 }

@@ -1,15 +1,15 @@
 package weac.compiler.resolve;
 
-import weac.compiler.WeacCompileUtils;
-import weac.compiler.precompile.WeacPreCompiler;
+import weac.compiler.CompileUtils;
+import weac.compiler.precompile.PreCompiler;
 import weac.compiler.resolve.insn.*;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-public class NumberResolver extends WeacCompileUtils {
+public class NumberResolver extends CompileUtils {
 
-    public WeacResolvedInsn resolve(String num) {
+    public ResolvedInsn resolve(String num) {
         if(isInteger(num)) {
             int base = getBase(num);
             if(base > 0) {
@@ -46,7 +46,7 @@ public class NumberResolver extends WeacCompileUtils {
                             if(base == 16) {
                                 c = Character.toUpperCase(c);
                             }
-                            digit = Arrays.binarySearch(WeacPreCompiler.extraDigits, c)+10;
+                            digit = Arrays.binarySearch(PreCompiler.extraDigits, c)+10;
                         }
                         convertedNumber += digit * Math.pow(base, power);
                     }
@@ -67,22 +67,22 @@ public class NumberResolver extends WeacCompileUtils {
 
                 switch (type) {
                     case "long":
-                        return new WeacLoadLongInsn(convertedNumber);
+                        return new LoadLongInsn(convertedNumber);
 
                     case "int":
-                        return new WeacLoadIntInsn((int)convertedNumber);
+                        return new LoadIntInsn((int)convertedNumber);
 
                     case "short":
-                        return new WeacLoadShortInsn((short)convertedNumber);
+                        return new LoadShortInsn((short)convertedNumber);
 
                     case "byte":
-                        return new WeacLoadByteInsn((byte)convertedNumber);
+                        return new LoadByteInsn((byte)convertedNumber);
 
                     case "float":
-                        return new WeacLoadFloatInsn((float)convertedNumber);
+                        return new LoadFloatInsn((float)convertedNumber);
 
                     case "double":
-                        return new WeacLoadDoubleInsn((double)convertedNumber);
+                        return new LoadDoubleInsn((double)convertedNumber);
                 }
             }
             newError("Invalid base: "+base, -1); // TODO: line
@@ -97,17 +97,17 @@ public class NumberResolver extends WeacCompileUtils {
             BigDecimal decimal = new BigDecimal(num);
             if(type == null) {
                 if(decimal.compareTo(new BigDecimal(Float.MAX_VALUE)) <= 0) {
-                    return new WeacLoadFloatInsn(decimal.floatValue());
+                    return new LoadFloatInsn(decimal.floatValue());
                 } else {
-                    return new WeacLoadDoubleInsn(decimal.doubleValue());
+                    return new LoadDoubleInsn(decimal.doubleValue());
                 }
             } else {
                 switch (type) {
                     case "float":
-                        return new WeacLoadFloatInsn(decimal.floatValue());
+                        return new LoadFloatInsn(decimal.floatValue());
 
                     case "double":
-                        return new WeacLoadDoubleInsn(decimal.doubleValue());
+                        return new LoadDoubleInsn(decimal.doubleValue());
                 }
             }
         }
@@ -158,7 +158,7 @@ public class NumberResolver extends WeacCompileUtils {
         return 10;
     }
 
-    // TODO: copypasted from WeacPreCompiler
+    // TODO: copypasted from PreCompiler
     private boolean isBaseCharacter(char c) {
         switch (c) {
             case 'x':

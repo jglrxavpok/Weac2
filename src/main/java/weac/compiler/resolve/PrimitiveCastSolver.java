@@ -1,11 +1,11 @@
 package weac.compiler.resolve;
 
-import weac.compiler.WeacCompileUtils;
+import weac.compiler.CompileUtils;
 import weac.compiler.utils.WeacType;
 
 import java.util.*;
 
-public class PrimitiveCastSolver extends WeacCompileUtils {
+public class PrimitiveCastSolver extends CompileUtils {
 
     private Map<WeacType, List<WeacType>> casts;
 

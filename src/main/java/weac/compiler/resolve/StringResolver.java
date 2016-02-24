@@ -1,11 +1,11 @@
 package weac.compiler.resolve;
 
-import weac.compiler.WeacCompileUtils;
-import weac.compiler.resolve.insn.WeacLoadStringInsn;
-import weac.compiler.resolve.insn.WeacResolvedInsn;
+import weac.compiler.CompileUtils;
+import weac.compiler.resolve.insn.LoadStringInsn;
+import weac.compiler.resolve.insn.ResolvedInsn;
 
-public class StringResolver extends WeacCompileUtils {
-    public WeacResolvedInsn resolve(String value) {
+public class StringResolver extends CompileUtils {
+    public ResolvedInsn resolve(String value) {
         char[] chars = value.toCharArray();
         StringBuilder builder = new StringBuilder();
         int offset = 0;
@@ -13,7 +13,7 @@ public class StringResolver extends WeacCompileUtils {
             int progress = resolveSingleCharacter(chars, offset, builder);
             offset += progress;
         }
-        return new WeacLoadStringInsn(builder.toString());
+        return new LoadStringInsn(builder.toString());
     }
 
     public char resolveSingleCharacter(char[] value, int offset) {

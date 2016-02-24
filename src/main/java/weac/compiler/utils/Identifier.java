@@ -2,7 +2,7 @@ package weac.compiler.utils;
 
 import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.Keywords;
-import weac.compiler.WeacCompileUtils;
+import weac.compiler.CompileUtils;
 
 /**
  * A WeaC identifier, used for types, variable and method names
@@ -89,7 +89,7 @@ public class Identifier {
                     String startString = potientialID.substring(0, i);
                     boolean isPotentialOperatorOverload = isValidOperatorOverloadStart(startString);
                     if(isPotentialOperatorOverload) {
-                        String operator = WeacCompileUtils.readOperator(potientialID.toCharArray(), i);
+                        String operator = CompileUtils.readOperator(potientialID.toCharArray(), i);
                         if(operator != null && operator.length()+i >= potientialID.length()) {
                             return checkCoherence(potientialID); // TODO: Custom operators
                         } else {
@@ -216,7 +216,7 @@ public class Identifier {
                     String startString = builder.toString();
                     boolean isPotentialOperatorOverload = isValidOperatorOverloadStart(startString);
                     if(isPotentialOperatorOverload) {
-                        String operator = WeacCompileUtils.readOperator(chars, i);
+                        String operator = CompileUtils.readOperator(chars, i);
                         if (operator != null && !operator.isEmpty()) {
                             return new Identifier(startString+operator);
                         } else {

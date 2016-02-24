@@ -1,7 +1,7 @@
 package weac.compiler.precompile;
 
-public class SpaceToken extends WeacToken {
+public class SpaceToken extends Token {
     public SpaceToken() {
-        super(" ", WeacTokenType.WAITING_FOR_NEXT, 1);
+        super(" ", TokenType.WAITING_FOR_NEXT, 1);
     }
 }

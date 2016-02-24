@@ -1,19 +1,19 @@
 package weac.compiler;
 
-import weac.compiler.parse.WeacParser;
-import weac.compiler.precompile.WeacPreCompiler;
-import weac.compiler.process.WeacProcessor;
-import weac.compiler.verify.WeacParsingVerifier;
+import weac.compiler.parse.Parser;
+import weac.compiler.precompile.PreCompiler;
+import weac.compiler.process.Processor;
+import weac.compiler.verify.ParsingVerifier;
 
-public class PrecompilationProcessor extends WeacProcessor {
+public class PrecompilationProcessor extends Processor {
 
     @Override
     public void initToolchain() {
         // Preprocessing -> Parsing (-> Verification) -> Pre compilation (breaking into pseudo-instructions) -> Type Resolution -> Compilation
-        addToChain(new WeacPreProcessor());
-        addToChain(new WeacParser());
-        addToChain(new WeacParsingVerifier()); // control step in order to prevent impossible/unlogical classes
-        addToChain(new WeacPreCompiler());
+        addToChain(new PreProcessor());
+        addToChain(new Parser());
+        addToChain(new ParsingVerifier()); // control step in order to prevent impossible/unlogical classes
+        addToChain(new PreCompiler());
     }
 
 }

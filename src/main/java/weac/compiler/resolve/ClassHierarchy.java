@@ -1,15 +1,15 @@
 package weac.compiler.resolve;
 
-import weac.compiler.precompile.structure.WeacPrecompiledClass;
+import weac.compiler.precompile.structure.PrecompiledClass;
 
 import java.util.LinkedList;
 import java.util.List;
 
 public class ClassHierarchy {
 
-    private WeacPrecompiledClass superclass;
-    private List<WeacPrecompiledClass> interfaces;
-    private List<WeacPrecompiledClass> mixins;
+    private PrecompiledClass superclass;
+    private List<PrecompiledClass> interfaces;
+    private List<PrecompiledClass> mixins;
 
     public ClassHierarchy() {
         interfaces = new LinkedList<>();
@@ -17,27 +17,27 @@ public class ClassHierarchy {
         superclass = null;
     }
 
-    public List<WeacPrecompiledClass> getInterfaces() {
+    public List<PrecompiledClass> getInterfaces() {
         return interfaces;
     }
 
-    public List<WeacPrecompiledClass> getMixins() {
+    public List<PrecompiledClass> getMixins() {
         return mixins;
     }
 
-    public void addMixin(WeacPrecompiledClass mixin) {
+    public void addMixin(PrecompiledClass mixin) {
         mixins.add(mixin);
     }
 
-    public void addInterface(WeacPrecompiledClass inter) {
+    public void addInterface(PrecompiledClass inter) {
         interfaces.add(inter);
     }
 
-    public WeacPrecompiledClass getSuperclass() {
+    public PrecompiledClass getSuperclass() {
         return superclass;
     }
 
-    public void setSuperclass(WeacPrecompiledClass superclass) {
+    public void setSuperclass(PrecompiledClass superclass) {
         this.superclass = superclass;
     }
 

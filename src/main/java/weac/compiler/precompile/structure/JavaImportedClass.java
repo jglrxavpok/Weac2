@@ -8,7 +8,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
-public class JavaImportedClass extends WeacPrecompiledClass {
+public class JavaImportedClass extends PrecompiledClass {
 
     private JavaImportedClass superclass;
 
@@ -26,7 +26,7 @@ public class JavaImportedClass extends WeacPrecompiledClass {
         fullName = clazz.getCanonicalName();
         Method[] jmethods = clazz.getDeclaredMethods();
         for(Method m : jmethods) {
-            WeacPrecompiledMethod convertedMethod = new WeacPrecompiledMethod();
+            PrecompiledMethod convertedMethod = new PrecompiledMethod();
             convertedMethod.name = new Identifier(m.getName());
             WeacType returnType = toWeacType(m.getReturnType().getCanonicalName());
             if(returnType == null) {
@@ -51,7 +51,7 @@ public class JavaImportedClass extends WeacPrecompiledClass {
 
         Field[] jfields = clazz.getDeclaredFields();
         for(Field f : jfields) {
-            WeacPrecompiledField convertedField = new WeacPrecompiledField();
+            PrecompiledField convertedField = new PrecompiledField();
             convertedField.name = new Identifier(f.getName());
             String classType = f.getType().getCanonicalName();
             convertedField.type = new Identifier(classType, true);

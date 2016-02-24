@@ -1,17 +1,17 @@
 package weac.compiler.utils;
 
-import weac.compiler.parse.structure.WeacParsedAnnotation;
+import weac.compiler.parse.structure.ParsedAnnotation;
 
-public class AnnotationModifier extends WeacModifier {
+public class AnnotationModifier extends Modifier {
 
-    private final WeacParsedAnnotation annotation;
+    private final ParsedAnnotation annotation;
 
-    public AnnotationModifier(WeacModifierType type, WeacParsedAnnotation annotation) {
+    public AnnotationModifier(ModifierType type, ParsedAnnotation annotation) {
         super(type);
         this.annotation = annotation;
     }
 
-    public WeacParsedAnnotation getAnnotation() {
+    public ParsedAnnotation getAnnotation() {
         return annotation;
     }
 }
