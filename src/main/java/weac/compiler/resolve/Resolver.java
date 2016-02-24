@@ -524,6 +524,7 @@ public class Resolver extends CompileUtils {
                             System.out.println("PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             WeacType fieldType = variableMaps.get(currentVarType).getFieldType(varName);
                             insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, currentIsStatic));
+                            valueStack.pop();
                             valueStack.push(new FieldValue(varName, currentVarType, fieldType));
                             currentVarType = fieldType;
                             currentIsStatic = false;
@@ -580,13 +581,15 @@ public class Resolver extends CompileUtils {
 
                 WeacType returnType = resolveType(realMethod.returnType, context);
                 insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), cst.shouldLookForInstance() && !realMethod.isJavaImported, argTypes, returnType, currentIsStatic));
-                int toPop = cst.getArgCount() + ((cst.shouldLookForInstance()) ? 1 : 0);
+                int toPop = cst.getArgCount();
                 if(valueStack.size() < toPop) {
                     throw new RuntimeException(name+" / "+toPop+" "+Arrays.toString(valueStack.toArray())+" / "+cst.shouldLookForInstance()+" (java: "+realMethod.isJavaImported+")");
                 }
                 for(int _dontcare = 0;_dontcare<toPop;_dontcare++) {
                     valueStack.pop();
                 }
+                if(cst.shouldLookForInstance())
+                    valueStack.pop();
                 if(!returnType.equals(WeacType.VOID_TYPE))
                     valueStack.push(new ConstantValue(returnType));
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.RETURN) {
@@ -625,7 +628,13 @@ public class Resolver extends CompileUtils {
                 valueStack.push(new NullValue());
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LABEL) {
                 while(!valueStack.isEmpty()) {
-                    valueStack.pop();
+                    if(valueStack.peek().getType().equals(selfType)) {
+                        break;
+                    }
+                    Value val = valueStack.pop();
+                    if(selfType.getIdentifier().getId().endsWith("Console")) {
+                        System.out.println("POP:"+val);
+                    }
                     insns.add(new PopInsn());
                 }
                 LabelInsn cst = ((LabelInsn) precompiledInsn);

@@ -73,7 +73,7 @@ public class WeacMonolith {
                 if (executor.awaitTermination(1000L, TimeUnit.HOURS)) {
                     executor = Executors.newFixedThreadPool(maxThreads);
                     for (PrecompileWorker worker : precompiledWorkers) {
-                        executor.execute(new CompileWorker(output, worker.getResult(), getSideClasses(worker, precompiledWorkers)));
+                        executor.execute(new CompileWorker(output, stopAt, worker.getResult(), getSideClasses(worker, precompiledWorkers)));
                     }
                     executor.shutdown();
                     if (!executor.awaitTermination(1000L, TimeUnit.HOURS)) {

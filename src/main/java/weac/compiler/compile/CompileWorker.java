@@ -1,28 +1,29 @@
 package weac.compiler.compile;
 
+import org.jglr.flows.io.IndentableWriter;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.precompile.structure.PrecompiledSource;
 import weac.compiler.resolve.Resolver;
 import weac.compiler.resolve.ResolvingContext;
+import weac.compiler.resolve.structure.ResolvedClass;
 import weac.compiler.resolve.structure.ResolvedSource;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.CheckClassAdapter;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 public class CompileWorker implements Runnable {
     private final File output;
+    private final String stopAt;
     private final PrecompiledSource source;
     private final List<PrecompiledClass> sideSources;
 
-    public CompileWorker(File output, PrecompiledSource source, List<PrecompiledClass> sideSources) {
+    public CompileWorker(File output, String stopAt, PrecompiledSource source, List<PrecompiledClass> sideSources) {
         this.output = output;
+        this.stopAt = stopAt;
         this.source = source;
         this.sideSources = sideSources;
     }
@@ -32,28 +33,47 @@ public class CompileWorker implements Runnable {
         Resolver resolver = new Resolver();
         Compiler compiler = new Compiler();
         ResolvedSource resolvedSource = resolver.process(readImports(source, sideSources));
-        Map<String, byte[]> classesBytecode = compiler.process(resolvedSource);
-        for(String className : classesBytecode.keySet()) {
-            File file = new File(output, className.replace(".", "/")+".class");
-            if(!file.getParentFile().exists())
-                file.getParentFile().mkdirs();
-            try {
-                file.createNewFile();
-                FileOutputStream out = new FileOutputStream(file);
-                byte[] bytecode = classesBytecode.get(className);
-                if(/*debug*/true) {
-                    try {
-                        PrintWriter pw = new PrintWriter(System.out);
-                        CheckClassAdapter.verify(new ClassReader(bytecode), true, pw);
-                    } catch (Exception e) {
-                        throw new RuntimeException("Error while compiling "+className, e);
-                    }
+        if(stopAt.equals("resolution")) {
+            for(ResolvedClass c : resolvedSource.classes) {
+                String fileName = c.fullName.replace(".", "/");
+                File outputFile = new File(output, fileName+".preweac");
+                if(!outputFile.getParentFile().exists()) {
+                    outputFile.getParentFile().mkdirs();
                 }
-                out.write(bytecode);
-                out.flush();
-                out.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+
+                try {
+                    IndentableWriter writer = new IndentableWriter(new FileWriter(outputFile));
+                    c.writeTo(writer);
+                    writer.flush();
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            Map<String, byte[]> classesBytecode = compiler.process(resolvedSource);
+            for(String className : classesBytecode.keySet()) {
+                File file = new File(output, className.replace(".", "/")+".class");
+                if(!file.getParentFile().exists())
+                    file.getParentFile().mkdirs();
+                try {
+                    file.createNewFile();
+                    FileOutputStream out = new FileOutputStream(file);
+                    byte[] bytecode = classesBytecode.get(className);
+                    if(/*debug*/true) {
+                        try {
+                            PrintWriter pw = new PrintWriter(System.out);
+                            CheckClassAdapter.verify(new ClassReader(bytecode), true, pw);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Error while compiling "+className, e);
+                        }
+                    }
+                    out.write(bytecode);
+                    out.flush();
+                    out.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }

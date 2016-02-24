@@ -25,7 +25,7 @@ public class WeaCC {
         parser.acceptsAll(asList("stdl", "standardLib"), "Chooses the folder from which to get the standard library. Must already exist")
                 .withRequiredArg().ofType(File.class).defaultsTo(new File("./stdl"));
         parser.acceptsAll(asList("compilestdl", "compileStandardLib"), "Compiles everything single class file of the standard library into the output folder. Must already exist");
-        parser.accepts("stopAt", "Stops at the given step. Must be one of 'resolution', 'parsing', 'precompilation', 'compilation'")
+        parser.accepts("stopAt", "Stops at the given step. Must be one of 'resolution', 'precompilation', 'compilation'")
                 .withRequiredArg().defaultsTo("compilation");
         parser.nonOptions("Source files location relative to current folder").ofType(File.class);
         if(args != null && args.length > 0) {
