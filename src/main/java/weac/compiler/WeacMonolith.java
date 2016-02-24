@@ -7,6 +7,7 @@ import weac.compiler.precompile.structure.JavaImportedClass;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.precompile.structure.PrecompiledSource;
 import weac.compiler.utils.Import;
+import weac.compiler.utils.SourceCode;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,13 +39,13 @@ public class WeacMonolith {
             outputFolder.mkdirs();
     }
 
-    public void compile(String... sources) throws IOException, TimeoutException {
+    public void compile(SourceCode... sources) throws IOException, TimeoutException {
         initStandardLib();
         int maxThreads = 15;
         ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
         PrecompileWorker[] precompiledWorkers = new PrecompileWorker[sources.length];
         int index = 0;
-        for(String source : sources) {
+        for(SourceCode source : sources) {
             PrecompileWorker worker = new PrecompileWorker(source);
             precompiledWorkers[index++] = worker;
             executor.execute(worker);
@@ -96,7 +97,7 @@ public class WeacMonolith {
             if(children != null) {
                 for (File child : children) {
                     PrecompilationProcessor processor = new PrecompilationProcessor();
-                    standardLib.addAll(((PrecompiledSource) processor.process(read(child))).classes);
+                    standardLib.addAll(((PrecompiledSource) processor.process(new SourceCode(child.getName(), read(child)))).classes);
                 }
             }
         }

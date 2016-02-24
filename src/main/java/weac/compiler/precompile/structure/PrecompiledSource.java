@@ -9,4 +9,5 @@ public class PrecompiledSource {
     public List<PrecompiledClass> classes;
     public List<Import> imports;
     public String packageName;
+    public String fileName;
 }

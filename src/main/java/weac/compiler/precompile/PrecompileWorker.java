@@ -2,12 +2,13 @@ package weac.compiler.precompile;
 
 import weac.compiler.PrecompilationProcessor;
 import weac.compiler.precompile.structure.PrecompiledSource;
+import weac.compiler.utils.SourceCode;
 
 public class PrecompileWorker implements Runnable {
-    private final String source;
+    private final SourceCode source;
     private PrecompiledSource result;
 
-    public PrecompileWorker(String source) {
+    public PrecompileWorker(SourceCode source) {
         this.source = source;
     }
 

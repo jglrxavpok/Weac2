@@ -44,6 +44,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         source.imports = parsed.imports;
 
         source.packageName = parsed.packageName;
+        source.fileName = parsed.fileName;
 
         parsed.classes.forEach(c -> {
             PrecompiledClass clazz = precompile(c);

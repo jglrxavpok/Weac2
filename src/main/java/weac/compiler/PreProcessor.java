@@ -1,5 +1,7 @@
 package weac.compiler;
 
+import weac.compiler.utils.SourceCode;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
@@ -15,7 +17,7 @@ import java.util.Stack;
  *     <li><code>#define &lt var &gt &lt value &gt</code>: Defines <code>var</code> and gives it the value described by <code>value</code></li>
  * </ul>
  */
-public class PreProcessor extends CompilePhase<String, String> {
+public class PreProcessor extends CompilePhase<SourceCode, SourceCode> {
 
     private final Map<String, String> compilerDefinitions;
     private final Stack<Boolean> conditions;
@@ -33,11 +35,11 @@ public class PreProcessor extends CompilePhase<String, String> {
      *              The preprocessed source code
      */
     @Override
-    public String process(String source) {
+    public SourceCode process(SourceCode source) {
         conditions.clear();
         compilerDefinitions.clear();
         conditions.push(true);
-        String[] lines = source.split("\n");
+        String[] lines = source.getContent().split("\n");
         StringBuilder builder = new StringBuilder();
         int lineIndex = 0;
         for(String l : lines) {
@@ -53,17 +55,17 @@ public class PreProcessor extends CompilePhase<String, String> {
             }
             lineIndex++;
         }
-        return builder.toString();
+        return new SourceCode(source.getFileName(), builder.toString());
     }
 
     @Override
-    public Class<String> getInputClass() {
-        return String.class;
+    public Class<SourceCode> getInputClass() {
+        return SourceCode.class;
     }
 
     @Override
-    public Class<String> getOutputClass() {
-        return String.class;
+    public Class<SourceCode> getOutputClass() {
+        return SourceCode.class;
     }
 
     /**

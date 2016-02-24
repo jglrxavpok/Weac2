@@ -37,6 +37,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                superclass = toInternal(clazz.parents.getSuperclass());
             }
             writer.visit(V1_8, convertAccessToASM(clazz), internalName, signature, superclass, convertToASM(clazz.parents.getInterfaces()));
+            writer.visitSource(source.fileName, "Compiled from WeaC");
 
             if(clazz.classType == EnumClassTypes.OBJECT) {
                 writer.visitField(ACC_PUBLIC + ACC_STATIC, Constants.SINGLETON_INSTANCE_FIELD, type.getDescriptor(), null, null);

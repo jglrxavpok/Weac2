@@ -1,6 +1,7 @@
 package weac.compiler.process;
 
 import weac.compiler.CompilePhase;
+import weac.compiler.utils.SourceCode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +36,7 @@ public abstract class Processor {
     }
 
     @SuppressWarnings("unchecked")
-    public Object process(String source) {
+    public Object process(SourceCode source) {
         Object currentResult = source;
         for(CompilePhase phase : toolchain) {
             currentResult = phase.process(currentResult);

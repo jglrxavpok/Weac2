@@ -3,18 +3,15 @@ package weac.compiler.parse;
 import weac.compiler.CompilePhase;
 import weac.compiler.parse.structure.ParsedAnnotation;
 import weac.compiler.parse.structure.ParsedClass;
-import weac.compiler.utils.Import;
+import weac.compiler.utils.*;
 import weac.compiler.parse.structure.ParsedSource;
-import weac.compiler.utils.AnnotationModifier;
-import weac.compiler.utils.Modifier;
-import weac.compiler.utils.ModifierType;
 
 import java.util.*;
 
 /**
  * Parses a WeaC source file
  */
-public class Parser extends CompilePhase<String, ParsedSource> {
+public class Parser extends CompilePhase<SourceCode, ParsedSource> {
 
     /**
      * The class parsing helper
@@ -32,19 +29,19 @@ public class Parser extends CompilePhase<String, ParsedSource> {
      * @return
      *              The parsed source, contains all the extracted data from the source file
      */
-    public ParsedSource process(String source) {
+    public ParsedSource process(SourceCode source) {
         ParsedSource parsedSource = new ParsedSource();
         parsedSource.imports = new ArrayList<>();
         parsedSource.classes = new ArrayList<>();
-        source = removeComments(source);
-        parsedSource.sourceCode = source;
-        analyseHeader(parsedSource, source);
+        parsedSource.sourceCode = removeComments(source.getContent());
+        parsedSource.fileName = source.getFileName();
+        analyseHeader(parsedSource, parsedSource.sourceCode);
         return parsedSource;
     }
 
     @Override
-    public Class<String> getInputClass() {
-        return String.class;
+    public Class<SourceCode> getInputClass() {
+        return SourceCode.class;
     }
 
     @Override

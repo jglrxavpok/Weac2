@@ -28,6 +28,7 @@ public class Resolver extends CompileUtils {
 
     public ResolvedSource process(ResolvingContext context) {
         ResolvedSource resolved = new ResolvedSource();
+        resolved.fileName = context.getSource().fileName;
         resolved.packageName = context.getSource().packageName;
         resolved.classes = new ArrayList<>();
 

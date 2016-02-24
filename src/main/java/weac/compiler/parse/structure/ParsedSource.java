@@ -11,6 +11,7 @@ public class ParsedSource {
     public String packageName;
     public List<Import> imports;
     public List<ParsedClass> classes;
+    public String fileName;
 
     /**
      * Debug

@@ -48,8 +48,7 @@ public class WeaCC {
                     if(children != null) {
                         Collections.addAll(toCompile, children);
                         System.out.println("Compiling standard lib: "+Arrays.toString(children));
-                        String[] sources = read(toCompile, (String) options.valueOf("encoding"));
-                        monolith.compile(sources);
+                        monolith.compile(toSourceCodes(toCompile, (String) options.valueOf("encoding")));
                     } else {
                         throw new FileNotFoundException("Standard lib location \""+standardLib.getAbsolutePath()+"\" is empty");
                     }
@@ -58,14 +57,22 @@ public class WeaCC {
                     List<File> toCompile = new ArrayList<>();
                     options.nonOptionArguments()
                             .forEach(o -> toCompile.add((File)o));
-                    String[] sources = read(toCompile, (String) options.valueOf("encoding"));
-                    monolith.compile(sources);
+                    monolith.compile(toSourceCodes(toCompile, (String) options.valueOf("encoding")));
                 }
             }
         } else {
             System.out.println("Need help?");
             parser.printHelpOn(System.out);
         }
+    }
+
+    private static SourceCode[] toSourceCodes(List<File> toCompile, String encoding) throws IOException {
+        SourceCode[] result = new SourceCode[toCompile.size()];
+        String[] contents = read(toCompile, encoding);
+        for (int i = 0; i < result.length; i++) {
+            result[i] = new SourceCode(toCompile.get(i).getName(), contents[i]);
+        }
+        return result;
     }
 
     private static String[] read(List<File> toCompile, String encoding) throws IOException {
