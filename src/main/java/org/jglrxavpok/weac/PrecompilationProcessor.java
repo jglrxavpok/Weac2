@@ -5,7 +5,7 @@ import org.jglrxavpok.weac.precompile.WeacPreCompiler;
 import org.jglrxavpok.weac.process.WeacProcessor;
 import org.jglrxavpok.weac.verify.WeacParsingVerifier;
 
-public class WeacDefaultProcessor extends WeacProcessor {
+public class PrecompilationProcessor extends WeacProcessor {
 
     @Override
     public void initToolchain() {

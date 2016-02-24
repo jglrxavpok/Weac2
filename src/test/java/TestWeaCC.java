@@ -53,7 +53,15 @@ public class TestWeaCC extends Tests {
         File output = new File(".", "monolith");
         empty(new File(output, "weac/lang"));
         WeaCC.main(new String[] {"--out", output.getPath(), "--compilestdl", "--stdl", "src/main/resources/weac/lang/"});
-        // TODO: Assertations
+        // TODO: Assertions
+    }
+
+    @Test
+    public void stopAtPrecompilation() throws IOException, TimeoutException {
+        File output = new File(".", "monolith/precompilation");
+        empty(new File(output, "weac/lang"));
+        WeaCC.main(new String[] {"--out", output.getPath(), "--compilestdl", "--stdl", "src/main/resources/weac/lang/", "--stopAt", "precompilation"});
+        // TODO: Assertions
     }
 
     private void empty(File output) {

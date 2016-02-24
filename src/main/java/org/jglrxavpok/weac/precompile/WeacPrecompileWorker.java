@@ -1,6 +1,6 @@
 package org.jglrxavpok.weac.precompile;
 
-import org.jglrxavpok.weac.WeacDefaultProcessor;
+import org.jglrxavpok.weac.PrecompilationProcessor;
 import org.jglrxavpok.weac.precompile.structure.WeacPrecompiledSource;
 
 public class WeacPrecompileWorker implements Runnable {
@@ -14,7 +14,7 @@ public class WeacPrecompileWorker implements Runnable {
     @Override
     public void run() {
         try {
-            WeacDefaultProcessor processor = new WeacDefaultProcessor();
+            PrecompilationProcessor processor = new PrecompilationProcessor();
             result = (WeacPrecompiledSource) processor.process(source);
         } catch (Exception e) {
             e.printStackTrace();

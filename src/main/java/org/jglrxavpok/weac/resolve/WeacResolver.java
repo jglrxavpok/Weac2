@@ -487,10 +487,6 @@ public class WeacResolver extends WeacCompileUtils {
 
                 currentVarType = WeacType.CHAR_TYPE;
                 currentIsStatic = false;
-            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LABEL) {
-                WeacLabelInsn cst = ((WeacLabelInsn) precompiledInsn);
-                insns.add(new WeacResolvedLabelInsn(cst.getLabel()));
-                currentVarType = selfType;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.ARGUMENT_SEPARATOR) {
                 currentVarType = selfType;
                 currentIsStatic = false;
@@ -631,6 +627,9 @@ public class WeacResolver extends WeacCompileUtils {
                     valueStack.pop();
                     insns.add(new WeacPopInsn());
                 }
+                WeacLabelInsn cst = ((WeacLabelInsn) precompiledInsn);
+                insns.add(new WeacResolvedLabelInsn(cst.getLabel()));
+                currentVarType = selfType;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.BINARY_OPERATOR) {
                 WeacOperatorInsn insn = ((WeacOperatorInsn) precompiledInsn);
                 EnumOperators op = insn.getOperator();

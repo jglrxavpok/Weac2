@@ -481,7 +481,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
 
     private List<WeacPrecompiledInsn> postProcessInstructions(List<WeacPrecompiledInsn> insns) {
         List<WeacPrecompiledInsn> finalInstructions = new LinkedList<>();
-        finalInstructions.add(new WeacLabelInsn());
         for(int i = 0;i<insns.size();i++) {
             boolean matchFound = false;
             for(WeacInstructionPattern<WeacPrecompiledInsn> p : patterns) {
@@ -497,7 +496,6 @@ public class WeacPreCompiler extends WeacCompilePhase<WeacParsedSource, WeacPrec
             }
 
         }
-        finalInstructions.add(new WeacLabelInsn());
         return finalInstructions;
     }
 

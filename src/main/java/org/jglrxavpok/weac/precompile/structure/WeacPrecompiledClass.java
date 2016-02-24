@@ -1,9 +1,13 @@
 package org.jglrxavpok.weac.precompile.structure;
 
 import org.jglrxavpok.weac.parse.EnumClassTypes;
+import org.jglrxavpok.weac.precompile.insn.WeacPrecompiledInsn;
+import org.jglrxavpok.weac.utils.IndentableWriter;
 import org.jglrxavpok.weac.utils.WeacImport;
 import org.jglrxavpok.weac.utils.WeacModifierType;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -81,5 +85,110 @@ public class WeacPrecompiledClass {
             return fullName.equals(((WeacPrecompiledClass) obj).fullName);
         }
         return super.equals(obj);
+    }
+
+    public void writeTo(IndentableWriter writer) throws IOException {
+        if(packageName != null) {
+            writer.append("package ").append(packageName).append('\n');
+            writer.append("\n");
+        }
+        for(WeacImport im : imports) {
+            writer.append("import ").append(im.importedType);
+            if(im.usageName != null) {
+                writer.append(" as ").write(im.usageName);
+            }
+            writer.append("\n");
+            writer.append("\n");
+        }
+
+        writeAnnotations(writer, annotations);
+
+        if(isFinal)
+            writer.append("final ");
+        else if(isAbstract)
+            writer.append("abstract ");
+        else if(isMixin)
+            writer.append("mixin ");
+        writer.append(classType.name().toLowerCase()).append(' ').append(name);
+        if(motherClass != null) {
+            writer.append(" > ").append(motherClass);
+            for (int i = 0; i < interfacesImplemented.size(); i++) {
+                if(i != interfacesImplemented.size()-1) {
+                    writer.append(" + ");
+                }
+                writer.append(interfacesImplemented.get(i));
+            }
+        }
+        writer.incrementIndentation();
+
+        writer.append(" {\n\n");
+
+
+        for(WeacPrecompiledField f : fields) {
+            writeAnnotations(writer, f.annotations);
+            writer.append(f.access.name().toLowerCase()).append(' ').append(f.type.getId()).append(' ').append(f.name.getId());
+            if(!f.defaultValue.isEmpty()) {
+                writer.append(" = (");
+                writer.incrementIndentation();
+                writeInstructions(writer, f.defaultValue);
+                writer.decrementIndentation();
+                writer.append(')');
+            }
+            writer.append(";\n\n");
+        }
+
+        for(WeacPrecompiledMethod m : methods) {
+            writeAnnotations(writer, m.annotations);
+            writer.append(m.access.name().toLowerCase()).append(' ').append(m.returnType.getId()).append(' ').append(m.name.getId());
+            writer.append('(');
+            for (int i = 0; i < m.argumentTypes.size(); i++) {
+                if(i != 0) {
+                    writer.append(", ");
+                }
+                writer.append(m.argumentTypes.get(i).getId()).append(' ').append(m.argumentNames.get(i).getId());
+            }
+            writer.append(')');
+            if(!m.isAbstract) {
+                writer.incrementIndentation();
+                writer.append(" {\n");
+                writeInstructions(writer, m.instructions);
+                writer.decrementIndentation();
+                writer.append("\n}");
+            } else {
+                writer.append(" (abstract)");
+            }
+            writer.append("\n");
+        }
+
+        writer.decrementIndentation();
+        writer.append("\n");
+
+        writer.append("}\n");
+    }
+
+    private void writeAnnotations(IndentableWriter writer, List<WeacPrecompiledAnnotation> annotations) throws IOException {
+        for(WeacPrecompiledAnnotation a : annotations) {
+            writer.append('@').append(a.getName());
+            if(!a.args.isEmpty()) {
+                writer.incrementIndentation();
+                writer.append("(\n");
+                for (int i = 0; i < a.args.size(); i++) {
+                    if(i != 0)
+                        writer.append(", ");
+                    writeInstructions(writer, a.args.get(i));
+                }
+                writer.append(')');
+                writer.decrementIndentation();
+            }
+            writer.append('\n');
+        }
+    }
+
+    private void writeInstructions(IndentableWriter writer, List<WeacPrecompiledInsn> insns) throws IOException {
+        for (int i = 0; i < insns.size(); i++) {
+            WeacPrecompiledInsn in = insns.get(i);
+            writer.write(in.toString());
+            writer.write('\n');
+        }
     }
 }

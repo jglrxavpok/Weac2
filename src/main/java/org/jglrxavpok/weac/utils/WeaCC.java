@@ -25,6 +25,8 @@ public class WeaCC {
         parser.acceptsAll(asList("stdl", "standardLib"), "Chooses the folder from which to get the standard library. Must already exist")
                 .withRequiredArg().ofType(File.class).defaultsTo(new File("./stdl"));
         parser.acceptsAll(asList("compilestdl", "compileStandardLib"), "Compiles everything single class file of the standard library into the output folder. Must already exist");
+        parser.accepts("stopAt", "Stops at the given step. Must be one of 'resolution', 'parsing', 'precompilation', 'compilation'")
+                .withRequiredArg().defaultsTo("compilation");
         parser.nonOptions("Source files location relative to current folder").ofType(File.class);
         if(args != null && args.length > 0) {
             OptionSet options = parser.parse(args);
@@ -40,7 +42,7 @@ public class WeaCC {
                     throw new FileNotFoundException("Standard lib location \""+standardLib.getAbsolutePath()+"\" is not a valid folder name. The folder must also exist");
                 }
                 if(options.has("compileStandardLib")) {
-                    WeacMonolith monolith = new WeacMonolith(null, output);
+                    WeacMonolith monolith = new WeacMonolith(null, output, (String) options.valueOf("stopAt"));
                     List<File> toCompile = new ArrayList<>();
                     File[] children = standardLib.listFiles();
                     if(children != null) {
@@ -52,7 +54,7 @@ public class WeaCC {
                         throw new FileNotFoundException("Standard lib location \""+standardLib.getAbsolutePath()+"\" is empty");
                     }
                 } else {
-                    WeacMonolith monolith = new WeacMonolith(standardLib, output);
+                    WeacMonolith monolith = new WeacMonolith(standardLib, output, (String) options.valueOf("stopAt"));
                     List<File> toCompile = new ArrayList<>();
                     options.nonOptionArguments()
                             .forEach(o -> toCompile.add((File)o));

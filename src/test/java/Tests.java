@@ -1,4 +1,4 @@
-import org.jglrxavpok.weac.WeacDefaultProcessor;
+import org.jglrxavpok.weac.PrecompilationProcessor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -7,7 +7,7 @@ import java.io.InputStream;
 public abstract class Tests {
 
     public String read(String filename) throws IOException {
-        InputStream stream = WeacDefaultProcessor.class.getResourceAsStream("/"+filename);
+        InputStream stream = PrecompilationProcessor.class.getResourceAsStream("/"+filename);
         byte[] buffer = new byte[8096];
         int i;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
