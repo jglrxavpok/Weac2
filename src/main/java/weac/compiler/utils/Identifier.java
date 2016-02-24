@@ -1,5 +1,6 @@
 package weac.compiler.utils;
 
+import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.Keywords;
 import weac.compiler.WeacCompileUtils;
 

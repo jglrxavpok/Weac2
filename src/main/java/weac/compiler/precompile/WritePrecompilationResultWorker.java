@@ -2,7 +2,7 @@ package weac.compiler.precompile;
 
 import weac.compiler.precompile.structure.WeacPrecompiledClass;
 import weac.compiler.precompile.structure.WeacPrecompiledSource;
-import weac.compiler.utils.IndentableWriter;
+import org.jglr.flows.io.IndentableWriter;
 
 import java.io.File;
 import java.io.FileWriter;

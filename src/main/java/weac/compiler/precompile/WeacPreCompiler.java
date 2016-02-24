@@ -7,7 +7,7 @@ import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.patterns.*;
 import weac.compiler.precompile.structure.*;
 import weac.compiler.utils.EnumOperators;
-import weac.compiler.utils.VariableTopStack;
+import org.jglr.flows.collection.VariableTopStack;
 
 import java.util.*;
 

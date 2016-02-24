@@ -2,7 +2,7 @@ package weac.compiler.precompile.structure;
 
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.precompile.insn.WeacPrecompiledInsn;
-import weac.compiler.utils.IndentableWriter;
+import org.jglr.flows.io.IndentableWriter;
 import weac.compiler.utils.WeacImport;
 import weac.compiler.utils.WeacModifierType;
 
