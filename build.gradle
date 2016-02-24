@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+    compile project(':Flows')
     compile 'org.ow2.asm:asm:5.0.4'
     compile 'net.sf.jopt-simple:jopt-simple:4.9'
     compile 'org.ow2.asm:asm-util:5.0.4'
