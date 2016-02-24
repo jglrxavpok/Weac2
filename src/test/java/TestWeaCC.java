@@ -1,5 +1,5 @@
 import joptsimple.OptionException;
-import org.jglrxavpok.weac.utils.WeaCC;
+import weac.compiler.utils.WeaCC;
 import org.junit.Test;
 
 import java.io.File;

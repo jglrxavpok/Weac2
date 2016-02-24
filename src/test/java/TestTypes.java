@@ -1,5 +1,5 @@
-import org.jglrxavpok.weac.utils.Identifier;
-import org.jglrxavpok.weac.utils.WeacType;
+import weac.compiler.utils.Identifier;
+import weac.compiler.utils.WeacType;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

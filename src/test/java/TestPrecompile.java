@@ -1,8 +1,6 @@
-import org.jglrxavpok.weac.precompile.WeacPreCompiler;
-import org.jglrxavpok.weac.precompile.WeacToken;
-import org.jglrxavpok.weac.precompile.WeacTokenType;
-import org.jglrxavpok.weac.precompile.insn.*;
-import org.jglrxavpok.weac.utils.EnumOperators;
+import weac.compiler.precompile.WeacPreCompiler;
+import weac.compiler.precompile.insn.*;
+import weac.compiler.utils.EnumOperators;
 import org.junit.Before;
 import org.junit.Test;
 

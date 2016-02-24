@@ -1,4 +1,4 @@
-import org.jglrxavpok.weac.PrecompilationProcessor;
+import weac.compiler.PrecompilationProcessor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
