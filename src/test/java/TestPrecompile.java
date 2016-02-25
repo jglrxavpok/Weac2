@@ -71,6 +71,11 @@ public class TestPrecompile extends Tests {
     }
 
     @Test
+    public void unaryOperator() {
+        precompile(preCompiler, "i++", new LoadVariable("i"), new OperatorInsn(EnumOperators.INCREMENT));
+    }
+
+    @Test
     public void testLocalCreationAndSimpleAssignment() {
         precompile(preCompiler, "String myValue = something", new NewLocalVar("String", "myValue"), new LoadVariable("myValue"), new LoadVariable("something"), new OperatorInsn(EnumOperators.SET_TO));
     }

@@ -387,14 +387,27 @@ public abstract class CompileUtils {
                     iterator.remove();
                 } else if(localIndex < operator.raw().length() && operator.raw().charAt(localIndex) != c) {
                     iterator.remove();
-                } else if(localIndex >= operator.raw().length()) {
-                    iterator.remove();
+                } else if(localIndex > operator.raw().length()) {
+                    if(i != chars.length-1 || operators.size() > 1)
+                        iterator.remove();
                 }
             }
 
             if(operators.size() == 1) {
                 return operators.get(0).raw();
             }
+        }
+        if(!operators.isEmpty()) {
+            Iterator<EnumOperators> iterator = operators.iterator();
+            while(iterator.hasNext()) {
+                EnumOperators operator = iterator.next();
+                if(operator.raw().length()+offset >= chars.length+1) {
+                    iterator.remove();
+                }
+            }
+        }
+        if(operators.size() == 1) {
+            return operators.get(0).raw();
         }
         return null;
     }
