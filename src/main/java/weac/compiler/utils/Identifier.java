@@ -90,8 +90,8 @@ public class Identifier {
                     boolean isPotentialOperatorOverload = isValidOperatorOverloadStart(startString);
                     if(isPotentialOperatorOverload) {
                         String operator = CompileUtils.readOperator(potientialID.toCharArray(), i);
-                        if(operator != null && operator.length()+i >= potientialID.length()) {
-                            return checkCoherence(potientialID); // TODO: Custom operators
+                        if(operator != null && potientialID.equals(startString+operator)) {
+                            return checkCoherence(potientialID);
                         } else {
                             return false;
                         }

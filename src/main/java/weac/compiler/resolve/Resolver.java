@@ -517,14 +517,14 @@ public class Resolver extends CompileUtils {
                         if(variableMaps.get(currentVarType).fieldExists(varName)) {
                             if(currentVarType.equals(selfType)) {
                                 ResolvedInsn previous = insns.get(insns.size() - 1);
-                                if(!(precompiled instanceof LoadThisInsn)) {
+                                if(!(previous instanceof LoadThisInsn)) {
                                     insns.add(new LoadThisInsn());
                                 }
                             }
                             System.out.println("PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             WeacType fieldType = variableMaps.get(currentVarType).getFieldType(varName);
                             insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, currentIsStatic));
-                            valueStack.pop();
+                            //valueStack.pop();
                             valueStack.push(new FieldValue(varName, currentVarType, fieldType));
                             currentVarType = fieldType;
                             currentIsStatic = false;
@@ -643,28 +643,38 @@ public class Resolver extends CompileUtils {
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.BINARY_OPERATOR) {
                 OperatorInsn insn = ((OperatorInsn) precompiledInsn);
                 EnumOperators op = insn.getOperator();
-                switch (op) {
-                    case SET_TO:
-
+                if(op.isVariableAssign()) {
+                    if(op == EnumOperators.SET_TO) {
                         Value toAssign = valueStack.pop();
                         Value potentialVariable = valueStack.pop();
-                        if(potentialVariable.isConstant()) {
-                            newError(potentialVariable.getName()+"Invalid assigment, can only assign a value to a field or a variable", -1); // todo line
+                        if (potentialVariable.isConstant()) {
+                            newError(potentialVariable.getName() + "Invalid assigment, can only assign a value to a field or a variable", -1); // todo line
                         } else {
                             String name = potentialVariable.getName();
-                            if(varMap.localExists(name)) { // local variables take priority
+                            if (varMap.localExists(name)) { // local variables take priority
                                 insns.add(new StoreVarInsn(varMap.getLocalIndex(name)));
-                            } else if(varMap.fieldExists(name)) {
-                                insns.add(new StoreFieldInsn(name, varMap.getFieldType(name)));
+                            } else if (variableMaps.get(currentVarType).fieldExists(name)) {
+                                if (currentVarType.equals(selfType)) {
+                                    ResolvedInsn previous = insns.get(insns.size() - 1);
+                                    if (!(previous instanceof LoadThisInsn)) {
+                                        insns.add(new LoadThisInsn());
+                                    }
+                                }
+                                WeacType fieldType = variableMaps.get(currentVarType).getFieldType(name);
+                                insns.add(new StoreFieldInsn(name, fieldType, currentIsStatic));
+                                currentVarType = fieldType;
+                                currentIsStatic = false;
                             } else {
-                                newError("local or field "+name+" does not exist", -1); // todo line
+                                newError("local or field " + name + " does not exist", -1); // todo line
                             }
                         }
-                        break;
-
-                    default:
-                        System.err.println("UNRESOLVED OP: "+op.name());
+                    } else {
+                        System.err.println("UNRESOLVED OP: " + op.name());
+                    }
+                } else {
+                    System.err.println("UNRESOLVED OP: " + op.name());
                 }
+                // TODO
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NEW_LOCAL) {
                 NewLocalVar localVar = ((NewLocalVar) precompiledInsn);
                 WeacType type = resolveType(new Identifier(localVar.getType(), true), context);

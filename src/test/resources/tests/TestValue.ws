@@ -2,7 +2,7 @@ package tests
 
 TestValue {
 
-    TestValue operator++() {
+    TestValue unary++() {
         // Do something
         return this;
     }

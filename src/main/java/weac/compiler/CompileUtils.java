@@ -383,11 +383,11 @@ public abstract class CompileUtils {
             Iterator<EnumOperators> iterator = operators.iterator();
             while(iterator.hasNext()) {
                 EnumOperators operator = iterator.next();
-                if(operator.raw().length()+offset >= chars.length) {
+                if(operator.raw().length()+offset >= chars.length+1) {
                     iterator.remove();
                 } else if(localIndex < operator.raw().length() && operator.raw().charAt(localIndex) != c) {
                     iterator.remove();
-                } else if(localIndex > operator.raw().length()) {
+                } else if(localIndex >= operator.raw().length()) {
                     iterator.remove();
                 }
             }

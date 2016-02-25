@@ -33,7 +33,7 @@ public class TestIdentifiers {
 
     @Test
     public void unaryOperatorOverload() {
-        assertTrue("Identifier 'unary+' must be valid", new Identifier("unary*").isValid());
+        assertTrue("Identifier 'unary++' must be valid", new Identifier("unary++").isValid());
     }
 
     @Test

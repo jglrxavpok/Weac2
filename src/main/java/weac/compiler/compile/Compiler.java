@@ -336,7 +336,13 @@ public class Compiler extends CompileUtils implements Opcodes {
                 writer.visitVarInsn(ASTORE, localIndex);
             } else if(insn instanceof StoreFieldInsn) {
                 StoreFieldInsn fieldInsn = (StoreFieldInsn)insn;
-                writer.visitFieldInsn(PUTFIELD, type.getInternalName(), fieldInsn.getName(), toDescriptor(fieldInsn.getType()));
+                int opcode;
+                if(fieldInsn.isStatic()) {
+                    opcode = PUTSTATIC;
+                } else {
+                    opcode = PUTFIELD;
+                }
+                writer.visitFieldInsn(opcode, type.getInternalName(), fieldInsn.getName(), toDescriptor(fieldInsn.getType()));
             } else if(insn instanceof LoadFieldInsn) {
                 LoadFieldInsn fieldInsn = (LoadFieldInsn)insn;
                 writer.visitFieldInsn(fieldInsn.isStatic() ? GETSTATIC : GETFIELD, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getFieldName(), toDescriptor(fieldInsn.getType()));

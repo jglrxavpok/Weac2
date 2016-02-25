@@ -20,7 +20,7 @@ public class LocalCreationPattern extends TokenPattern {
         Token type = original.get(i);
         Token name = original.get(i+1);
         output.add(new NewLocalToken(type.getContent(), name.getContent()));
-        if(original.size()-i > 0) {
+        if(original.size() > i+2) {
             Token potentialOperator = original.get(i+2);
             if(potentialOperator.getType() == TokenType.BINARY_OPERATOR) {
                 EnumOperators operator = EnumOperators.get(potentialOperator.getContent());
