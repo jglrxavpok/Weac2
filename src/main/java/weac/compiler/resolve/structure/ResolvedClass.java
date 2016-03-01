@@ -22,7 +22,7 @@ public class ResolvedClass {
     /**
      * The simple name of the class, such as Math, Class, String, etc.
      */
-    public String name;
+    public WeacType name;
 
     /**
      * The class returnType
@@ -110,7 +110,7 @@ public class ResolvedClass {
 
     public void writeTo(IndentableWriter writer) throws IOException {
         if(!fullName.equals(name)) {
-            writer.append("package ").append(fullName.substring(0, fullName.length()-name.length())).append('\n');
+            writer.append("package ").append(fullName.substring(0, fullName.length()-name.getCoreType().getIdentifier().toString().length())).append('\n');
             writer.append("\n");
         }
 
@@ -122,7 +122,7 @@ public class ResolvedClass {
             writer.append("abstract ");
         else if(isMixin)
             writer.append("mixin ");
-        writer.append(classType.name().toLowerCase()).append(' ').append(name);
+        writer.append(classType.name().toLowerCase()).append(' ').append(name.toString());
         if(parents.getSuperclass() != null) {
             writer.append(" > ").append(parents.getSuperclass().fullName);
             for (int i = 0; i < parents.getInterfaces().size(); i++) {

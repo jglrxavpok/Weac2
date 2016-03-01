@@ -3,6 +3,7 @@ package weac.compiler.parse.structure;
 import weac.compiler.code.Member;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.ModifierType;
+import weac.compiler.utils.WeacType;
 
 import java.util.Collections;
 import java.util.List;
@@ -67,7 +68,7 @@ public class ParsedField implements Member {
     }
 
     @Override
-    public List<String> getGenericParameterNames() {
+    public List<WeacType> getGenericParameterNames() {
         return Collections.emptyList();
     }
 }

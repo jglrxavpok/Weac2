@@ -38,7 +38,7 @@ public class Resolver extends CompileUtils {
 
     private ResolvedClass resolve(PrecompiledClass aClass, ResolvingContext context) {
         ResolvedClass resolvedClass = new ResolvedClass();
-        WeacType currentType = resolveType(new Identifier(aClass.name), context);
+        WeacType currentType = resolveType(aClass.name.getIdentifier(), context);
         resolvedClass.access = aClass.access;
         resolvedClass.annotations.addAll(resolveAnnotations(aClass.annotations, currentType, context));
         resolvedClass.classType = aClass.classType;
@@ -267,7 +267,7 @@ public class Resolver extends CompileUtils {
     }
 
     private String getFullName(PrecompiledClass aClass) {
-        return (aClass.packageName == null || aClass.packageName.isEmpty()) ? aClass.name : aClass.packageName+"."+aClass.name;
+        return (aClass.packageName == null || aClass.packageName.isEmpty()) ? aClass.name.getCoreType().getIdentifier().getId() : aClass.packageName+"."+aClass.name.getCoreType().getIdentifier().getId();
     }
 
     private ClassHierarchy getHierarchy(PrecompiledClass aClass, List<String> interfacesImplemented, ResolvingContext context) {
@@ -350,7 +350,7 @@ public class Resolver extends CompileUtils {
                 return sourceClass;
             }
 
-            if(sourceClass.name.equals(inter)) {
+            if(sourceClass.name.getCoreType().toString().equals(inter)) {
                 return sourceClass;
             }
         }
@@ -524,7 +524,7 @@ public class Resolver extends CompileUtils {
                             System.out.println("PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             WeacType fieldType = variableMaps.get(currentVarType).getFieldType(varName);
                             insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, currentIsStatic));
-                            //valueStack.pop();
+                            valueStack.pop();
                             valueStack.push(new FieldValue(varName, currentVarType, fieldType));
                             currentVarType = fieldType;
                             currentIsStatic = false;

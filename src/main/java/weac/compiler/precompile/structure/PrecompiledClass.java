@@ -1,21 +1,23 @@
 package weac.compiler.precompile.structure;
 
+import weac.compiler.code.Member;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.precompile.insn.PrecompiledInsn;
 import org.jglr.flows.io.IndentableWriter;
 import weac.compiler.utils.Import;
 import weac.compiler.utils.ModifierType;
+import weac.compiler.utils.WeacType;
 
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-public class PrecompiledClass {
+public class PrecompiledClass implements Member {
 
     /**
      * The simple name of the class, such as Math, Class, String, etc.
      */
-    public String name;
+    public WeacType name;
 
     public String packageName;
 
@@ -66,7 +68,8 @@ public class PrecompiledClass {
     public String fullName;
 
     public boolean isCompilerSpecial;
-    public List<Import> imports;
+    public final List<Import> imports;
+    private final List<WeacType> paramNames;
     public boolean isFinal;
 
     public PrecompiledClass() {
@@ -76,6 +79,7 @@ public class PrecompiledClass {
         fields = new LinkedList<>();
         methods = new LinkedList<>();
         imports = new LinkedList<>();
+        paramNames = new LinkedList<>();
     }
 
     @Override
@@ -108,7 +112,18 @@ public class PrecompiledClass {
             writer.append("abstract ");
         else if(isMixin)
             writer.append("mixin ");
-        writer.append(classType.name().toLowerCase()).append(' ').append(name);
+        writer.append(classType.name().toLowerCase()).append(' ').append(name.toString());
+        if(!getGenericParameterNames().isEmpty()) {
+            writer.append('<');
+            for (int i = 0; i < getGenericParameterNames().size(); i++) {
+                WeacType type = getGenericParameterNames().get(i);
+                if(i != 0) {
+                    writer.append(", ");
+                }
+                writer.append(type.toString());
+            }
+            writer.append('>');
+        }
         if(motherClass != null) {
             writer.append(" > ").append(motherClass);
             for (int i = 0; i < interfacesImplemented.size(); i++) {
@@ -189,5 +204,25 @@ public class PrecompiledClass {
             writer.write(in.toString());
             writer.write('\n');
         }
+    }
+
+    @Override
+    public String getName() {
+        return name.getCoreType().toString();
+    }
+
+    @Override
+    public String getCanonicalName() {
+        return fullName;
+    }
+
+    @Override
+    public ModifierType getAccess() {
+        return access;
+    }
+
+    @Override
+    public List<WeacType> getGenericParameterNames() {
+        return paramNames;
     }
 }

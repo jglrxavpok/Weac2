@@ -17,7 +17,7 @@ public class ParsingVerifier extends CompilePhase<ParsedSource, ParsedSource> {
     }
 
     private void verify(ParsedClass parsedClass) {
-        verifyValidName(parsedClass.name, parsedClass.startingLine);
+        verifyValidName(parsedClass.name.getCoreType().getIdentifier().getId(), parsedClass.startingLine);
 
         for (ParsedField field : parsedClass.fields) {
             verifyValidName(field.name.getId(), field.startingLine);

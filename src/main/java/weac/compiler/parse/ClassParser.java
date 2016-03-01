@@ -2,6 +2,7 @@ package weac.compiler.parse;
 
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.structure.ParsedClass;
+import weac.compiler.utils.WeacType;
 
 import java.util.ArrayList;
 
@@ -80,7 +81,7 @@ public class ClassParser extends CompileUtils {
         char[] chars = s.toCharArray();
         int start = readUntilNot(chars, 0, ' ', '\n').length();
         String name = readUntil(chars, start, ' ', '\n');
-        parsedClass.name = name;
+        parsedClass.name = new WeacType(WeacType.OBJECT_TYPE, name, false);
         if(name.isEmpty())
             System.out.println("!!!"+s.substring(start));
         StringBuilder buffer = new StringBuilder();

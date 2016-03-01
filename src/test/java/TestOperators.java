@@ -7,6 +7,11 @@ import static org.junit.Assert.assertEquals;
 public class TestOperators {
 
     @Test
+    public void readWithSpaceAtEnd() {
+        assertEquals(EnumOperators.NOTEQUAL.raw(), CompileUtils.readOperator("!= ".toCharArray(), 0));
+    }
+
+    @Test
     public void readAmbiguous() {
         assertEquals(EnumOperators.INCREMENT.raw(), CompileUtils.readOperator("++".toCharArray(), 0));
     }

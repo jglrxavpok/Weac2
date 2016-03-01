@@ -21,7 +21,6 @@ public class JavaImportedClass extends PrecompiledClass {
         } else {
             classType = EnumClassTypes.CLASS;
         }
-        name = clazz.getSimpleName();
         packageName = clazz.getPackage().getName();
         fullName = clazz.getCanonicalName();
         Method[] jmethods = clazz.getDeclaredMethods();
@@ -63,6 +62,8 @@ public class JavaImportedClass extends PrecompiledClass {
             superclass = new JavaImportedClass(clazz.getSuperclass());
         if(superclass != null)
             motherClass = superclass.fullName;
+
+        name = new WeacType(superclass != null ? superclass.name : WeacType.OBJECT_TYPE, clazz.getSimpleName(), false);
     }
 
     public JavaImportedClass getSuperclass() {

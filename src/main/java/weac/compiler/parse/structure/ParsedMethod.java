@@ -3,6 +3,7 @@ package weac.compiler.parse.structure;
 import weac.compiler.code.Member;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.ModifierType;
+import weac.compiler.utils.WeacType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -113,7 +114,7 @@ public class ParsedMethod implements Member {
     }
 
     @Override
-    public List<String> getGenericParameterNames() {
+    public List<WeacType> getGenericParameterNames() {
         return Collections.emptyList();
     }
 }

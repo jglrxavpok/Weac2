@@ -1,6 +1,7 @@
 package weac.compiler.code;
 
 import weac.compiler.utils.ModifierType;
+import weac.compiler.utils.WeacType;
 
 import java.util.List;
 
@@ -11,5 +12,5 @@ public interface Member {
 
     ModifierType getAccess();
 
-    List<String> getGenericParameterNames();
+    List<WeacType> getGenericParameterNames();
 }

@@ -3,10 +3,7 @@ package weac.compiler;
 import weac.compiler.parse.structure.ParsedAnnotation;
 import weac.compiler.utils.*;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 // TODO: Clean this mess
 public abstract class CompileUtils {
@@ -377,37 +374,30 @@ public abstract class CompileUtils {
         operators.remove(EnumOperators.UNARY_MINUS);
         operators.remove(EnumOperators.UNARY_PLUS);
         operators.remove(EnumOperators.CAST);
-        for(int i = offset;i<chars.length;i++) {
-            char c = chars[i];
-            int localIndex = i-offset;
-            Iterator<EnumOperators> iterator = operators.iterator();
-            while(iterator.hasNext()) {
-                EnumOperators operator = iterator.next();
-                if(operator.raw().length()+offset >= chars.length+1) {
+        String end = new String(chars, offset, chars.length-offset);
+        Iterator<EnumOperators> iterator = operators.iterator();
+        while(iterator.hasNext()) {
+            EnumOperators operator = iterator.next();
+            if(operator.raw().length() == chars.length-offset) { // exact size
+                if(operator.raw().equals(end)) {
+                    return operator.raw();
+                } else {
                     iterator.remove();
-                } else if(localIndex < operator.raw().length() && operator.raw().charAt(localIndex) != c) {
-                    iterator.remove();
-                } else if(localIndex > operator.raw().length()) {
-                    if(i != chars.length-1 || operators.size() > 1)
-                        iterator.remove();
                 }
-            }
-
-            if(operators.size() == 1) {
-                return operators.get(0).raw();
-            }
-        }
-        if(!operators.isEmpty()) {
-            Iterator<EnumOperators> iterator = operators.iterator();
-            while(iterator.hasNext()) {
-                EnumOperators operator = iterator.next();
-                if(operator.raw().length()+offset >= chars.length+1) {
+            } else if(operator.raw().length() > chars.length-offset) { // too long, get out
+                iterator.remove();
+            } else { // smaller, let's read it
+                if(!end.startsWith(operator.raw())) { // absolutely not here, skip
                     iterator.remove();
                 }
             }
         }
-        if(operators.size() == 1) {
-            return operators.get(0).raw();
+        Optional<EnumOperators> operator = operators.stream()
+                .sorted((a, b) -> Integer.compare(a.raw().length(), b.raw().length()))
+                .sorted(Comparator.reverseOrder())
+                .findFirst();
+        if(operator.isPresent()) {
+            return operator.get().raw();
         }
         return null;
     }

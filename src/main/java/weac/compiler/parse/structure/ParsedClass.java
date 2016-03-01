@@ -3,6 +3,7 @@ package weac.compiler.parse.structure;
 import weac.compiler.code.Member;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.utils.ModifierType;
+import weac.compiler.utils.WeacType;
 
 import java.util.Collections;
 import java.util.List;
@@ -20,7 +21,7 @@ public class ParsedClass implements Member {
     /**
      * The simple name of the class, such as Math, Class, String, etc.
      */
-    public String name;
+    public WeacType name;
 
     public String packageName;
 
@@ -108,7 +109,7 @@ public class ParsedClass implements Member {
 
     @Override
     public String getName() {
-        return name;
+        return name.getCoreType().getIdentifier().getId();
     }
 
     @Override
@@ -122,7 +123,7 @@ public class ParsedClass implements Member {
     }
 
     @Override
-    public List<String> getGenericParameterNames() {
+    public List<WeacType> getGenericParameterNames() {
         return Collections.emptyList();
     }
 }

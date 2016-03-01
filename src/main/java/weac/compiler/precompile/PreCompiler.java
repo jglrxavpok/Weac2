@@ -8,6 +8,9 @@ import weac.compiler.precompile.patterns.*;
 import weac.compiler.precompile.structure.*;
 import weac.compiler.utils.EnumOperators;
 import org.jglr.flows.collection.VariableTopStack;
+import weac.compiler.utils.GenericType;
+import weac.compiler.utils.Identifier;
+import weac.compiler.utils.WeacType;
 
 import java.util.*;
 
@@ -57,22 +60,31 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
     private PrecompiledClass precompile(ParsedClass c) {
         PrecompiledClass clazz = new PrecompiledClass();
+        if(c.name.isGeneric()) {
+            WeacType[] params = c.name.getGenericParameters();
+            for (WeacType param : params) {
+                clazz.getGenericParameterNames().add(new GenericType(param));
+            }
+        }
+
         clazz.access = c.access;
         clazz.annotations.addAll(precompileAnnotations(c.annotations));
         clazz.classType = c.classType;
         clazz.enumConstants.addAll(precompileEnumConstants(c.enumConstants));
-        clazz.fields.addAll(precompileFields(c.fields));
+        clazz.fields.addAll(precompileFields(c.fields, clazz));
         clazz.interfacesImplemented.addAll(c.interfacesImplemented);
         clazz.isAbstract = c.isAbstract;
         clazz.isMixin = c.isMixin;
-        clazz.methods.addAll(precompileMethods(c.methods));
+        clazz.methods.addAll(precompileMethods(c.methods, clazz));
         clazz.motherClass = c.motherClass;
-        clazz.name = c.name;
+        clazz.name = c.name.getCoreType();
+
+
         clazz.packageName = c.packageName;
         clazz.isCompilerSpecial = c.isCompilerSpecial;
         clazz.isFinal = c.isFinal;
 
-        clazz.fullName = c.packageName == null || c.packageName.isEmpty() ? c.name : c.packageName+"."+c.name;
+        clazz.fullName = c.packageName == null || c.packageName.isEmpty() ? c.name.getCoreType().getIdentifier().getId() : c.packageName+"."+c.name.getCoreType().getIdentifier().getId();
         return clazz;
     }
 
@@ -89,23 +101,25 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         return precompiledAnnotations;
     }
 
-    private List<PrecompiledMethod> precompileMethods(List<ParsedMethod> methods) {
+    private List<PrecompiledMethod> precompileMethods(List<ParsedMethod> methods, PrecompiledClass clazz) {
         List<PrecompiledMethod> precompiledMethods = new LinkedList<>();
         methods.stream()
-                .map(this::compileSingleMethod)
+                .map(m -> compileSingleMethod(m, clazz))
                 .forEach(precompiledMethods::add);
         return precompiledMethods;
     }
 
-    private PrecompiledMethod compileSingleMethod(ParsedMethod parsedMethod) {
+    private PrecompiledMethod compileSingleMethod(ParsedMethod parsedMethod, PrecompiledClass clazz) {
         PrecompiledMethod method = new PrecompiledMethod();
         method.access = parsedMethod.access;
         method.argumentNames.addAll(parsedMethod.argumentNames);
-        method.argumentTypes.addAll(parsedMethod.argumentTypes);
+        for(Identifier t : parsedMethod.argumentTypes) {
+            method.argumentTypes.add(resolveGeneric(t, clazz));
+        }
         method.isAbstract = parsedMethod.isAbstract;
         method.isConstructor = parsedMethod.isConstructor;
         method.name = parsedMethod.name;
-        method.returnType = parsedMethod.returnType;
+        method.returnType = resolveGeneric(parsedMethod.returnType, clazz);
 
         method.isCompilerSpecial = parsedMethod.isCompilerSpecial;
         method.annotations.addAll(precompileAnnotations(parsedMethod.annotations));
@@ -174,13 +188,13 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         return currentBlock;
     }
 
-    private List<PrecompiledField> precompileFields(List<ParsedField> fields) {
+    private List<PrecompiledField> precompileFields(List<ParsedField> fields, PrecompiledClass clazz) {
         List<PrecompiledField> finalFields = new LinkedList<>();
         for(ParsedField f : fields) {
             PrecompiledField precompiledField = new PrecompiledField();
             precompiledField.access = f.access;
             precompiledField.name = f.name;
-            precompiledField.type = f.type;
+            precompiledField.type = resolveGeneric(f.type, clazz);
             precompiledField.isCompilerSpecial = f.isCompilerSpecial;
             precompiledField.defaultValue.addAll(precompileExpression(f.defaultValue));
             finalFields.add(precompiledField);
@@ -188,6 +202,13 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
             precompiledField.annotations.addAll(precompileAnnotations(f.annotations));
         }
         return finalFields;
+    }
+
+    private Identifier resolveGeneric(Identifier type, PrecompiledClass clazz) {
+        boolean isGeneric = clazz.getGenericParameterNames().stream()
+                .filter(t -> t.getIdentifier().getId().endsWith(type.getId()))
+                .count() != 0L;
+        return isGeneric ? WeacType.OBJECT_TYPE.getIdentifier() : type;
     }
 
     private List<PrecompiledEnumConstant> precompileEnumConstants(List<String> enumConstants) {

@@ -2,6 +2,7 @@ package weac.compiler.parse.structure;
 
 import weac.compiler.code.Member;
 import weac.compiler.utils.ModifierType;
+import weac.compiler.utils.WeacType;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -32,7 +33,7 @@ public class ParsedAnnotation implements Member {
     }
 
     @Override
-    public List<String> getGenericParameterNames() {
+    public List<WeacType> getGenericParameterNames() {
         return Collections.emptyList();
     }
 
