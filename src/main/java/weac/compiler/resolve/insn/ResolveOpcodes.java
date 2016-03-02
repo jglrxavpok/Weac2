@@ -31,6 +31,8 @@ public interface ResolveOpcodes {
             CHAR_RETURN = 0x17,
             DOUBLE_RETURN = 0x18,
 
+            // Room for other types
+
             FIRST_RETURN_OPCODE = RETURN,
             LAST_RETURN_OPCODE = DOUBLE_RETURN,
 
@@ -38,7 +40,12 @@ public interface ResolveOpcodes {
             LOAD_FIELD = 0x21,
             STORE_LOCAL_VARIABLE = 0x22,
             STORE_FIELD = 0x23,
-            POP = 0x24
+            POP = 0x24,
+
+            OBJ_EQUAL = 0x25,
+            DUP = 0x26,
+            NEW = 0x27,
+            THROW = 0x28
 
     ;
 

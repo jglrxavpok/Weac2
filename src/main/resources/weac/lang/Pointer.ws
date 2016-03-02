@@ -5,13 +5,13 @@ Pointer<Type> {
     private Type value;
 
     Type get() {
-        if(/*value == null*/false) {
+        if(value == null) {
             throw new NullPointerException();
         }
         return value;
     }
 
-    void set(Type value) {
-        this.value = value;
+    void set(Type newValue) {
+        this.value = newValue;
     }
 }

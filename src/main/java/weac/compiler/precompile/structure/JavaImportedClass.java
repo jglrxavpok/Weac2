@@ -4,6 +4,7 @@ import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -25,27 +26,12 @@ public class JavaImportedClass extends PrecompiledClass {
         fullName = clazz.getCanonicalName();
         Method[] jmethods = clazz.getDeclaredMethods();
         for(Method m : jmethods) {
-            PrecompiledMethod convertedMethod = new PrecompiledMethod();
-            convertedMethod.name = new Identifier(m.getName());
-            WeacType returnType = toWeacType(m.getReturnType().getCanonicalName());
-            if(returnType == null) {
-                returnType = new WeacType(null, m.getReturnType().getCanonicalName(), true);
-            }
-            convertedMethod.returnType = new Identifier(returnType.getIdentifier().getId(), true);
+            importMethod(m.getName(), m.getReturnType(), m.getParameters());
+        }
 
-            Parameter[] parameters = m.getParameters();
-            for(Parameter p : parameters) {
-                convertedMethod.argumentNames.add(new Identifier(p.getName(), true));
-                WeacType argType = toWeacType(p.getType().getCanonicalName());
-                if(argType == null) {
-                    argType = new WeacType(null, p.getType().getCanonicalName(), true);
-                }
-                convertedMethod.argumentTypes.add(argType.getIdentifier());
-            }
-            convertedMethod.isJavaImported = true;
-
-//            System.out.println("Imported method: "+convertedMethod.name+" / "+convertedMethod.returnType+" / "+ Arrays.toString(convertedMethod.argumentTypes.toArray()));
-            methods.add(convertedMethod);
+        Constructor[] jcons = clazz.getDeclaredConstructors();
+        for(Constructor c : jcons) {
+            importMethod("<init>", Void.TYPE, c.getParameters());
         }
 
         Field[] jfields = clazz.getDeclaredFields();
@@ -64,6 +50,29 @@ public class JavaImportedClass extends PrecompiledClass {
             motherClass = superclass.fullName;
 
         name = new WeacType(superclass != null ? superclass.name : WeacType.OBJECT_TYPE, clazz.getSimpleName(), false);
+    }
+
+    private void importMethod(String name, Class<?> returnType, Parameter[] parameters) {
+        PrecompiledMethod convertedMethod = new PrecompiledMethod();
+        convertedMethod.name = new Identifier(name);
+        WeacType returnTypeType = toWeacType(returnType.getCanonicalName());
+        if(returnTypeType == null) {
+            returnTypeType = new WeacType(null, returnType.getCanonicalName(), true);
+        }
+        convertedMethod.returnType = new Identifier(returnTypeType.getIdentifier().getId(), true);
+
+        for(Parameter p : parameters) {
+            convertedMethod.argumentNames.add(new Identifier(p.getName(), true));
+            WeacType argType = toWeacType(p.getType().getTypeName());
+            if(argType == null) {
+                argType = new WeacType(null, p.getType().getTypeName(), true);
+            }
+            convertedMethod.argumentTypes.add(argType.getIdentifier());
+        }
+        convertedMethod.isJavaImported = true;
+
+//            System.out.println("Imported method: "+convertedMethod.name+" / "+convertedMethod.returnType+" / "+ Arrays.toString(convertedMethod.argumentTypes.toArray()));
+        methods.add(convertedMethod);
     }
 
     public JavaImportedClass getSuperclass() {

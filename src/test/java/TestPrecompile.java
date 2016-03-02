@@ -150,7 +150,7 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testReturnAfterConstructorCall() {
-        precompile(preCompiler, "return new Object", new InstanciateInsn("Object"), new FunctionCall("<init>", 0, true), new SimplePreInsn(PrecompileOpcodes.RETURN));
+        precompile(preCompiler, "return new Object", new InstanciateInsn("Object"), new SimplePreInsn(PrecompileOpcodes.DUP), new FunctionCall("<init>", 0, true), new SimplePreInsn(PrecompileOpcodes.RETURN));
     }
 
     @Test
@@ -181,17 +181,17 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testConstructorCallWithNoArgument() {
-        precompile(preCompiler, "new Foo", new InstanciateInsn("Foo"), new FunctionCall("<init>", 0, true));
+        precompile(preCompiler, "new Foo", new InstanciateInsn("Foo"), new SimplePreInsn(PrecompileOpcodes.DUP), new FunctionCall("<init>", 0, true));
     }
 
     @Test
     public void testConstructorCallWithArgument() {
-        precompile(preCompiler, "new Foo(bar)", new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadVariable("bar"), new InstanciateInsn("Foo"), new FunctionCall("<init>", 1, true));
+        precompile(preCompiler, "new Foo(bar)", new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadVariable("bar"), new InstanciateInsn("Foo"), new SimplePreInsn(PrecompileOpcodes.DUP), new FunctionCall("<init>", 1, true));
     }
 
     @Test
     public void testSimpleConstructorCall() {
-        precompile(preCompiler, "new Object()", new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new InstanciateInsn("Object"), new FunctionCall("<init>", 0, true));
+        precompile(preCompiler, "new Object()", new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new InstanciateInsn("Object"), new SimplePreInsn(PrecompileOpcodes.DUP), new FunctionCall("<init>", 0, true));
     }
 
     @Test

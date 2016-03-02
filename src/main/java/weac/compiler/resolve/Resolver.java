@@ -380,7 +380,6 @@ public class Resolver extends CompileUtils {
                 return new JavaImportedClass(javaClass);
             }
         } catch (Exception e) {
-//            e.printStackTrace();
 
             // try importing from java.lang
             try {
@@ -389,7 +388,8 @@ public class Resolver extends CompileUtils {
                     return new JavaImportedClass(javaClass);
                 }
             } catch (ClassNotFoundException e1) {
-                throw new RuntimeException(inter+" / "+context.getSource().classes.get(0).fullName, e1);
+                e.printStackTrace();
+                throw new RuntimeException(inter+"("+transformedName+")"+" / "+context.getSource().classes.get(0).fullName, e1);
             }
         }
 
@@ -491,6 +491,11 @@ public class Resolver extends CompileUtils {
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.ARGUMENT_SEPARATOR) {
                 currentVarType = selfType;
                 currentIsStatic = false;
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.DUP) {
+                insns.add(new ResolvedInsn(ResolveOpcodes.DUP));
+                Value val = valueStack.pop();
+                valueStack.push(val);
+                valueStack.push(val);
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_VARIABLE) {
                 LoadVariable ldVar = ((LoadVariable) precompiledInsn);
                 String varName = ldVar.getName();
@@ -519,12 +524,16 @@ public class Resolver extends CompileUtils {
                                 ResolvedInsn previous = insns.get(insns.size() - 1);
                                 if(!(previous instanceof LoadThisInsn)) {
                                     insns.add(new LoadThisInsn());
+                                    valueStack.push(new ThisValue(selfType));
+                                    currentVarType = selfType;
+                                    currentIsStatic = false;
                                 }
                             }
                             System.out.println("PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             WeacType fieldType = variableMaps.get(currentVarType).getFieldType(varName);
                             insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, currentIsStatic));
                             valueStack.pop();
+                            System.out.println("2PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             valueStack.push(new FieldValue(varName, currentVarType, fieldType));
                             currentVarType = fieldType;
                             currentIsStatic = false;
@@ -644,41 +653,93 @@ public class Resolver extends CompileUtils {
                 OperatorInsn insn = ((OperatorInsn) precompiledInsn);
                 EnumOperators op = insn.getOperator();
                 if(op.isVariableAssign()) {
-                    if(op == EnumOperators.SET_TO) {
-                        Value toAssign = valueStack.pop();
-                        Value potentialVariable = valueStack.pop();
-                        if (potentialVariable.isConstant()) {
-                            newError(potentialVariable.getName() + "Invalid assigment, can only assign a value to a field or a variable", -1); // todo line
-                        } else {
-                            String name = potentialVariable.getName();
-                            if (varMap.localExists(name)) { // local variables take priority
-                                insns.add(new StoreVarInsn(varMap.getLocalIndex(name)));
-                            } else if (variableMaps.get(currentVarType).fieldExists(name)) {
-                                if (currentVarType.equals(selfType)) {
-                                    ResolvedInsn previous = insns.get(insns.size() - 1);
-                                    if (!(previous instanceof LoadThisInsn)) {
-                                        insns.add(new LoadThisInsn());
-                                    }
-                                }
-                                WeacType fieldType = variableMaps.get(currentVarType).getFieldType(name);
-                                insns.add(new StoreFieldInsn(name, fieldType, currentIsStatic));
-                                currentVarType = fieldType;
-                                currentIsStatic = false;
+                    switch(op) {
+                        case SET_TO: {
+                            Value toAssign = valueStack.pop();
+                            Value potentialVariable = valueStack.pop();
+                            if (potentialVariable.isConstant()) {
+                                newError(potentialVariable.getName() + "Invalid assigment, can only assign a value to a field or a variable", -1); // todo line
                             } else {
-                                newError("local or field " + name + " does not exist", -1); // todo line
+                                String name = potentialVariable.getName();
+                                if (potentialVariable instanceof VariableValue) { // local variables take priority
+                                    for(int i0 = insns.size()-1;i0>=0;i0--) {
+                                        ResolvedInsn in = insns.get(i0);
+                                        if(in instanceof LoadVariableInsn) {
+                                            LoadVariableInsn variableInsn = (LoadVariableInsn) in;
+                                            int index = variableInsn.getVarIndex();
+                                            if(varMap.getLocalName(index).equals(potentialVariable.getName())) {
+                                                insns.remove(i0);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    insns.add(new StoreVarInsn(varMap.getLocalIndex(name)));
+                                } else if (potentialVariable instanceof FieldValue) {
+                                    FieldValue fieldValue = (FieldValue) potentialVariable;
+                                    for(int i0 = insns.size()-1;i0>=0;i0--) {
+                                        ResolvedInsn in = insns.get(i0);
+                                        if(in instanceof LoadFieldInsn) {
+                                            LoadFieldInsn fieldInsn = (LoadFieldInsn) in;
+                                            if(fieldInsn.getOwner().equals(fieldValue.getOwner()) && fieldInsn.getFieldName().equals(fieldValue.getName())) {
+                                                insns.remove(i0);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (currentVarType.equals(selfType)) {
+                                        ResolvedInsn previous = insns.get(insns.size() - 1);
+                                        if (!(previous instanceof LoadThisInsn)) {
+                                            insns.add(new LoadThisInsn());
+                                        }
+                                    }
+
+                                    WeacType fieldType = fieldValue.getType();
+                                    insns.add(new StoreFieldInsn(name, fieldValue.getOwner(), fieldType, currentIsStatic));
+                                    currentVarType = fieldType;
+                                    currentIsStatic = false;
+                                } else {
+                                    newError("local or field " + name + " does not exist ("+currentVarType+")", -1); // todo line
+                                }
                             }
                         }
-                    } else {
-                        System.err.println("UNRESOLVED OP: " + op.name());
+                        break;
+
+                        default:
+                            System.err.println("UNRESOLVED OP: " + op.name());
+                            break;
                     }
                 } else {
-                    System.err.println("UNRESOLVED OP: " + op.name());
+                    switch (op) {
+                        case EQUAL:
+                            Value second = valueStack.pop();
+                            Value first = valueStack.pop();
+                            if(second.getType().isPrimitive() && first.getType().isPrimitive()) {
+                                // TODO
+                            } else {
+                                insns.add(new ObjectEqualInsn());
+                            }
+                            break;
+
+                        default:
+                            System.err.println("UNRESOLVED OP: " + op.name());
+                            break;
+                    }
                 }
                 // TODO
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NEW_LOCAL) {
                 NewLocalVar localVar = ((NewLocalVar) precompiledInsn);
                 WeacType type = resolveType(new Identifier(localVar.getType(), true), context);
                 varMap.registerLocal(localVar.getName(), type);
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NEW) {
+                InstanciateInsn instanciateInsn = (InstanciateInsn) precompiledInsn;
+                WeacType type = resolveType(new Identifier(instanciateInsn.getTypeName(), false), context);
+                insns.add(new NewInsn(type));
+                valueStack.push(new ConstantValue(type));
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.THROW) {
+                Value exception = valueStack.pop();
+                valueStack.clear();
+                valueStack.push(exception);
+                insns.add(new ResolvedInsn(ResolveOpcodes.THROW));
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }

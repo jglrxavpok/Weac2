@@ -19,8 +19,9 @@ public class WeacType {
 
     public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
 
-    public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "$$Pointer", true);
+    public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Pointer<Type>", true);
     public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
+
     private final WeacType superType;
     private final Identifier identifier;
     private boolean isGeneric;
@@ -143,6 +144,10 @@ public class WeacType {
 
     public WeacType getSuperType() {
         return superType;
+    }
+
+    public boolean isPrimitive() {
+        return superType.equals(PRIMITIVE_TYPE);
     }
 
     @Override

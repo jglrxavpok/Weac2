@@ -342,7 +342,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 } else {
                     opcode = PUTFIELD;
                 }
-                writer.visitFieldInsn(opcode, type.getInternalName(), fieldInsn.getName(), toDescriptor(fieldInsn.getType()));
+                writer.visitFieldInsn(opcode, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getName(), toDescriptor(fieldInsn.getType()));
             } else if(insn instanceof LoadFieldInsn) {
                 LoadFieldInsn fieldInsn = (LoadFieldInsn)insn;
                 writer.visitFieldInsn(fieldInsn.isStatic() ? GETSTATIC : GETFIELD, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getFieldName(), toDescriptor(fieldInsn.getType()));
@@ -362,6 +362,8 @@ public class Compiler extends CompileUtils implements Opcodes {
                 int invokeType = INVOKEVIRTUAL;
                 if(callInsn.isStatic()) {
                     invokeType = INVOKESTATIC;
+                } else if(callInsn.getName().equals("<init>")) {
+                    invokeType = INVOKESPECIAL;
                 }
                 WeacType owner = callInsn.getOwner();
                 if(owner.getSuperType() != null) {
@@ -376,6 +378,12 @@ public class Compiler extends CompileUtils implements Opcodes {
                     String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
                     writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
                 }
+            } else if(insn.getOpcode() == ResolveOpcodes.DUP) {
+                writer.visitInsn(DUP);
+            } else if(insn.getOpcode() == ResolveOpcodes.THROW) {
+                writer.visitInsn(ATHROW);
+            } else if(insn instanceof NewInsn) {
+                writer.visitTypeInsn(NEW, toJVMType(((NewInsn) insn).getType()).getInternalName());
             } else {
                 System.err.println("unknown: "+insn);
             }

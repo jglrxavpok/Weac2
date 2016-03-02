@@ -5,6 +5,8 @@ import static weac.compiler.utils.EnumOperators.Associativity.*;
 public enum EnumOperators {
 
     RETURN("return", 100, RIGHT, true, false),
+    THROW("throw", 100, RIGHT, true, false),
+
     NEW("new", 2, RIGHT, true, false),
     INCREMENT("++", 2, RIGHT, true, false),
     DECREMENT("--", 2, RIGHT, true, false),

@@ -553,6 +553,8 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     EnumOperators operator = EnumOperators.get(token.getContent(), true);
                     if(operator == EnumOperators.RETURN) {
                         insns.add(new SimplePreInsn(PrecompileOpcodes.RETURN));
+                    } else if(operator == EnumOperators.THROW) {
+                        insns.add(new SimplePreInsn(PrecompileOpcodes.THROW));
                     } else if(operator == EnumOperators.NEW) {
                         PrecompiledInsn prev = insns.remove(insns.size()-1);
                         String typeName;
@@ -572,6 +574,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                             typeName = "INVALID$$";
                         }
                         insns.add(new InstanciateInsn(typeName));
+                        insns.add(new SimplePreInsn(PrecompileOpcodes.DUP));
 
                         // look into the stack, as the value as just be added via the WeacInstanceInsn
                         insns.add(new FunctionCall("<init>", constructorArgCount, true));
@@ -713,7 +716,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     operator = EnumOperators.CAST;
                 }
                 if(operator != null) {
-                    if(operator != EnumOperators.RETURN) {
+                    if(operator != EnumOperators.RETURN && operator != EnumOperators.THROW) {
                         while (!stack.isEmpty() && (stack.peek().getType() == TokenType.UNARY_OPERATOR || stack.peek().getType() == TokenType.BINARY_OPERATOR || stack.peek().getType() == TokenType.CAST)) {
                             Token stackTop = stack.pop();
                             EnumOperators operator2 = EnumOperators.get(stackTop.getContent());
@@ -721,7 +724,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                 operator2 = EnumOperators.CAST;
                             }
                             if (operator2 != null) {
-                                if(operator2 == EnumOperators.RETURN) {
+                                if(operator2 == EnumOperators.RETURN || operator2 == EnumOperators.THROW) {
                                     stack.push(stackTop);
                                     break;
                                 } else {

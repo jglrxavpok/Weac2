@@ -60,6 +60,9 @@ public class CompileWorker implements Runnable {
                     file.createNewFile();
                     FileOutputStream out = new FileOutputStream(file);
                     byte[] bytecode = classesBytecode.get(className);
+                    out.write(bytecode);
+                    out.flush();
+                    out.close();
                     if(/*debug*/true) {
                         try {
                             PrintWriter pw = new PrintWriter(System.out);
@@ -68,9 +71,6 @@ public class CompileWorker implements Runnable {
                             throw new RuntimeException("Error while compiling "+className, e);
                         }
                     }
-                    out.write(bytecode);
-                    out.flush();
-                    out.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
