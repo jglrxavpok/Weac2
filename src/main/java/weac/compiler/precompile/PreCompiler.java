@@ -150,8 +150,10 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
         int offset = 0;
         String instruction;
+        int labelIndex = -1;
+        // TODO: Increment label
         do {
-            instructions.add(Collections.singletonList(new LabelInsn()));
+            instructions.add(Collections.singletonList(new LabelInsn(new Label(labelIndex))));
             offset += readUntilNot(chars, offset, ' ', '\n').length();
             instruction = readUntilInsnEnd(chars, offset);
             offset += instruction.length() + 1;
@@ -289,11 +291,16 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
         resolveOperators(tokens);
 
-        tokens = solvePatterns(tokens);
-
         handleBuiltins(tokens);
 
+        tokens = solvePatterns(tokens);
+
+        System.out.println("START TOKENS OF "+expression);
+        tokens.forEach(t -> System.out.print("<"+t+"> "));
+        System.out.println("\nEND TOKENS");
+
         List<Token> output = convertToRPN(expression, tokens);
+
 
         List<PrecompiledInsn> instructions = toInstructions(output, insns);
         if(ditchLabels) {
@@ -301,7 +308,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
             while (insnIterator.hasNext()) {
                 PrecompiledInsn insn = insnIterator.next();
                 if(insn instanceof LabelInsn) {
-                    insnIterator.remove();
+                    if(((LabelInsn) insn).getLabel().getIndex() < 0)
+                        insnIterator.remove();
+                    // TODO: Remove only if not necessary
                 }
             }
         }
@@ -390,8 +399,87 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
     private List<PrecompiledInsn> toInstructions(List<Token> output, List<PrecompiledInsn> insns) {
         // TODO: Handle 'if'/'else'
-        for(Token token : output) {
+        int labelIndex = 1;
+        for(int i = 0;i<output.size();i++) {
+            Token token = output.get(i);
+            Token previous = null;
+            Token next = null;
+            if(i != 0)
+                previous = output.get(i-1);
+            if(i != output.size()-1)
+                next = output.get(i+1);
             switch (token.getType()) {
+
+                case IF:
+                    if(next == null) {
+                        newError("Invalid statement", -1); // todo: line
+                    } else {
+                        if(next.getType() == TokenType.OPENING_CURLY_BRACKETS) {
+                            int index = findEndOfBlock(next, i+1, output);
+                            if(index < 0) {
+                                newError("Unmatched curly bracket", -1);
+                            } else {
+                                int jumpTo = labelIndex++;
+                                output.set(index, new Token(String.valueOf(jumpTo), TokenType.CLOSING_CURLY_BRACKETS, -1));
+                                insns.add(new IfNotJumpInsn(new Label(jumpTo)));
+                            }
+                        } else {
+                            newError("Not supported yet", -1);
+                        }
+                    }
+                    break;
+
+                case ELSEIF:
+                    if(next == null || previous == null) {
+                        newError("Invalid statement", -1); // todo: line
+                    } else {
+                        if(next.getType() == TokenType.OPENING_CURLY_BRACKETS) {
+                            int index = findEndOfBlock(next, i+1, output);
+                            int jumpTo = labelIndex++;
+                            output.set(index, new Token(String.valueOf(jumpTo), TokenType.CLOSING_CURLY_BRACKETS, -1));
+                            insns.add(new IfNotJumpInsn(new Label(jumpTo)));
+                        } else {
+                            newError("Not supported yet "+next.getType(), -1);
+                        }
+                    }
+                    break;
+
+                case ELSE:
+                    if(next == null || previous == null) {
+                        newError("Invalid statement", -1); // todo: line
+                    } else {
+                        if(next.getType() == TokenType.OPENING_CURLY_BRACKETS && previous.getType() == TokenType.CLOSING_CURLY_BRACKETS) {
+                            int index = findEndOfBlock(next, i+1, output);
+                            int jumpTo = labelIndex++;
+                            output.set(index, new Token(String.valueOf(jumpTo), TokenType.CLOSING_CURLY_BRACKETS, -1));
+                            insns.add(new GotoInsn(new Label(jumpTo)));
+                            insns.add(new LabelInsn(new Label(Integer.parseInt(previous.getContent()))));
+                        } else {
+                            newError("Not supported yet", -1);
+                        }
+                    }
+                    break;
+
+                case OPENING_CURLY_BRACKETS:
+                    int index = findEndOfBlock(token, i, output);
+                    if(index == -1) { // should not happen, but who knows
+                        newError("Unclosed curly bracket!", -1); // todo: line
+                    }
+                    break;
+
+                case CLOSING_CURLY_BRACKETS:
+                    if(next == null || next.getType() != TokenType.ELSE) {
+                        if(next != null && next instanceof FunctionStartToken) {
+                            if(((FunctionStartToken) next).getFunctionType() == TokenType.ELSEIF) {
+                                break;
+                            }
+                        }
+                        if(!token.getContent().equals("}")) {
+                            int lbl = Integer.parseInt(token.getContent());
+                            insns.add(new LabelInsn(new Label(lbl)));
+                        }
+                    }
+                    break;
 
                 case NEW_LOCAL:
                     NewLocalToken localToken = ((NewLocalToken) token);
@@ -447,6 +535,17 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     break;
 
                 case FUNCTION_START:
+                    if(token instanceof FunctionStartToken) {
+                        if(((FunctionStartToken) token).getFunctionType() == TokenType.ELSEIF) {
+                            if (previous != null && previous.getType() == TokenType.CLOSING_CURLY_BRACKETS && !previous.getContent().equals("}")) {
+                                int jumpTo = labelIndex;
+                                insns.add(new GotoInsn(new Label(jumpTo)));
+                                insns.add(new LabelInsn(new Label(Integer.parseInt(previous.getContent()))));
+                            } else {
+                                newError("Not supported, yet", -1);
+                            }
+                        }
+                    }
                     insns.add(new SimplePreInsn(PrecompileOpcodes.FUNCTION_START));
                     break;
 
@@ -485,9 +584,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 case DEFINE_ARRAY:
                     int length = Integer.parseInt(token.getContent());
                     insns.add(new CreateArray(length, "$$unknown"));
-                    for(int i = 0;i<length;i++) {
+                    for(int j = 0;j<length;j++) {
                         insns.add(new SimplePreInsn(PrecompileOpcodes.DUP));
-                        insns.add(new StoreArray(length - i - 1));
+                        insns.add(new StoreArray(length - j - 1));
                     }
                     break;
 
@@ -499,6 +598,28 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         }
 
         return postProcessInstructions(insns);
+    }
+
+    private int findEndOfBlock(Token start, int off, List<Token> tokens) {
+        if(start.getType() != TokenType.OPENING_CURLY_BRACKETS) {
+            throw new IllegalArgumentException("start");
+        }
+        int unclosed = 0;
+        for(int i = off;i<tokens.size();i++) {
+            Token t = tokens.get(i);
+            switch (t.getType()) {
+                case OPENING_CURLY_BRACKETS:
+                    unclosed++;
+                    break;
+
+                case CLOSING_CURLY_BRACKETS:
+                    unclosed--;
+                    if(unclosed == 0)
+                        return i;
+                    break;
+            }
+        }
+        return -1;
     }
 
     private List<PrecompiledInsn> postProcessInstructions(List<PrecompiledInsn> insns) {
@@ -536,8 +657,10 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         instanceStack.setCurrent(false).push();
         for(int i = 0;i<tokens.size();i++) {
             Token token = tokens.get(i);
-            if(token.getType() == TokenType.NEW_LOCAL) {
-              out.add(token);
+            if(token.getType() == TokenType.INSTRUCTION_END) {
+                out.add(token);
+            } else if(token.getType() == TokenType.NEW_LOCAL) {
+                out.add(token);
             } else if(token.getType().isValue()) {
                 instanceStack.setCurrent(true);
                 if(i+2 < tokens.size()) {
@@ -565,8 +688,8 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     out.add(token);
                     argCount++;
                 }
-            } else if(token.getType() == TokenType.FUNCTION || token.getType() == TokenType.IF) {
-                out.add(new FunctionStartToken());
+            } else if(token.getType() == TokenType.FUNCTION || token.getType() == TokenType.IF || token.getType() == TokenType.ELSEIF) {
+                out.add(new FunctionStartToken(token.getType()));
                 stack.push(token);
                 argCountStack.push(argCount);
                 argCount = 0;
@@ -669,7 +792,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         } else {
                             if(!stack.isEmpty()) {
                                 Token top = stack.peek();
-                                if(top.getType() == TokenType.FUNCTION || top.getType() == TokenType.IF) {
+                                if(top.getType() == TokenType.FUNCTION || top.getType() == TokenType.IF || top.getType() == TokenType.ELSEIF) {
                                     Token originalToken = stack.pop();
                                     /*if(!stack.isEmpty()) {
                                         if(stack.peek().getType() == TokenType.MEMBER_ACCESSING) {
@@ -700,7 +823,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     return Collections.EMPTY_LIST;
                 }
                 instanceStack.setCurrent(true);
-            } else if(token.getType() == TokenType.ELSE || token.getType() == TokenType.IF) {
+            } else if(token.getType() == TokenType.ELSE) {
                 out.add(token);
             }
         }

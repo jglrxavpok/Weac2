@@ -37,6 +37,7 @@ public enum TokenType {
     ELSEIF,
 
     FUNCTION_START,
+    INSTRUCTION_END,
 
     NEW_LOCAL,
 

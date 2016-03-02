@@ -4,6 +4,7 @@ import weac.compiler.parse.structure.ParsedAnnotation;
 import weac.compiler.utils.*;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 // TODO: Clean this mess
 public abstract class CompileUtils {
@@ -392,9 +393,9 @@ public abstract class CompileUtils {
                 }
             }
         }
-        Optional<EnumOperators> operator = operators.stream()
-                .sorted((a, b) -> Integer.compare(a.raw().length(), b.raw().length()))
-                .sorted(Comparator.reverseOrder())
+        Stream<EnumOperators> sortedStream = operators.stream()
+                .sorted((a, b) -> -Integer.compare(a.raw().length(), b.raw().length()));
+        Optional<EnumOperators> operator = sortedStream
                 .findFirst();
         if(operator.isPresent()) {
             return operator.get().raw();

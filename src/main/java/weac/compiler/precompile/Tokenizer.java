@@ -29,6 +29,9 @@ public class Tokenizer extends CompileUtils {
                     return new Token(String.valueOf(first), TokenType.MEMBER_ACCESSING, 1);
                 }
                 switch (first) {
+                    case '\n':
+                        return new SpaceToken(); // TODO: Handle linenumbers properly
+
                     case ':':
                         return new Token(String.valueOf(first), TokenType.INTERVAL_STEP, 1);
 
@@ -75,6 +78,9 @@ public class Tokenizer extends CompileUtils {
 
                     case ',':
                         return new Token(String.valueOf(first), TokenType.ARGUMENT_SEPARATOR, 1);
+
+                    case ';':
+                        return new Token(String.valueOf(first), TokenType.INSTRUCTION_END, 1);
 
                 }
 

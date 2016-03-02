@@ -5,9 +5,9 @@ Pointer<Type> {
     private Type value;
 
     Type get() {
-        /*if(value == null) {
+        if(/*value == null*/false) {
             throw new NullPointerException();
-        }*/
+        }
         return value;
     }
 

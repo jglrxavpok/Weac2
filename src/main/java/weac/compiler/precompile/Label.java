@@ -11,4 +11,14 @@ public class Label {
     public int getIndex() {
         return index;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Label && ((Label) obj).getIndex() == getIndex();
+    }
+
+    @Override
+    public String toString() {
+        return "Label["+index+"]";
+    }
 }

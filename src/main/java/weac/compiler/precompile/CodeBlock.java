@@ -12,7 +12,7 @@ public class CodeBlock {
     private final List<List<PrecompiledInsn>> instructions;
 
     public CodeBlock() {
-        start = new Label(0);
+        start = new Label(-1);
         end = new Label(-1);
         instructions = new LinkedList<>();
     }

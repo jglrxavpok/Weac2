@@ -1,3 +1,4 @@
+import weac.compiler.precompile.Label;
 import weac.compiler.precompile.PreCompiler;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.utils.EnumOperators;
@@ -19,8 +20,36 @@ public class TestPrecompile extends Tests {
     }
 
     @Test
-    public void testPrecompile() {
-        precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }", null);
+    public void testElseIf() {
+        precompile(preCompiler, "if(false) { 0.5f } else if(false) { -0.5f }",
+                new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(1)),
+                    new LoadNumberConstant("0.5f"),
+                    new GotoInsn(new Label(2)),
+                new LabelInsn(new Label(1)),
+                new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(2)),
+                    new LoadNumberConstant("0.5f"),
+                    new OperatorInsn(EnumOperators.UNARY_MINUS),
+                new LabelInsn(new Label(2)));
+    }
+
+    @Test
+    public void test() {
+        precompile(preCompiler, "if(false) {\n" +
+                "throw new NullPointerException();\n" +
+                "}\n" +
+                "return value", null);
+    }
+
+    @Test
+    public void testElse() {
+        precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }",
+                new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(1)),
+                new LoadNumberConstant("0.5f"),
+                new GotoInsn(new Label(2)),
+                new LabelInsn(new Label(1)),
+                    new LoadNumberConstant("0.5f"),
+                    new OperatorInsn(EnumOperators.UNARY_MINUS),
+                new LabelInsn(new Label(2)));
     }
 
     @Test

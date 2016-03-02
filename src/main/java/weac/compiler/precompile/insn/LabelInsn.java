@@ -12,11 +12,6 @@ public class LabelInsn extends PrecompiledInsn {
         this.label = label;
     }
 
-    public LabelInsn() {
-        super(LABEL);
-        this.label = new Label(labelIndex++);
-    }
-
     public Label getLabel() {
         return label;
     }
@@ -30,5 +25,10 @@ public class LabelInsn extends PrecompiledInsn {
             return casted.getLabel().equals(label);
         }
         return false;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString()+" "+label;
     }
 }

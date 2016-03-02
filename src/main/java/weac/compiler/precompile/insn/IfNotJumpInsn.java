@@ -24,4 +24,9 @@ public class IfNotJumpInsn extends PrecompiledInsn {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return super.toString()+" "+jumpTo;
+    }
 }
