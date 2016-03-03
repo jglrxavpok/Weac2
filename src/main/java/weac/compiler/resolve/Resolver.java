@@ -718,6 +718,7 @@ public class Resolver extends CompileUtils {
                             } else {
                                 insns.add(new ObjectEqualInsn());
                             }
+                            valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
                             break;
 
                         default:
@@ -738,8 +739,13 @@ public class Resolver extends CompileUtils {
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.THROW) {
                 Value exception = valueStack.pop();
                 valueStack.clear();
-                valueStack.push(exception);
+                //valueStack.push(exception);
                 insns.add(new ResolvedInsn(ResolveOpcodes.THROW));
+            } else if(precompiledInsn instanceof IfNotJumpInsn) {
+                valueStack.pop();
+                insns.add(new IfNotJumpResInsn(((IfNotJumpInsn) precompiledInsn).getJumpTo()));
+            } else if(precompiledInsn instanceof GotoInsn) {
+                insns.add(new GotoResInsn(((GotoInsn) precompiledInsn).getLabel()));
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }

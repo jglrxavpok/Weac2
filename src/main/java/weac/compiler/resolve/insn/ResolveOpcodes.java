@@ -45,7 +45,9 @@ public interface ResolveOpcodes {
             OBJ_EQUAL = 0x25,
             DUP = 0x26,
             NEW = 0x27,
-            THROW = 0x28
+            THROW = 0x28,
+            IF_NOT_TRUE_JUMP = 0x29,
+            JUMP = 0x2A
 
     ;
 

@@ -3,6 +3,7 @@ package weac.compiler.compile;
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.precompile.Label;
+import weac.compiler.precompile.insn.LabelInsn;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
@@ -292,6 +293,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         l.forEach(System.out::println);
         System.out.println("=============");
         ResolvedInsn last = null;
+        LabelMap labelMap = new LabelMap();
         for (int i = 0; i < l.size(); i++) {
             ResolvedInsn insn = l.get(i);
             last = insn;
@@ -324,7 +326,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 writer.visitInsn(b ? ICONST_1 : ICONST_0);
             } else if(insn instanceof ResolvedLabelInsn) {
                 Label b = ((ResolvedLabelInsn) insn).getLabel();
-                writer.visitLabel(new org.objectweb.asm.Label());
+                writer.visitLabel(labelMap.get(b));
             } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
                 int code = insn.getOpcode();
                 int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
@@ -384,6 +386,23 @@ public class Compiler extends CompileUtils implements Opcodes {
                 writer.visitInsn(ATHROW);
             } else if(insn instanceof NewInsn) {
                 writer.visitTypeInsn(NEW, toJVMType(((NewInsn) insn).getType()).getInternalName());
+            } else if(insn instanceof GotoResInsn) {
+                org.objectweb.asm.Label lbl = labelMap.get(((GotoResInsn) insn).getLabel());
+                writer.visitJumpInsn(GOTO, lbl);
+            } else if(insn instanceof IfNotJumpResInsn) {
+                org.objectweb.asm.Label lbl = labelMap.get(((IfNotJumpResInsn) insn).getJumpTo());
+                writer.visitLabel(new org.objectweb.asm.Label());
+                writer.visitJumpInsn(IF_ICMPNE, lbl);
+            } else if(insn instanceof ObjectEqualInsn) {
+                org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
+                org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
+                writer.visitLabel(new org.objectweb.asm.Label());
+                writer.visitJumpInsn(IF_ACMPNE, lbl);
+                writer.visitInsn(ICONST_0);
+                writer.visitJumpInsn(GOTO, lbl1);
+                writer.visitLabel(lbl);
+                writer.visitInsn(ICONST_1);
+                writer.visitLabel(lbl1);
             } else {
                 System.err.println("unknown: "+insn);
             }
