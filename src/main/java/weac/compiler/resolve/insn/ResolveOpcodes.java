@@ -30,11 +30,12 @@ public interface ResolveOpcodes {
             BOOL_RETURN = 0x16,
             CHAR_RETURN = 0x17,
             DOUBLE_RETURN = 0x18,
+            BYTE_RETURN = 0x19,
 
             // Room for other types
 
             FIRST_RETURN_OPCODE = RETURN,
-            LAST_RETURN_OPCODE = DOUBLE_RETURN,
+            LAST_RETURN_OPCODE = BYTE_RETURN,
 
             LOAD_LOCAL_VARIABLE = 0x20,
             LOAD_FIELD = 0x21,
@@ -47,7 +48,11 @@ public interface ResolveOpcodes {
             NEW = 0x27,
             THROW = 0x28,
             IF_NOT_TRUE_JUMP = 0x29,
-            JUMP = 0x2A
+            JUMP = 0x2A,
+            MULTIPLY = 0x2B,
+            ADD = 0x2C,
+            SUBTRACT = 0x2D,
+            DIVIDE = 0x2E
 
     ;
 

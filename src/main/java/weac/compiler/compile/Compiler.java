@@ -202,6 +202,11 @@ public class Compiler extends CompileUtils implements Opcodes {
             org.objectweb.asm.Label start = new org.objectweb.asm.Label();
             org.objectweb.asm.Label end = new org.objectweb.asm.Label();
 
+            if(method.isConstructor) {
+                mv.visitVarInsn(ALOAD, 0);
+                mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
+            }
+
             int localIndex = 0;
             if(!convertInstanceMethodToStatic) {
                 localIndex++; // 'this'
@@ -220,6 +225,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             if(!isAbstract) {
                 mv.visitCode();
                 mv.visitLabel(start);
+
                 if(!method.isAbstract && method.isConstructor) {
                     clazz.fields.stream()
                             .filter(f -> !f.defaultValue.isEmpty())
@@ -240,6 +246,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                     try {
                         throw new RuntimeException("WARNING in "+method.name+" "+method.argumentTypes.get(0)+" / "+type, e);
                     } catch (Exception e1) {
+                        e.printStackTrace();
                         e1.printStackTrace();
                     }
                 }
@@ -248,7 +255,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             mv.visitEnd();
         }
         if(nConstructors == 0) {
-            MethodVisitor mv = writer.visitMethod(ACC_PRIVATE, "<init>", Type.getMethodType(Type.VOID_TYPE).getDescriptor(), null, null);
+            MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "<init>", Type.getMethodType(Type.VOID_TYPE).getDescriptor(), null, null);
             org.objectweb.asm.Label start = new org.objectweb.asm.Label();
             org.objectweb.asm.Label end = new org.objectweb.asm.Label();
 
@@ -256,6 +263,8 @@ public class Compiler extends CompileUtils implements Opcodes {
 
             int localIndex = 1; // 'this'
             mv.visitLabel(start);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
             clazz.fields.stream()
                     .filter(f -> !f.defaultValue.isEmpty())
                     .forEach(f -> {
@@ -330,7 +339,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
                 int code = insn.getOpcode();
                 int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
-                int[] returnOpcodes = new int[] {RETURN, ARETURN, IRETURN, FRETURN, IRETURN, LRETURN, IRETURN, IRETURN, DRETURN};
+                int[] returnOpcodes = new int[] {RETURN, ARETURN, IRETURN, FRETURN, IRETURN, LRETURN, IRETURN, IRETURN, DRETURN, IRETURN};
                 writer.visitInsn(returnOpcodes[returnIndex]);
             } else if(insn instanceof StoreVarInsn) {
                 StoreVarInsn varInsn = (StoreVarInsn)insn;
@@ -350,7 +359,88 @@ public class Compiler extends CompileUtils implements Opcodes {
                 writer.visitFieldInsn(fieldInsn.isStatic() ? GETSTATIC : GETFIELD, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getFieldName(), toDescriptor(fieldInsn.getType()));
             } else if(insn instanceof LoadVariableInsn) {
                 LoadVariableInsn variableInsn = (LoadVariableInsn)insn;
-                writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
+                Type primitiveType = getPrimitiveType(variableInsn.getVarType());
+                if(primitiveType != null) {
+                    int loadType = ALOAD;
+                    if(primitiveType == Type.BOOLEAN_TYPE) {
+                        loadType = ILOAD;
+                    } else if(primitiveType == Type.BYTE_TYPE) {
+                        loadType = ILOAD;
+                    } else if(primitiveType == Type.CHAR_TYPE) {
+                        loadType = ILOAD;
+                    } else if(primitiveType == Type.DOUBLE_TYPE) {
+                        loadType = DLOAD;
+                    } else if(primitiveType == Type.FLOAT_TYPE) {
+                        loadType = FLOAD;
+                    } else if(primitiveType == Type.INT_TYPE) {
+                        loadType = ILOAD;
+                    } else if(primitiveType == Type.LONG_TYPE) {
+                        loadType = LLOAD;
+                    } else if(primitiveType == Type.SHORT_TYPE) {
+                        loadType = ILOAD;
+                    } else if(primitiveType == Type.VOID_TYPE) {
+                        loadType = ALOAD;
+                    }
+                    writer.visitVarInsn(loadType, variableInsn.getVarIndex());
+                } else {
+                    writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
+                }
+            } else if(insn instanceof MultiplyInsn) {
+                MultiplyInsn multInsn = (MultiplyInsn)insn;
+                Type primitiveType = getPrimitiveType(multInsn.getResultType());
+                if(primitiveType != null) {
+                    int loadType = -1; // TODO: custom operators
+                    if(primitiveType == Type.BOOLEAN_TYPE) {
+                        loadType = IMUL;
+                    } else if(primitiveType == Type.BYTE_TYPE) {
+                        loadType = IMUL;
+                    } else if(primitiveType == Type.CHAR_TYPE) {
+                        loadType = IMUL;
+                    } else if(primitiveType == Type.DOUBLE_TYPE) {
+                        loadType = DMUL;
+                    } else if(primitiveType == Type.FLOAT_TYPE) {
+                        loadType = FMUL;
+                    } else if(primitiveType == Type.INT_TYPE) {
+                        loadType = IMUL;
+                    } else if(primitiveType == Type.LONG_TYPE) {
+                        loadType = LMUL;
+                    } else if(primitiveType == Type.SHORT_TYPE) {
+                        loadType = IMUL;
+                    } else if(primitiveType == Type.VOID_TYPE) {
+                        loadType = -1;
+                    }
+                    writer.visitInsn(loadType);
+                } else {
+                    //writer.visitVarInsn(ALOAD, multInsn.getVarIndex());
+                }
+            } else if(insn instanceof SubtractInsn) {
+                SubtractInsn multInsn = (SubtractInsn)insn;
+                Type primitiveType = getPrimitiveType(multInsn.getResultType());
+                if(primitiveType != null) {
+                    int loadType = -1; // TODO: custom operators
+                    if(primitiveType == Type.BOOLEAN_TYPE) {
+                        loadType = ISUB;
+                    } else if(primitiveType == Type.BYTE_TYPE) {
+                        loadType = ISUB;
+                    } else if(primitiveType == Type.CHAR_TYPE) {
+                        loadType = ISUB;
+                    } else if(primitiveType == Type.DOUBLE_TYPE) {
+                        loadType = DSUB;
+                    } else if(primitiveType == Type.FLOAT_TYPE) {
+                        loadType = FSUB;
+                    } else if(primitiveType == Type.INT_TYPE) {
+                        loadType = ISUB;
+                    } else if(primitiveType == Type.LONG_TYPE) {
+                        loadType = LSUB;
+                    } else if(primitiveType == Type.SHORT_TYPE) {
+                        loadType = ISUB;
+                    } else if(primitiveType == Type.VOID_TYPE) {
+                        loadType = -1;
+                    }
+                    writer.visitInsn(loadType);
+                } else {
+                    //writer.visitVarInsn(ALOAD, multInsn.getVarIndex());
+                }
             } else if(insn instanceof LoadNullInsn) {
                 writer.visitInsn(ACONST_NULL);
             } else if(insn instanceof PopInsn) {
@@ -549,11 +639,13 @@ public class Compiler extends CompileUtils implements Opcodes {
 
         switch (clazz.classType) {
             case ANNOTATION:
-                type = ACC_ANNOTATION + ACC_INTERFACE;
+                type = ACC_ANNOTATION | ACC_INTERFACE;
+                abstractness = ACC_ABSTRACT;
                 break;
 
             case INTERFACE:
                 type = ACC_INTERFACE;
+                abstractness = ACC_ABSTRACT;
                 break;
 
             case ENUM:
@@ -580,6 +672,7 @@ public class Compiler extends CompileUtils implements Opcodes {
 
         if(clazz.isMixin) {
             type = ACC_INTERFACE;
+            abstractness = ACC_ABSTRACT;
         }
 
         return access | type | abstractness;

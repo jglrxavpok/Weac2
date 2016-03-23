@@ -21,15 +21,34 @@ public class TestPrecompile extends Tests {
 
     @Test
     public void testElseIf() {
-        precompile(preCompiler, "if(false) { 0.5f } else if(false) { -0.5f }",
+        precompile(preCompiler, "if(false) { 0.5f } else if(false) { -0.5f } else if(false) { -0.5f } else if(false) { -0.5f }",
                 new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(1)),
                     new LoadNumberConstant("0.5f"),
-                    new GotoInsn(new Label(2)),
+
+                new LabelInsn(new Label(2)),
+                    new GotoInsn(new Label(4)),
                 new LabelInsn(new Label(1)),
-                new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(2)),
+                new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(3)),
                     new LoadNumberConstant("0.5f"),
                     new OperatorInsn(EnumOperators.UNARY_MINUS),
-                new LabelInsn(new Label(2)));
+
+                new LabelInsn(new Label(4)),
+                    new GotoInsn(new Label(6)),
+
+                new LabelInsn(new Label(3)),
+                    new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(5)),
+                    new LoadNumberConstant("0.5f"),
+                    new OperatorInsn(EnumOperators.UNARY_MINUS),
+
+                new LabelInsn(new Label(6)),
+                    new GotoInsn(new Label(8)),
+
+                new LabelInsn(new Label(5)),
+                    new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(7)),
+                    new LoadNumberConstant("0.5f"),
+                    new OperatorInsn(EnumOperators.UNARY_MINUS),
+                new LabelInsn(new Label(8)),
+                new LabelInsn(new Label(7)));
     }
 
     @Test
@@ -45,11 +64,16 @@ public class TestPrecompile extends Tests {
         precompile(preCompiler, "if(false) { 0.5f } else { -0.5f }",
                 new SimplePreInsn(PrecompileOpcodes.FUNCTION_START), new LoadBooleanConstant(false), new IfNotJumpInsn(new Label(1)),
                 new LoadNumberConstant("0.5f"),
-                new GotoInsn(new Label(2)),
+                new GotoInsn(new Label(4)),
+
+                new LabelInsn(new Label(2)),
+                    new GotoInsn(new Label(3)),
+
                 new LabelInsn(new Label(1)),
                     new LoadNumberConstant("0.5f"),
                     new OperatorInsn(EnumOperators.UNARY_MINUS),
-                new LabelInsn(new Label(2)));
+                new LabelInsn(new Label(4)),
+                new LabelInsn(new Label(3)));
     }
 
     @Test

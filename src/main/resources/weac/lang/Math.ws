@@ -25,7 +25,10 @@ object Math {
     }
 
     Int fact(Int number) {
-        return 0;
+        if(number == 1) {
+            return 1;
+        }
+        return number*fact(number-1);
     }
 
 }

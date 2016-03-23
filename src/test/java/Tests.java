@@ -1,13 +1,18 @@
 import weac.compiler.PrecompilationProcessor;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 public abstract class Tests {
 
     public String read(String filename) throws IOException {
-        InputStream stream = PrecompilationProcessor.class.getResourceAsStream("/"+filename);
+        return new String(readRaw(filename, true), "UTF-8");
+    }
+
+    public byte[] readRaw(String filename, boolean inClasspath) throws IOException {
+        InputStream stream = inClasspath ? PrecompilationProcessor.class.getResourceAsStream("/"+filename) : new FileInputStream(filename);
         byte[] buffer = new byte[8096];
         int i;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -16,6 +21,6 @@ public abstract class Tests {
         }
         out.flush();
         out.close();
-        return new String(out.toByteArray(), "UTF-8");
+        return out.toByteArray();
     }
 }

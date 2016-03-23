@@ -36,7 +36,7 @@ public class FunctionCallInsn extends ResolvedInsn {
 
     @Override
     public String toString() {
-        return super.toString()+" "+owner.getIdentifier()+" "+name+" "+nArgs+" ("+instanceInStack+")";
+        return super.toString()+" "+owner.getIdentifier()+" "+name+" "+nArgs+" ("+instanceInStack+", "+isStatic+")";
     }
 
     public WeacType getOwner() {

@@ -1,5 +1,6 @@
 package weac.compiler.resolve;
 
+import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.patterns.InstructionPattern;
@@ -439,6 +440,8 @@ public class Resolver extends CompileUtils {
     private List<ResolvedInsn> resolveSingleExpression(List<PrecompiledInsn> precompiled, WeacType selfType, ResolvingContext context, VariableMap varMap) {
         List<ResolvedInsn> insns = new LinkedList<>();
         Stack<Value> valueStack = new Stack<>();
+        VariableTopStack<Boolean> staticness = new VariableTopStack<>();
+        staticness.setCurrent(false);
 
         Map<WeacType, VariableMap> variableMaps = new HashMap<>();
         // fill variableMaps
@@ -448,7 +451,6 @@ public class Resolver extends CompileUtils {
         variableMaps.put(selfType, varMap);
 
         WeacType currentVarType = selfType;
-        boolean currentIsStatic = false;
         for(int i = 0;i<precompiled.size();i++) {
             PrecompiledInsn precompiledInsn = precompiled.get(i);
             if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_NUMBER_CONSTANT) {
@@ -463,56 +465,61 @@ public class Resolver extends CompileUtils {
                 insns.add(resolvedNumber);
 
                 currentVarType = numberType;
-                currentIsStatic = false;
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.FUNCTION_START) {
                 currentVarType = selfType;
-                currentIsStatic = false;
+                staticness.setCurrent(true).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_BOOLEAN_CONSTANT) {
                 LoadBooleanConstant cst = ((LoadBooleanConstant) precompiledInsn);
                 insns.add(new LoadBooleanInsn(cst.getValue()));
 
                 valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
                 currentVarType = WeacType.BOOLEAN_TYPE;
-                currentIsStatic = false;
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_STRING_CONSTANT) {
                 LoadStringConstant cst = ((LoadStringConstant) precompiledInsn);
                 insns.add(stringResolver.resolve(cst.getValue()));
                 valueStack.push(new ConstantValue(WeacType.STRING_TYPE));
 
                 currentVarType = WeacType.STRING_TYPE;
-                currentIsStatic = false;
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_CHARACTER_CONSTANT) {
                 LoadCharacterConstant cst = ((LoadCharacterConstant) precompiledInsn);
                 insns.add(new LoadCharInsn(stringResolver.resolveSingleCharacter(cst.getValue().toCharArray(), 0)));
                 valueStack.push(new ConstantValue(WeacType.CHAR_TYPE));
 
                 currentVarType = WeacType.CHAR_TYPE;
-                currentIsStatic = false;
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.ARGUMENT_SEPARATOR) {
                 currentVarType = selfType;
-                currentIsStatic = false;
+
+                staticness.pop();
+                staticness.setCurrent(true).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.DUP) {
                 insns.add(new ResolvedInsn(ResolveOpcodes.DUP));
                 Value val = valueStack.pop();
                 valueStack.push(val);
                 valueStack.push(val);
+
+                staticness.push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_VARIABLE) {
                 LoadVariable ldVar = ((LoadVariable) precompiledInsn);
                 String varName = ldVar.getName();
                 if(varName.equals("this")) {
-                    insns.add(new LoadThisInsn());
+                    insns.add(new LoadThisInsn(selfType));
                     valueStack.push(new ThisValue(selfType));
                     currentVarType = selfType;
-                    currentIsStatic = false;
+                    staticness.setCurrent(false).push();
                 } else {
                     // check if local variable
                     if(varMap.localExists(varName)) {
                         int index = varMap.getLocalIndex(varName);
-                        insns.add(new LoadVariableInsn(index));
+                        WeacType type = varMap.getLocalType(varName);
+                        insns.add(new LoadVariableInsn(index, type));
                         WeacType localType = varMap.getLocalType(varName);
                         valueStack.push(new VariableValue(varName, localType, index));
                         currentVarType = localType;
-                        currentIsStatic = false;
+                        staticness.setCurrent(false).push();
                     } else {
                         // check if field
                         if(!variableMaps.containsKey(currentVarType)) {
@@ -523,32 +530,34 @@ public class Resolver extends CompileUtils {
                             if(currentVarType.equals(selfType)) {
                                 ResolvedInsn previous = insns.get(insns.size() - 1);
                                 if(!(previous instanceof LoadThisInsn)) {
-                                    insns.add(new LoadThisInsn());
+                                    insns.add(new LoadThisInsn(selfType));
                                     valueStack.push(new ThisValue(selfType));
                                     currentVarType = selfType;
-                                    currentIsStatic = false;
+                                    staticness.setCurrent(false).push();
                                 }
                             }
                             System.out.println("PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             WeacType fieldType = variableMaps.get(currentVarType).getFieldType(varName);
-                            insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, currentIsStatic));
+                            insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, staticness.pop()));
                             valueStack.pop();
+                            staticness.pop();
                             System.out.println("2PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             valueStack.push(new FieldValue(varName, currentVarType, fieldType));
                             currentVarType = fieldType;
-                            currentIsStatic = false;
+                            staticness.setCurrent(false).push();
                         } else {
                             System.out.println("Did not find field "+varName+" in "+currentVarType+" (self is "+selfType+")");
                             PrecompiledClass clazz = findClass(varName, context);
                             if(clazz != null) {
                                 currentVarType = resolveType(new Identifier(clazz.fullName, true), context);
                                 if(clazz instanceof JavaImportedClass) {
-                                    currentIsStatic = true;
+                                    staticness.setCurrent(true).push();
                                     valueStack.push(new ConstantValue(currentVarType));
+                                    System.out.println("FROM JAVA!! "+currentVarType);
                                 } else if(clazz.classType == EnumClassTypes.OBJECT) {
                                     insns.add(new LoadFieldInsn(Constants.SINGLETON_INSTANCE_FIELD, currentVarType, currentVarType, true));
                                     valueStack.push(new FieldValue(Constants.SINGLETON_INSTANCE_FIELD, currentVarType, currentVarType));
-                                    currentIsStatic = false;
+                                    staticness.setCurrent(false).push();
                                 } else {
                                     newError(":cc2 "+context.getSource().classes.get(0).fullName+" / "+currentVarType.getIdentifier(), -1); // todo line
                                 }
@@ -589,7 +598,10 @@ public class Resolver extends CompileUtils {
                 }
 
                 WeacType returnType = resolveType(realMethod.returnType, context);
-                insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), cst.shouldLookForInstance() && !realMethod.isJavaImported, argTypes, returnType, currentIsStatic));
+                if(cst.getArgCount() != 0)
+                    staticness.pop(); // remove value on top of stack
+                insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), cst.shouldLookForInstance() && !realMethod.isJavaImported, argTypes, returnType, staticness.pop()));
+                staticness.setCurrent(true).push();
                 int toPop = cst.getArgCount();
                 if(valueStack.size() < toPop) {
                     throw new RuntimeException(name+" / "+toPop+" "+Arrays.toString(valueStack.toArray())+" / "+cst.shouldLookForInstance()+" (java: "+realMethod.isJavaImported+")");
@@ -605,12 +617,15 @@ public class Resolver extends CompileUtils {
                 if(valueStack.isEmpty()) {
                     insns.add(new ResolvedInsn(ResolveOpcodes.RETURN));
                 } else {
-                    WeacType type = valueStack.pop().getType();
+                    Value val = valueStack.pop();
+                    WeacType type = val.getType();
                     int opcode = ResolveOpcodes.OBJ_RETURN;
                     if(type == null) {
                         opcode = ResolveOpcodes.RETURN;
                     } else if(type.equals(WeacType.BOOLEAN_TYPE)) {
                         opcode = ResolveOpcodes.BOOL_RETURN;
+                    } else if(type.equals(WeacType.BYTE_TYPE)) {
+                        opcode = ResolveOpcodes.BYTE_RETURN;
                     } else if(type.equals(WeacType.CHAR_TYPE)) {
                         opcode = ResolveOpcodes.CHAR_RETURN;
                     } else if(type.equals(WeacType.DOUBLE_TYPE)) {
@@ -630,11 +645,13 @@ public class Resolver extends CompileUtils {
                     insns.add(new ResolvedInsn(opcode));
                 }
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.THIS) {
-                insns.add(new LoadThisInsn());
+                insns.add(new LoadThisInsn(selfType));
                 valueStack.push(new ThisValue(selfType));
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_NULL) {
                 insns.add(new LoadNullInsn());
                 valueStack.push(new NullValue());
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LABEL) {
                 while(!valueStack.isEmpty()) {
                     if(valueStack.peek().getType().equals(selfType)) {
@@ -656,7 +673,9 @@ public class Resolver extends CompileUtils {
                     switch(op) {
                         case SET_TO: {
                             Value toAssign = valueStack.pop();
+                            staticness.pop();
                             Value potentialVariable = valueStack.pop();
+                            staticness.pop();
                             if (potentialVariable.isConstant()) {
                                 newError(potentialVariable.getName() + "Invalid assigment, can only assign a value to a field or a variable", -1); // todo line
                             } else {
@@ -689,14 +708,14 @@ public class Resolver extends CompileUtils {
                                     if (currentVarType.equals(selfType)) {
                                         ResolvedInsn previous = insns.get(insns.size() - 1);
                                         if (!(previous instanceof LoadThisInsn)) {
-                                            insns.add(new LoadThisInsn());
+                                            insns.add(new LoadThisInsn(selfType));
                                         }
                                     }
 
                                     WeacType fieldType = fieldValue.getType();
-                                    insns.add(new StoreFieldInsn(name, fieldValue.getOwner(), fieldType, currentIsStatic));
+                                    insns.add(new StoreFieldInsn(name, fieldValue.getOwner(), fieldType, staticness.pop()));
                                     currentVarType = fieldType;
-                                    currentIsStatic = false;
+                                    staticness.setCurrent(false).push();
                                 } else {
                                     newError("local or field " + name + " does not exist ("+currentVarType+")", -1); // todo line
                                 }
@@ -712,14 +731,41 @@ public class Resolver extends CompileUtils {
                     switch (op) {
                         case EQUAL:
                             Value second = valueStack.pop();
+                            staticness.pop();
                             Value first = valueStack.pop();
+                            staticness.pop();
                             if(second.getType().isPrimitive() && first.getType().isPrimitive()) {
                                 // TODO
                             } else {
                                 insns.add(new ObjectEqualInsn());
                             }
                             valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
+                            staticness.setCurrent(false).push();
                             break;
+
+                        case MULTIPLY: {
+                            Value last = valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(last.getType()));
+                            staticness.pop();
+                            staticness.pop();
+                            staticness.setCurrent(false).push();
+
+                            insns.add(new MultiplyInsn(last.getType()));
+                        }
+                        break;
+
+                        case MINUS: {
+                            Value last = valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(last.getType()));
+                            staticness.pop();
+                            staticness.pop();
+                            staticness.setCurrent(false).push();
+
+                            insns.add(new SubtractInsn(last.getType()));
+                        }
+                        break;
 
                         default:
                             System.err.println("UNRESOLVED OP: " + op.name());
@@ -736,6 +782,7 @@ public class Resolver extends CompileUtils {
                 WeacType type = resolveType(new Identifier(instanciateInsn.getTypeName(), false), context);
                 insns.add(new NewInsn(type));
                 valueStack.push(new ConstantValue(type));
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.THROW) {
                 Value exception = valueStack.pop();
                 valueStack.clear();
@@ -743,6 +790,7 @@ public class Resolver extends CompileUtils {
                 insns.add(new ResolvedInsn(ResolveOpcodes.THROW));
             } else if(precompiledInsn instanceof IfNotJumpInsn) {
                 valueStack.pop();
+                staticness.pop();
                 insns.add(new IfNotJumpResInsn(((IfNotJumpInsn) precompiledInsn).getJumpTo()));
             } else if(precompiledInsn instanceof GotoInsn) {
                 insns.add(new GotoResInsn(((GotoInsn) precompiledInsn).getLabel()));
