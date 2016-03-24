@@ -441,7 +441,7 @@ public class Resolver extends CompileUtils {
         List<ResolvedInsn> insns = new LinkedList<>();
         Stack<Value> valueStack = new Stack<>();
         VariableTopStack<Boolean> staticness = new VariableTopStack<>();
-        staticness.setCurrent(false);
+        staticness.setCurrent(false).push();
 
         Map<WeacType, VariableMap> variableMaps = new HashMap<>();
         // fill variableMaps
@@ -501,7 +501,8 @@ public class Resolver extends CompileUtils {
                 valueStack.push(val);
                 valueStack.push(val);
 
-                staticness.push();
+                boolean staticnessVal = staticness.pop();
+                staticness.setCurrent(staticnessVal).push().push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_VARIABLE) {
                 LoadVariable ldVar = ((LoadVariable) precompiledInsn);
                 String varName = ldVar.getName();
@@ -538,9 +539,9 @@ public class Resolver extends CompileUtils {
                             }
                             System.out.println("PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             WeacType fieldType = variableMaps.get(currentVarType).getFieldType(varName);
-                            insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, staticness.pop()));
+                            boolean isStatic = staticness.pop();
+                            insns.add(new LoadFieldInsn(varName, currentVarType, fieldType, isStatic));
                             valueStack.pop();
-                            staticness.pop();
                             System.out.println("2PL FOUND in "+currentVarType.getIdentifier()+" : "+varName);
                             valueStack.push(new FieldValue(varName, currentVarType, fieldType));
                             currentVarType = fieldType;
@@ -574,6 +575,9 @@ public class Resolver extends CompileUtils {
                 FunctionCall cst = ((FunctionCall) precompiledInsn);
                 Value owner;
                 String name;
+                if(cst.getArgCount() != 0)
+                    staticness.pop(); // remove value on top of stack
+                boolean isStatic = staticness.pop();
                 if(cst.getName().equals("this")) { // call constructor
                     owner = new ThisValue(selfType);
                     name = selfType.getIdentifier().getId();
@@ -581,7 +585,7 @@ public class Resolver extends CompileUtils {
                     owner = new ThisValue(selfType.getSuperType());
                     name = selfType.getSuperType().getIdentifier().getId();
                 } else {
-                    owner = findFunctionOwner(valueStack, selfType, cst, context);
+                    owner = findFunctionOwner(valueStack, selfType, cst, context, isStatic);
                     name = cst.getName();
                 }
 
@@ -590,7 +594,7 @@ public class Resolver extends CompileUtils {
                 PrecompiledMethod realMethod = findMethod(owner.getType(), name, cst.getArgCount(), valueStack, context);
 
                 if(realMethod == null) {
-                    newError("Could not find method named "+name+" in "+owner.getType()+" with "+cst.getArgCount()+" argument(s).", -1);
+                    newError("Could not find method named "+name+" in "+owner.getType()+" with "+cst.getArgCount()+" argument(s). (current class: "+selfType+")", -1);
                 }
 
                 for(int i0 = 0;i0<argTypes.length;i0++) {
@@ -598,10 +602,9 @@ public class Resolver extends CompileUtils {
                 }
 
                 WeacType returnType = resolveType(realMethod.returnType, context);
-                if(cst.getArgCount() != 0)
-                    staticness.pop(); // remove value on top of stack
-                insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), cst.shouldLookForInstance() && !realMethod.isJavaImported, argTypes, returnType, staticness.pop()));
-                staticness.setCurrent(true).push();
+                insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), cst.shouldLookForInstance() && !realMethod.isJavaImported, argTypes, returnType, isStatic));
+
+                staticness.setCurrent(false).push();
                 int toPop = cst.getArgCount();
                 if(valueStack.size() < toPop) {
                     throw new RuntimeException(name+" / "+toPop+" "+Arrays.toString(valueStack.toArray())+" / "+cst.shouldLookForInstance()+" (java: "+realMethod.isJavaImported+")");
@@ -764,6 +767,18 @@ public class Resolver extends CompileUtils {
                             staticness.setCurrent(false).push();
 
                             insns.add(new SubtractInsn(last.getType()));
+                        }
+                        break;
+
+                        case MOD: {
+                            Value last = valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(last.getType()));
+                            staticness.pop();
+                            staticness.pop();
+                            staticness.setCurrent(false).push();
+
+                            insns.add(new ModuloInsn(last.getType()));
                         }
                         break;
 
@@ -965,7 +980,7 @@ public class Resolver extends CompileUtils {
         return WeacType.VOID_TYPE;
     }
 
-    private Value findFunctionOwner(Stack<Value> stack, WeacType currentType, FunctionCall cst, ResolvingContext context) {
+    private Value findFunctionOwner(Stack<Value> stack, WeacType currentType, FunctionCall cst, ResolvingContext context, boolean isStatic) {
         if(cst.shouldLookForInstance()) {
             System.out.println("OWNER: "+currentType.getIdentifier()+" "+cst+" "+Arrays.toString(stack.toArray()));
             int args = cst.getArgCount();

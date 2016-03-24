@@ -18,9 +18,16 @@ import java.util.*;
 public class Compiler extends CompileUtils implements Opcodes {
 
     private final PseudoInterpreter pseudoInterpreter;
+    private final HashMap<Integer, Integer> startingOpcodes;
 
     public Compiler() {
         pseudoInterpreter = new PseudoInterpreter();
+        startingOpcodes = new HashMap<>();
+        startingOpcodes.put(ResolveOpcodes.ADD, IADD);
+        startingOpcodes.put(ResolveOpcodes.MULTIPLY, IMUL);
+        startingOpcodes.put(ResolveOpcodes.DIVIDE, IDIV);
+        startingOpcodes.put(ResolveOpcodes.SUBTRACT, ISUB);
+        startingOpcodes.put(ResolveOpcodes.MODULUS, IREM);
     }
 
     public Map<String, byte[]> process(ResolvedSource source) {
@@ -385,57 +392,28 @@ public class Compiler extends CompileUtils implements Opcodes {
                 } else {
                     writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
                 }
-            } else if(insn instanceof MultiplyInsn) {
-                MultiplyInsn multInsn = (MultiplyInsn)insn;
+            } else if(insn instanceof OperationInsn) {
+                OperationInsn multInsn = (OperationInsn)insn;
+                int startingOpcode = startingOpcodes.getOrDefault(multInsn.getOpcode(), -100);
                 Type primitiveType = getPrimitiveType(multInsn.getResultType());
                 if(primitiveType != null) {
                     int loadType = -1; // TODO: custom operators
                     if(primitiveType == Type.BOOLEAN_TYPE) {
-                        loadType = IMUL;
+                        loadType = startingOpcode;
                     } else if(primitiveType == Type.BYTE_TYPE) {
-                        loadType = IMUL;
+                        loadType = startingOpcode;
                     } else if(primitiveType == Type.CHAR_TYPE) {
-                        loadType = IMUL;
+                        loadType = startingOpcode;
                     } else if(primitiveType == Type.DOUBLE_TYPE) {
-                        loadType = DMUL;
+                        loadType = startingOpcode+3;
                     } else if(primitiveType == Type.FLOAT_TYPE) {
-                        loadType = FMUL;
+                        loadType = startingOpcode+2;
                     } else if(primitiveType == Type.INT_TYPE) {
-                        loadType = IMUL;
+                        loadType = startingOpcode;
                     } else if(primitiveType == Type.LONG_TYPE) {
-                        loadType = LMUL;
+                        loadType = startingOpcode+1;
                     } else if(primitiveType == Type.SHORT_TYPE) {
-                        loadType = IMUL;
-                    } else if(primitiveType == Type.VOID_TYPE) {
-                        loadType = -1;
-                    }
-                    writer.visitInsn(loadType);
-                } else {
-                    //writer.visitVarInsn(ALOAD, multInsn.getVarIndex());
-                }
-            } else if(insn instanceof SubtractInsn) {
-                SubtractInsn multInsn = (SubtractInsn)insn;
-                Type primitiveType = getPrimitiveType(multInsn.getResultType());
-                if(primitiveType != null) {
-                    int loadType = -1; // TODO: custom operators
-                    if(primitiveType == Type.BOOLEAN_TYPE) {
-                        loadType = ISUB;
-                    } else if(primitiveType == Type.BYTE_TYPE) {
-                        loadType = ISUB;
-                    } else if(primitiveType == Type.CHAR_TYPE) {
-                        loadType = ISUB;
-                    } else if(primitiveType == Type.DOUBLE_TYPE) {
-                        loadType = DSUB;
-                    } else if(primitiveType == Type.FLOAT_TYPE) {
-                        loadType = FSUB;
-                    } else if(primitiveType == Type.INT_TYPE) {
-                        loadType = ISUB;
-                    } else if(primitiveType == Type.LONG_TYPE) {
-                        loadType = LSUB;
-                    } else if(primitiveType == Type.SHORT_TYPE) {
-                        loadType = ISUB;
-                    } else if(primitiveType == Type.VOID_TYPE) {
-                        loadType = -1;
+                        loadType = startingOpcode;
                     }
                     writer.visitInsn(loadType);
                 } else {

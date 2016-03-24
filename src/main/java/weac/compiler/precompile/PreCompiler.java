@@ -751,7 +751,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                         if (operator.precedence() > operator2.precedence()) {
                                             out.add(stackTop);
                                             if(!operator2.isUnary()) {
+                                                instanceStack.pop();
                                                 argCount--;
+                                                instanceStack.setCurrent(false).push();
                                             }
                                         } else {
                                             break;
@@ -760,7 +762,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                         if (operator.precedence() >= operator2.precedence()) {
                                             out.add(stackTop);
                                             if(!operator2.isUnary()) {
+                                                instanceStack.pop();
                                                 argCount--;
+                                                instanceStack.setCurrent(false).push();
                                             }
                                         } else {
                                             break;
@@ -776,6 +780,11 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     if(token.getType() == TokenType.CAST) {
                         stack.push(token);
                     } else {
+                        if(!operator.isUnary()) {
+                            instanceStack.pop();
+                            //argCount--;
+                            instanceStack.setCurrent(false).push();
+                        }
                         stack.push(new Token(operator.raw(), token.getType(), token.length));
                     }
                 } else {
@@ -794,8 +803,13 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 boolean shouldLookForInstance = instanceStack.pop();
                 if(!stack.isEmpty()) {
                     while(!stack.peek().isOpposite(token)) {
-                        out.add(stack.pop());
-
+                        Token val = stack.pop();
+                        out.add(val);
+                        if(val.getType() == TokenType.BINARY_OPERATOR) {
+                            instanceStack.pop();
+                            argCount--;
+                            instanceStack.setCurrent(false).push();
+                        }
                     }
 
                     if(stack.isEmpty()) {

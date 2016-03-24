@@ -49,10 +49,13 @@ public interface ResolveOpcodes {
             THROW = 0x28,
             IF_NOT_TRUE_JUMP = 0x29,
             JUMP = 0x2A,
-            MULTIPLY = 0x2B,
-            ADD = 0x2C,
-            SUBTRACT = 0x2D,
-            DIVIDE = 0x2E
+
+            // Operations
+            MULTIPLY = 0x30,
+            ADD = 0x31,
+            SUBTRACT = 0x32,
+            DIVIDE = 0x33,
+            MODULUS = 0x34
 
     ;
 

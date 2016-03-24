@@ -21,7 +21,11 @@ object Math {
     }
 
     Boolean isInteger(Double value) {
-        return value % 1 == 0;
+        return abs(value % 1) == 0;
+    }
+
+    Double abs(Double value) {
+        return JMath.abs(value);
     }
 
     Int fact(Int number) {

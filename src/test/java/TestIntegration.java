@@ -19,11 +19,11 @@ public class TestIntegration extends Tests {
         Class<?> mathClass = Class.forName("weac.lang.Math");
         if(mathClass != null)
         {
-            Method m = mathClass.getDeclaredMethod("random");
+            Method m = mathClass.getDeclaredMethod("fact");
             m.setAccessible(true);
             Object instance = mathClass.getDeclaredField("__instance__").get(null);
-            Object val = m.invoke(instance);
-            System.out.println("Math.__instance__.random() = "+val);
+            Object val = m.invoke(instance, 5);
+            System.out.println("Math.__instance__.fact(5) = "+val);
         }
     }
 

@@ -9,7 +9,7 @@ import weac.compiler.CompileUtils;
  */
 public class Identifier {
 
-    public static final char[] allowedCharacters = {'<', '>', '*', '[', ']', '_'};
+    public static final char[] allowedCharacters = {'<', '>', '~', '[', ']', '_'};
 
     /**
      * The raw id

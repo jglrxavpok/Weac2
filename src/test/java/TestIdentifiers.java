@@ -48,7 +48,7 @@ public class TestIdentifiers {
 
     @Test
     public void pointerID() {
-        assertTrue("Identifier 'SomeType*' must be valid", new Identifier("SomeType*").isValid());
+        assertTrue("Identifier 'SomeType~' must be valid", new Identifier("SomeType~").isValid());
     }
 
     @Test
