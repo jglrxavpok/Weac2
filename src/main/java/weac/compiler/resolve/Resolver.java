@@ -747,8 +747,8 @@ public class Resolver extends CompileUtils {
                             break;
 
                         case MULTIPLY: {
-                            Value last = valueStack.pop();
                             valueStack.pop();
+                            Value last = valueStack.pop();
                             valueStack.push(new ConstantValue(last.getType()));
                             staticness.pop();
                             staticness.pop();
@@ -759,8 +759,8 @@ public class Resolver extends CompileUtils {
                         break;
 
                         case MINUS: {
-                            Value last = valueStack.pop();
                             valueStack.pop();
+                            Value last = valueStack.pop();
                             valueStack.push(new ConstantValue(last.getType()));
                             staticness.pop();
                             staticness.pop();
@@ -771,8 +771,8 @@ public class Resolver extends CompileUtils {
                         break;
 
                         case MOD: {
-                            Value last = valueStack.pop();
                             valueStack.pop();
+                            Value last = valueStack.pop();
                             valueStack.push(new ConstantValue(last.getType()));
                             staticness.pop();
                             staticness.pop();

@@ -10,7 +10,8 @@ public class TestIntegration extends Tests {
     public void test0() throws IOException, InvocationTargetException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, NoSuchFieldException {
         String[] names = {
                 "weac.lang.Object", "weac.lang.Void", "weac.lang.Primitive", "weac.lang.JavaPrimitive",
-                "weac.lang.Double", "weac.lang.Float", "weac.lang.Int", "weac.lang.Boolean", "weac.lang.Math"
+                "weac.lang.Double", "weac.lang.Float", "weac.lang.Int", "weac.lang.Boolean", "weac.lang.Pointer",
+                "weac.lang.Math"
         };
         for(String n : names)
         {

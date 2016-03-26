@@ -33,6 +33,14 @@ public class TestWeaCC extends Tests {
     }
 
     @Test
+    public void simpleResolution() throws IOException, TimeoutException {
+        File output = new File(".", "monolith/resolution");
+        empty(new File(output, "tests"));
+        WeaCC.main(new String[] {"--out", output.getPath(), "--stdl", "src/main/resources/weac/lang", "src/test/resources/tests/HelloWorld.ws", "--stopAt", "precompilation"});
+        assertEquals(asList(new File(output, "tests/HelloWorld.preweac"), new File(output, "tests/TestMixin.preweac")), asList(new File(output, "tests").listFiles()));
+    }
+
+    @Test
     public void simpleCompile() throws IOException, TimeoutException {
         File output = new File(".", "monolith");
         empty(new File(output, "tests"));

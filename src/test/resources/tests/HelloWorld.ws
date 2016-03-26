@@ -3,7 +3,7 @@ package tests
 object HelloWorld > Application + TestMixin {
 
     String[] myField;
-    private Int fieldWithDefaultValue0 = 0
+    private Int fieldWithDefaultValue0 = 0;
     private Int fieldWithDefaultValue1 = 0xA;
     private Int fieldWithDefaultValue2 = 0b1010;
     private Int fieldWithDefaultValue3 = 0o451;
