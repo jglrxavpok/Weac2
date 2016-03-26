@@ -738,7 +738,11 @@ public class Resolver extends CompileUtils {
                             Value first = valueStack.pop();
                             staticness.pop();
                             if(second.getType().isPrimitive() && first.getType().isPrimitive()) {
+                                insns.add(new SubtractInsn(first.getType()));
+                                insns.add(new CheckNotZero());
+                            } else if(first.getType().isPrimitive() && !second.getType().isPrimitive()) {
                                 // TODO
+                                newError("Dunno what to do", -1);
                             } else {
                                 insns.add(new ObjectEqualInsn());
                             }
