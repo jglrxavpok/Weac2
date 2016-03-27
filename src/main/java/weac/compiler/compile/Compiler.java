@@ -3,7 +3,6 @@ package weac.compiler.compile;
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.precompile.Label;
-import weac.compiler.precompile.insn.LabelInsn;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
@@ -392,6 +391,23 @@ public class Compiler extends CompileUtils implements Opcodes {
                 } else {
                     writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
                 }
+            } else if(insn instanceof CompareInsn) {
+                CompareInsn compInsn = (CompareInsn)insn;
+                Type primitiveType = getPrimitiveType(compInsn.getResultType());
+                if(primitiveType != null) {
+                    int loadType = -1; // TODO: custom operators
+                    if(primitiveType == Type.DOUBLE_TYPE) {
+                        loadType = DCMPL;
+                    } else if(primitiveType == Type.FLOAT_TYPE) {
+                        loadType = FCMPL;
+                    } else if(primitiveType == Type.LONG_TYPE) {
+                        loadType = LCMP;
+                    }
+                    writer.visitInsn(loadType);
+                } else {
+                    // TODO
+                    // invalid
+                }
             } else if(insn instanceof OperationInsn) {
                 OperationInsn multInsn = (OperationInsn)insn;
                 int startingOpcode = startingOpcodes.getOrDefault(multInsn.getOpcode(), -100);
@@ -471,7 +487,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 writer.visitLabel(lbl);
                 writer.visitInsn(ICONST_1);
                 writer.visitLabel(lbl1);
-            } else if(insn instanceof CheckNotZero) {
+            } else if(insn instanceof CheckZero) {
                 org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
                 org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
                 writer.visitLabel(new org.objectweb.asm.Label());

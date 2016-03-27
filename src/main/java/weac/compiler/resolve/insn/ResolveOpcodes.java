@@ -57,7 +57,8 @@ public interface ResolveOpcodes {
             DIVIDE = 0x33,
             MODULUS = 0x34,
 
-            IS_ZERO = 0x40
+            IS_ZERO = 0x40,
+            COMPARE_ZERO = 0x41
 
     ;
 

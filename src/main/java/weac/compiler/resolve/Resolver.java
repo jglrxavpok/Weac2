@@ -12,6 +12,7 @@ import weac.compiler.resolve.values.*;
 import weac.compiler.utils.*;
 
 import java.util.*;
+import java.util.function.Function;
 
 public class Resolver extends CompileUtils {
 
@@ -19,12 +20,19 @@ public class Resolver extends CompileUtils {
     private final NumberResolver numberResolver;
     private final StringResolver stringResolver;
     private final PrimitiveCastSolver primitiveCasts;
+    private final Map<EnumOperators, Function<WeacType, OperationInsn>> operatorsInsnFactories;
 
     public Resolver() {
         patterns = new LinkedList<>();
         numberResolver = new NumberResolver();
         stringResolver = new StringResolver();
         primitiveCasts = new PrimitiveCastSolver();
+        operatorsInsnFactories = new HashMap<>();
+        operatorsInsnFactories.put(EnumOperators.MINUS, SubtractInsn::new);
+        operatorsInsnFactories.put(EnumOperators.PLUS, AddInsn::new);
+        operatorsInsnFactories.put(EnumOperators.MOD, ModulusInsn::new);
+        operatorsInsnFactories.put(EnumOperators.MULTIPLY, MultiplyInsn::new);
+        operatorsInsnFactories.put(EnumOperators.DIVIDE, DivideInsn::new);
     }
 
     public ResolvedSource process(ResolvingContext context) {
@@ -738,9 +746,15 @@ public class Resolver extends CompileUtils {
                             Value first = valueStack.pop();
                             staticness.pop();
                             if(second.getType().isPrimitive() && first.getType().isPrimitive()) {
-                                insns.add(new SubtractInsn(first.getType()));
-                                insns.add(new CheckNotZero());
-                            } else if(first.getType().isPrimitive() && !second.getType().isPrimitive()) {
+                                WeacType resultType = findResultType(first.getType(), second.getType(), context);
+                                insns.add(new SubtractInsn(resultType));
+                                if(!isCastable(resultType, WeacType.INTEGER_TYPE, context)) {
+                                    insns.add(new CompareInsn(resultType));
+                                } else {
+                                    insns.add(new CheckZero());
+                                }
+                            } else if(first.getType().isPrimitive() && !second.getType().isPrimitive()
+                                    || !first.getType().isPrimitive() && second.getType().isPrimitive()) {
                                 // TODO
                                 newError("Dunno what to do", -1);
                             } else {
@@ -750,39 +764,21 @@ public class Resolver extends CompileUtils {
                             staticness.setCurrent(false).push();
                             break;
 
+                        case MINUS:
+                        case MOD:
+                        case PLUS:
+                        case DIVIDE:
                         case MULTIPLY: {
-                            valueStack.pop();
-                            Value last = valueStack.pop();
-                            valueStack.push(new ConstantValue(last.getType()));
+                            Value right = valueStack.pop();
+                            Value left = valueStack.pop();
+                            WeacType resultType = findResultType(left.getType(), right.getType(), context);
+
+                            valueStack.push(new ConstantValue(resultType));
                             staticness.pop();
                             staticness.pop();
                             staticness.setCurrent(false).push();
 
-                            insns.add(new MultiplyInsn(last.getType()));
-                        }
-                        break;
-
-                        case MINUS: {
-                            valueStack.pop();
-                            Value last = valueStack.pop();
-                            valueStack.push(new ConstantValue(last.getType()));
-                            staticness.pop();
-                            staticness.pop();
-                            staticness.setCurrent(false).push();
-
-                            insns.add(new SubtractInsn(last.getType()));
-                        }
-                        break;
-
-                        case MOD: {
-                            valueStack.pop();
-                            Value last = valueStack.pop();
-                            valueStack.push(new ConstantValue(last.getType()));
-                            staticness.pop();
-                            staticness.pop();
-                            staticness.setCurrent(false).push();
-
-                            insns.add(new ModuloInsn(last.getType()));
+                            insns.add(createOperatorInsn(resultType, op));
                         }
                         break;
 
@@ -818,6 +814,21 @@ public class Resolver extends CompileUtils {
             }
         }
         return insns;
+    }
+
+    private WeacType findResultType(WeacType left, WeacType right, ResolvingContext context) {
+        if(left.equals(right)) {
+            return left;
+        } else if(isCastable(left, right, context)) {
+            return right;
+        } else if(isCastable(right, left, context)) {
+            return left;
+        }
+        return WeacType.JOBJECT_TYPE;
+    }
+
+    private ResolvedInsn createOperatorInsn(WeacType resultType, EnumOperators op) {
+        return operatorsInsnFactories.get(op).apply(resultType);
     }
 
     private void registerVariables(PrecompiledClass cl, Map<WeacType, VariableMap> variableMaps, ResolvingContext context) {

@@ -147,7 +147,7 @@ public class WeacType {
     }
 
     public boolean isPrimitive() {
-        return superType.equals(PRIMITIVE_TYPE);
+        return superType != null && superType.equals(PRIMITIVE_TYPE);
     }
 
     @Override
