@@ -58,7 +58,10 @@ public interface ResolveOpcodes {
             MODULUS = 0x34,
 
             IS_ZERO = 0x40,
-            COMPARE_ZERO = 0x41
+            COMPARE_ZERO = 0x41,
+
+            LOCAL_VARIABLE_TABLE = 0x50,
+            CAST = 0x51
 
     ;
 
@@ -70,8 +73,9 @@ public interface ResolveOpcodes {
             for(Field field : fields) {
                 if(field.getType() == Integer.TYPE) {
                     try {
-                        if(!names.containsValue(field.getName()))
-                            names.put(field.getInt(null), field.getName());
+                        int value = field.getInt(null);
+                        if(!names.containsKey(value))
+                            names.put(value, field.getName());
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }

@@ -773,6 +773,18 @@ public class Resolver extends CompileUtils {
                             Value left = valueStack.pop();
                             WeacType resultType = findResultType(left.getType(), right.getType(), context);
 
+                            if(!left.getType().equals(resultType)) {
+                                int tmpVarIndex = varMap.registerLocal("$temp"+varMap.getCurrentLocalIndex(), right.getType());
+                                insns.add(new StoreVarInsn(tmpVarIndex));
+
+                                insns.add(new CastInsn(left.getType(), resultType));
+                                insns.add(new LoadVariableInsn(tmpVarIndex, right.getType()));
+                            }
+
+                            if(!right.getType().equals(resultType)) {
+                                insns.add(new CastInsn(right.getType(), resultType));
+                            }
+
                             valueStack.push(new ConstantValue(resultType));
                             staticness.pop();
                             staticness.pop();
@@ -813,6 +825,8 @@ public class Resolver extends CompileUtils {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }
         }
+
+        insns.add(0, new LocalVariableTableInsn(varMap));
         return insns;
     }
 

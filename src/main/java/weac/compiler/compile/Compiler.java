@@ -6,6 +6,7 @@ import weac.compiler.precompile.Label;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
+import weac.compiler.resolve.values.VariableValue;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.Constants;
 import weac.compiler.utils.ModifierType;
@@ -18,9 +19,11 @@ public class Compiler extends CompileUtils implements Opcodes {
 
     private final PseudoInterpreter pseudoInterpreter;
     private final HashMap<Integer, Integer> startingOpcodes;
+    private PrimitiveCastCompiler primitiveCastCompiler;
 
     public Compiler() {
         pseudoInterpreter = new PseudoInterpreter();
+        primitiveCastCompiler = new PrimitiveCastCompiler();
         startingOpcodes = new HashMap<>();
         startingOpcodes.put(ResolveOpcodes.ADD, IADD);
         startingOpcodes.put(ResolveOpcodes.MULTIPLY, IMUL);
@@ -497,10 +500,29 @@ public class Compiler extends CompileUtils implements Opcodes {
                 writer.visitLabel(lbl);
                 writer.visitInsn(ICONST_1);
                 writer.visitLabel(lbl1);
+            } else if(insn instanceof LocalVariableTableInsn) {
+                List<VariableValue> locals = ((LocalVariableTableInsn) insn).getLocals();
+                for(VariableValue local : locals) {
+                    writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
+                            new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex());
+                }
+            } else if(insn instanceof CastInsn) {
+                CastInsn cInsn = ((CastInsn) insn);
+                WeacType from = cInsn.getFrom();
+                WeacType to = cInsn.getTo();
+                if(from.isPrimitive() && to.isPrimitive()) {
+                    handlePrimitiveCast(from, to, writer);
+                } else if(!from.isPrimitive() && !to.isPrimitive()) {
+                    writer.visitTypeInsn(CHECKCAST, toJVMType(to).getInternalName());
+                }
             } else {
                 System.err.println("unknown: "+insn);
             }
         }
+    }
+
+    private void handlePrimitiveCast(WeacType from, WeacType to, MethodVisitor writer) {
+        primitiveCastCompiler.compile(from, to, writer);
     }
 
     private void writeFields(ClassWriter writer, Type type, ResolvedClass clazz, Type primitiveType) {
