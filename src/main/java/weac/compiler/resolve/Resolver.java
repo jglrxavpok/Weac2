@@ -740,20 +740,34 @@ public class Resolver extends CompileUtils {
                     }
                 } else {
                     switch (op) {
-                        case EQUAL:
+                        case EQUAL: {
                             Value second = valueStack.pop();
                             staticness.pop();
                             Value first = valueStack.pop();
                             staticness.pop();
-                            if(second.getType().isPrimitive() && first.getType().isPrimitive()) {
-                                WeacType resultType = findResultType(first.getType(), second.getType(), context);
+
+                            WeacType resultType = findResultType(first.getType(), second.getType(), context);
+
+                            if (!first.getType().equals(resultType)) {
+                                int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), second.getType());
+                                insns.add(new StoreVarInsn(tmpVarIndex));
+
+                                insns.add(new CastInsn(first.getType(), resultType));
+                                insns.add(new LoadVariableInsn(tmpVarIndex, second.getType()));
+                            }
+
+                            if (!second.getType().equals(resultType)) {
+                                insns.add(new CastInsn(second.getType(), resultType));
+                            }
+
+                            if (second.getType().isPrimitive() && first.getType().isPrimitive()) {
                                 insns.add(new SubtractInsn(resultType));
-                                if(!isCastable(resultType, WeacType.INTEGER_TYPE, context)) {
+                                if (!isCastable(resultType, WeacType.INTEGER_TYPE, context)) {
                                     insns.add(new CompareInsn(resultType));
                                 } else {
                                     insns.add(new CheckZero());
                                 }
-                            } else if(first.getType().isPrimitive() && !second.getType().isPrimitive()
+                            } else if (first.getType().isPrimitive() && !second.getType().isPrimitive()
                                     || !first.getType().isPrimitive() && second.getType().isPrimitive()) {
                                 // TODO
                                 newError("Dunno what to do", -1);
@@ -762,7 +776,8 @@ public class Resolver extends CompileUtils {
                             }
                             valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
                             staticness.setCurrent(false).push();
-                            break;
+                        }
+                        break;
 
                         case MINUS:
                         case MOD:
@@ -888,6 +903,7 @@ public class Resolver extends CompileUtils {
                     return true;
                 })
                 .sorted((a, b) -> {
+
                     // TODO: make methods that have the correct types go towards the first indexes
                     return 0;
                 })
@@ -921,7 +937,6 @@ public class Resolver extends CompileUtils {
             WeacType superType = resolveType(new Identifier(superclass.fullName, true), context);
             PrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, context);
             if(supermethod == null) {
-                // TODO: check interfaces
                 List<PrecompiledClass> interfaces = hierarchy.getInterfaces();
                 for(PrecompiledClass in : interfaces) {
                     WeacType interType = resolveType(new Identifier(in.fullName, true), context);
@@ -949,7 +964,6 @@ public class Resolver extends CompileUtils {
         if(from.equals(to)) {
             return true;
         }
-        // TODO: primitive types
         if(primitiveCasts.isPrimitiveCast(from, to)) {
             return primitiveCasts.isCastable(from, to);
         }

@@ -220,8 +220,9 @@ public class Compiler extends CompileUtils implements Opcodes {
             if(!convertInstanceMethodToStatic) {
                 localIndex++; // 'this'
             } else {
+                mv.visitLocalVariable("__value", primitiveType.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 0);
                 mv.visitParameter("__value", ACC_FINAL);
-                mv.visitLocalVariable("__value", primitiveType.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), localIndex++);
+                localIndex++;
             }
             List<Identifier> argumentNames = method.argumentNames;
             for (int i = 0; i < argumentNames.size(); i++) {
@@ -276,6 +277,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
             clazz.fields.stream()
                     .filter(f -> !f.defaultValue.isEmpty())
+                    .filter(f -> !(f.defaultValue.size() == 1 && f.defaultValue.get(0) instanceof LocalVariableTableInsn))
                     .forEach(f -> {
                         mv.visitLabel(new org.objectweb.asm.Label());
                         mv.visitVarInsn(ALOAD, 0);
@@ -307,6 +309,7 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private void compileSingleExpression(Type type, MethodVisitor writer, List<ResolvedInsn> l) {
+        boolean localDefined = false;
         System.out.println("=== INSNS "+type.getInternalName()+" ===");
         l.forEach(System.out::println);
         System.out.println("=============");
@@ -400,10 +403,13 @@ public class Compiler extends CompileUtils implements Opcodes {
                 if(primitiveType != null) {
                     int loadType = -1; // TODO: custom operators
                     if(primitiveType == Type.DOUBLE_TYPE) {
+                        writer.visitInsn(DCONST_0);
                         loadType = DCMPL;
                     } else if(primitiveType == Type.FLOAT_TYPE) {
+                        writer.visitInsn(FCONST_0);
                         loadType = FCMPL;
                     } else if(primitiveType == Type.LONG_TYPE) {
+                        writer.visitInsn(LCONST_0);
                         loadType = LCMP;
                     }
                     writer.visitInsn(loadType);
@@ -506,6 +512,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                     writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
                             new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex());
                 }
+                // TODO: avoid duplicate entries
             } else if(insn instanceof CastInsn) {
                 CastInsn cInsn = ((CastInsn) insn);
                 WeacType from = cInsn.getFrom();
@@ -522,7 +529,7 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private void handlePrimitiveCast(WeacType from, WeacType to, MethodVisitor writer) {
-        primitiveCastCompiler.compile(from, to, writer);
+        primitiveCastCompiler.compile(getPrimitiveType(from).getDescriptor(), getPrimitiveType(to).getDescriptor(), writer);
     }
 
     private void writeFields(ClassWriter writer, Type type, ResolvedClass clazz, Type primitiveType) {

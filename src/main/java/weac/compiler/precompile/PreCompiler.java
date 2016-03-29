@@ -138,7 +138,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
     private CodeBlock compileCodeBlock(String source) {
 
-        // TODO: Support if, else, etc.
         char[] chars = source.toCharArray();
         StringBuilder buffer = new StringBuilder();
         final CodeBlock currentBlock = new CodeBlock();
@@ -160,32 +159,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
             instructions.add(precompileExpression(instruction));
         } while(!instruction.isEmpty());
 
-/*        for(int i = 0;i<chars.length;i++) {
-            char c = chars[i];
-            if(c == '(') {
-                int offset = handleBuiltins(buffer.toString(), chars, i, instructions, currentBlock, previousBlock);
-                if(offset == 0) {
-                    buffer.append(c);
-                } else {
-                    buffer.delete(0, buffer.length());
-                }
-                i += offset;
-            } else if(c == '{') {
-                if(buffer.toString().equals("else")) {
-                    // TODO
-                } else {
-                    String codeBlockSource = readCodeblock(chars, i+1);
-                    CodeBlock block = compileCodeBlock(codeBlockSource);
-                    instructions.add(Collections.singletonList(new BlockInsn(block)));
-                    i += codeBlockSource.length();
-                }
-                buffer.delete(0, buffer.length());
-            } else {
-                String instructionSource = readUntilInsnEnd(chars, i);
-                buffer.delete(0, buffer.length());
-                instructions.add(compileSingleInstruction(instructionSource));
-            }
-        }*/
         instructions.add(Collections.singletonList(new LabelInsn(currentBlock.getEnd())));
         return currentBlock;
     }
@@ -398,7 +371,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
     }
 
     private List<PrecompiledInsn> toInstructions(List<Token> output, List<PrecompiledInsn> insns) {
-        // TODO: Handle 'if'/'else'
         int labelIndex = 1;
         for(int i = 0;i<output.size();i++) {
             Token token = output.get(i);
