@@ -229,7 +229,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 Identifier argName = argumentNames.get(i);
                 Type argType = argTypes.get(i);
                 mv.visitParameter(argName.getId(), ACC_FINAL);
-                mv.visitLocalVariable(argName.getId(), argType.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), localIndex++);
+            //    mv.visitLocalVariable(argName.getId(), argType.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), localIndex++);
             }
 
             if(!isAbstract) {
@@ -247,7 +247,9 @@ public class Compiler extends CompileUtils implements Opcodes {
                             });
                     nConstructors++;
                 }
+                mv.visitLabel(new org.objectweb.asm.Label());
                 compileSingleExpression(type, mv, method.instructions);
+                mv.visitLabel(new org.objectweb.asm.Label());
                 mv.visitInsn(RETURN);
                 mv.visitLabel(end);
                 try {
@@ -284,6 +286,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                         this.compileSingleExpression(type, mv, f.defaultValue);
                         mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                     });
+            mv.visitLabel(new org.objectweb.asm.Label());
             mv.visitInsn(RETURN);
             mv.visitLabel(end);
             mv.visitMaxs(0,0);
@@ -485,7 +488,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             } else if(insn instanceof IfNotJumpResInsn) {
                 org.objectweb.asm.Label lbl = labelMap.get(((IfNotJumpResInsn) insn).getJumpTo());
                 writer.visitLabel(new org.objectweb.asm.Label());
-                writer.visitJumpInsn(IF_ICMPNE, lbl);
+                writer.visitJumpInsn(IFNE, lbl);
             } else if(insn instanceof ObjectEqualInsn) {
                 org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
                 org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
@@ -521,6 +524,8 @@ public class Compiler extends CompileUtils implements Opcodes {
                     handlePrimitiveCast(from, to, writer);
                 } else if(!from.isPrimitive() && !to.isPrimitive()) {
                     writer.visitTypeInsn(CHECKCAST, toJVMType(to).getInternalName());
+                } else {
+                    System.out.println("HALP: "+from+" -> "+to);
                 }
             } else {
                 System.err.println("unknown: "+insn);

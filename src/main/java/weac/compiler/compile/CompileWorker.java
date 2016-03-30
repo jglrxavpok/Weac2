@@ -11,6 +11,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +65,11 @@ public class CompileWorker implements Runnable {
                     out.write(bytecode);
                     out.flush();
                     out.close();
+                    try {
+                        defineClass(className, bytecode);
+                    } catch (InvocationTargetException | IllegalAccessException e) {
+                        e.printStackTrace();
+                    }
                     if(/*debug*/true) {
                         try {
                             PrintWriter pw = new PrintWriter(System.out);
@@ -76,6 +83,22 @@ public class CompileWorker implements Runnable {
                 }
             }
         }
+    }
+
+    private static Class<?> defineClass(String name, byte[] classData) throws InvocationTargetException, IllegalAccessException {
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        if(cl == null) {
+            cl = ClassLoader.getSystemClassLoader();
+        }
+        try {
+            Method m = ClassLoader.class.getDeclaredMethod("defineClass", String.class, byte[].class, int.class, int.class);
+            m.setAccessible(true);
+            Class<?> result = (Class<?>) m.invoke(cl, name, classData, 0, classData.length);
+            return result;
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private ResolvingContext readImports(PrecompiledSource from, List<PrecompiledClass> sideSources) {

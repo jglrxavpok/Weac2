@@ -109,7 +109,17 @@ public class Resolver extends CompileUtils {
         resolvedField.access = field.access;
         resolvedField.isCompilerSpecial = field.isCompilerSpecial;
         resolvedField.type = resolveType(field.type, context);
-        resolvedField.defaultValue.addAll(resolveSingleExpression(field.defaultValue, currentType, context, fieldVarMap));
+        Stack<Value> valStack = new Stack<>();
+        List<ResolvedInsn> insns = resolveSingleExpression(field.defaultValue, currentType, context, fieldVarMap, valStack);
+        if(valStack.size() != 1) {
+            newError("Invalid default value for field "+field.name, -1);
+        } else {
+            Value result = valStack.pop();
+            if(!result.getType().equals(resolvedField.type)) {
+                insns.add(new CastInsn(result.getType(), resolvedField.type));
+            }
+        }
+        resolvedField.defaultValue.addAll(insns);
         return resolvedField;
     }
 
@@ -446,8 +456,11 @@ public class Resolver extends CompileUtils {
     }
 
     private List<ResolvedInsn> resolveSingleExpression(List<PrecompiledInsn> precompiled, WeacType selfType, ResolvingContext context, VariableMap varMap) {
+        return resolveSingleExpression(precompiled, selfType, context, varMap, new Stack<>());
+    }
+
+    private List<ResolvedInsn> resolveSingleExpression(List<PrecompiledInsn> precompiled, WeacType selfType, ResolvingContext context, VariableMap varMap, Stack<Value> valueStack) {
         List<ResolvedInsn> insns = new LinkedList<>();
-        Stack<Value> valueStack = new Stack<>();
         VariableTopStack<Boolean> staticness = new VariableTopStack<>();
         staticness.setCurrent(false).push();
 
@@ -475,8 +488,11 @@ public class Resolver extends CompileUtils {
                 currentVarType = numberType;
                 staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.FUNCTION_START) {
+                FunctionStartInsn startInsn = (FunctionStartInsn)precompiledInsn;
+                if(!startInsn.shouldLookForInstance()) {
+                    insns.add(new LoadThisInsn(selfType));
+                }
                 currentVarType = selfType;
-                staticness.setCurrent(true).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_BOOLEAN_CONSTANT) {
                 LoadBooleanConstant cst = ((LoadBooleanConstant) precompiledInsn);
                 insns.add(new LoadBooleanInsn(cst.getValue()));
@@ -502,7 +518,7 @@ public class Resolver extends CompileUtils {
                 currentVarType = selfType;
 
                 staticness.pop();
-                staticness.setCurrent(true).push();
+                staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.DUP) {
                 insns.add(new ResolvedInsn(ResolveOpcodes.DUP));
                 Value val = valueStack.pop();
@@ -691,6 +707,7 @@ public class Resolver extends CompileUtils {
                                 newError(potentialVariable.getName() + "Invalid assigment, can only assign a value to a field or a variable", -1); // todo line
                             } else {
                                 String name = potentialVariable.getName();
+                                WeacType varType = toAssign.getType();
                                 if (potentialVariable instanceof VariableValue) { // local variables take priority
                                     for(int i0 = insns.size()-1;i0>=0;i0--) {
                                         ResolvedInsn in = insns.get(i0);
@@ -702,6 +719,11 @@ public class Resolver extends CompileUtils {
                                                 break;
                                             }
                                         }
+                                    }
+                                    WeacType type = varMap.getLocalType(name);
+
+                                    if(!type.equals(varType)) {
+                                        insns.add(new CastInsn(varType, type));
                                     }
                                     insns.add(new StoreVarInsn(varMap.getLocalIndex(name)));
                                 } else if (potentialVariable instanceof FieldValue) {
@@ -721,6 +743,12 @@ public class Resolver extends CompileUtils {
                                         if (!(previous instanceof LoadThisInsn)) {
                                             insns.add(new LoadThisInsn(selfType));
                                         }
+                                    }
+
+                                    WeacType type = varMap.getFieldType(name);
+
+                                    if(!type.equals(varType)) {
+                                        insns.add(new CastInsn(varType, type));
                                     }
 
                                     WeacType fieldType = fieldValue.getType();

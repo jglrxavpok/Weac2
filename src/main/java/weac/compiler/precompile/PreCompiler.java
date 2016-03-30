@@ -535,9 +535,16 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                             } else {
                                 newError("Not supported, yet", -1);
                             }
+                        } else if(((FunctionStartToken) token).getFunctionType() == TokenType.FUNCTION) {
+                            Token funcToken = ((FunctionStartToken) token).getFuncToken();
+                            String[] parts = funcToken.getContent().split(";");
+                            System.out.println(">>>> "+funcToken.getContent());
+                            String funcName = parts[0];
+                            int nArgs = Integer.parseInt(parts[1]);
+                            boolean shouldLookForInstance = Boolean.parseBoolean(parts[2]);
+                            insns.add(new FunctionStartInsn(funcName, nArgs, shouldLookForInstance));
                         }
                     }
-                    insns.add(new SimplePreInsn(PrecompileOpcodes.FUNCTION_START));
                     break;
 
                 case UNARY_OPERATOR:
@@ -683,7 +690,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     argCount++;
                 }
             } else if(token.getType() == TokenType.FUNCTION || token.getType() == TokenType.IF || token.getType() == TokenType.ELSEIF) {
-                out.add(new FunctionStartToken(token.getType()));
+                out.add(new FunctionStartToken(token.getType(), token));
                 stack.push(token);
                 argCountStack.push(argCount);
                 argCount = 0;
@@ -813,11 +820,14 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                     /*for(int j = 0;j<argCount;i++)
                                         instanceStack.pop();*/
                                     // function name;argument count;true if we should look for the object to call it on in the stack
-                                    Token functionToken = new Token(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance), top.getType(), originalToken.length);
+                                    originalToken.setContent(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance));
+                                    originalToken.setType(top.getType());
                                     argCount = argCountStack.pop();
-                                    if(!shouldLookForInstance)
+                                    if(!shouldLookForInstance) {
                                         argCount++;
-                                    out.add(functionToken);
+                                    }
+                                    out.add(originalToken);
+
                                 }
                             }
                         }

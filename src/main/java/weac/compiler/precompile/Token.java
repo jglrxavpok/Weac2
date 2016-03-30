@@ -2,7 +2,7 @@ package weac.compiler.precompile;
 
 public class Token {
 
-    private final String content;
+    private String content;
     private TokenType type;
     public final int length;
 
@@ -58,5 +58,9 @@ public class Token {
     @Override
     public String toString() {
         return type+" "+getContent();
+    }
+
+    public void setContent(String content) {
+        this.content = content;
     }
 }

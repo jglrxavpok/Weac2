@@ -5,7 +5,7 @@ public class LoadDoubleInsn extends ResolvedInsn {
     private final double number;
 
     public LoadDoubleInsn(double number) {
-        super(LOAD_BYTE_CONSTANT);
+        super(LOAD_DOUBLE_CONSTANT);
         this.number = number;
     }
 

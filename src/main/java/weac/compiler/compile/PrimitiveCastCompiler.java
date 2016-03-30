@@ -99,6 +99,8 @@ public class PrimitiveCastCompiler {
     public void compile(String jvmTypeFrom, String jvmTypeTo, MethodVisitor writer) {
         if(jvmTypeFrom.equals("B") || jvmTypeFrom.equals("C")) { // promote byte and chars to ints
             compile("I", jvmTypeTo, writer);
+        } else if(jvmTypeFrom.equals("J")) { // longs are represented by J in the JVM but the corresponding opcodes use L
+            compile("L", jvmTypeTo, writer);
         } else if(paths.containsKey(jvmTypeFrom, jvmTypeTo)) {
             List<Integer> list = paths.get(jvmTypeFrom, jvmTypeTo);
             System.out.println("CAST "+jvmTypeFrom+" -> "+jvmTypeTo);

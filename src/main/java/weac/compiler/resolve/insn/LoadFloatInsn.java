@@ -5,7 +5,7 @@ public class LoadFloatInsn extends ResolvedInsn {
     private final float number;
 
     public LoadFloatInsn(float number) {
-        super(LOAD_BYTE_CONSTANT);
+        super(LOAD_FLOAT_CONSTANT);
         this.number = number;
     }
 
