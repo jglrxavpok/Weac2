@@ -78,6 +78,10 @@ public class ClassBodyParser extends CompileUtils {
             }
             if(parsedClass.classType == EnumClassTypes.INTERFACE)
                 isAbstract = true; // interfaces methods are always abstract
+            else if(parsedClass.isMixin)
+                isAbstract = true; // mixin (are analog to interfaces for the JVM) methods are always abstract
+            else if(parsedClass.classType == EnumClassTypes.ANNOTATION)
+                isAbstract = true; // annotation methods are always abstract
             Identifier firstPart = Identifier.read(chars, i);
             if(firstPart.isValid()) {
                 i += firstPart.getId().length();

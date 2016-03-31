@@ -53,34 +53,40 @@ public class CompileWorker implements Runnable {
                 }
             }
         } else {
-            Map<String, byte[]> classesBytecode = compiler.process(resolvedSource);
-            for(String className : classesBytecode.keySet()) {
-                File file = new File(output, className.replace(".", "/")+".class");
-                if(!file.getParentFile().exists())
-                    file.getParentFile().mkdirs();
-                try {
-                    file.createNewFile();
-                    FileOutputStream out = new FileOutputStream(file);
-                    byte[] bytecode = classesBytecode.get(className);
-                    out.write(bytecode);
-                    out.flush();
-                    out.close();
+
+            try {
+                Map<String, byte[]> classesBytecode = compiler.process(resolvedSource);
+                for (String className : classesBytecode.keySet()) {
+                    File file = new File(output, className.replace(".", "/") + ".class");
+                    if (!file.getParentFile().exists())
+                        file.getParentFile().mkdirs();
                     try {
-                        defineClass(className, bytecode);
-                    } catch (InvocationTargetException | IllegalAccessException e) {
+                        file.createNewFile();
+                        FileOutputStream out = new FileOutputStream(file);
+                        byte[] bytecode = classesBytecode.get(className);
+                        out.write(bytecode);
+                        out.flush();
+                        out.close();
+                        try {
+                            defineClass(className, bytecode);
+                        } catch (InvocationTargetException | IllegalAccessException e) {
+                         //   e.printStackTrace();
+                        }
+                        if (/*debug*/true) {
+                            try {
+                                PrintWriter pw = new PrintWriter(System.out);
+                                CheckClassAdapter.verify(new ClassReader(bytecode), true, pw);
+                            } catch (Exception e) {
+                                throw new RuntimeException("Error while compiling " + className, e);
+                            }
+                        }
+                    } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    if(/*debug*/true) {
-                        try {
-                            PrintWriter pw = new PrintWriter(System.out);
-                            CheckClassAdapter.verify(new ClassReader(bytecode), true, pw);
-                        } catch (Exception e) {
-                            throw new RuntimeException("Error while compiling "+className, e);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
+            } catch (Throwable t) {
+                System.err.println(">> THROWN");
+                t.printStackTrace();
             }
         }
     }

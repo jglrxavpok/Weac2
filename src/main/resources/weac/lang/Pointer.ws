@@ -11,7 +11,7 @@ Pointer<Type> {
         return value;
     }
 
-    void set(Type newValue) {
-        //this.value = newValue;
+    Void set(Type newValue) {
+        this.value = newValue;
     }
 }

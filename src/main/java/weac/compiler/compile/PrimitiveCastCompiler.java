@@ -10,7 +10,6 @@ import java.util.*;
 
 public class PrimitiveCastCompiler {
 
-    private final String[] types;
     private final DoubleKeyMap<String, String, List<Integer>> paths;
 
     public PrimitiveCastCompiler() {
@@ -19,7 +18,7 @@ public class PrimitiveCastCompiler {
         paths = new DoubleKeyMap<>();
 
         Field[] fields = Opcodes.class.getFields();
-        types = new String[] {
+        String[] types = new String[]{
                 "I", "S", "D", "F", "L", "B", "C"
         };
 
@@ -34,8 +33,6 @@ public class PrimitiveCastCompiler {
                     possibleOpcodes.add(field.getInt(null));
                     possibleNames.add(to);
 
-                  //  System.out.println("Found cast: "+name+" ("+from+" -> "+to+")");
-
                     possibilitiesOps.put(from, possibleOpcodes);
                     possibilities.put(from, possibleNames);
                 } catch (IllegalAccessException e) {
@@ -49,7 +46,6 @@ public class PrimitiveCastCompiler {
                 if(!other.equals(type)) {
                     List<Integer> output = new ArrayList<>();
                     initPath(type, other, possibilities, possibilitiesOps, output, new ArrayList<>());
-                    System.out.println("Found path from "+type+" to "+other+": "+ Arrays.toString(output.toArray()));
                     paths.put(type, other, output);
                 }
             }
@@ -103,13 +99,7 @@ public class PrimitiveCastCompiler {
             compile("L", jvmTypeTo, writer);
         } else if(paths.containsKey(jvmTypeFrom, jvmTypeTo)) {
             List<Integer> list = paths.get(jvmTypeFrom, jvmTypeTo);
-            System.out.println("CAST "+jvmTypeFrom+" -> "+jvmTypeTo);
-            list.forEach(i -> {
-                writer.visitInsn(i);
-                System.out.println("WROTE "+i);
-            });
-        } else {
-            System.out.println(">><< Not found: "+jvmTypeFrom+" -> "+jvmTypeTo);
+            list.forEach(writer::visitInsn);
         }
     }
 }

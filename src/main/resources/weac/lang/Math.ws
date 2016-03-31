@@ -21,7 +21,7 @@ object Math {
     }
 
     Boolean isInteger(Double value) {
-        return value % 1 == 0;
+        return (value % 1) == 0;
     }
 
     Double abs(Double value) {

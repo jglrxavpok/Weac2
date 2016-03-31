@@ -268,13 +268,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
         tokens = solvePatterns(tokens);
 
-        System.out.println("START TOKENS OF "+expression);
-        tokens.forEach(t -> System.out.print("<"+t+"> "));
-        System.out.println("\nEND TOKENS");
-
         List<Token> output = convertToRPN(expression, tokens);
-
-
         List<PrecompiledInsn> instructions = toInstructions(output, insns);
         if(ditchLabels) {
             ListIterator<PrecompiledInsn> insnIterator = instructions.listIterator();
@@ -538,7 +532,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         } else if(((FunctionStartToken) token).getFunctionType() == TokenType.FUNCTION) {
                             Token funcToken = ((FunctionStartToken) token).getFuncToken();
                             String[] parts = funcToken.getContent().split(";");
-                            System.out.println(">>>> "+funcToken.getContent());
                             String funcName = parts[0];
                             int nArgs = Integer.parseInt(parts[1]);
                             boolean shouldLookForInstance = Boolean.parseBoolean(parts[2]);

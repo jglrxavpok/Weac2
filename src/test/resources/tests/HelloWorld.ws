@@ -21,6 +21,7 @@ object HelloWorld > Application + TestMixin {
     Void start(String[] args) {
         Console.writeLine("Hello World!");
         Math.sin(Math.random());
+        this.myField = args;
         Console.writeLine(fieldWithDefaultValue0.factorial());
     }
 

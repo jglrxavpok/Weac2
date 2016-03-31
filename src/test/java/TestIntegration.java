@@ -17,14 +17,18 @@ public class TestIntegration extends Tests {
         {
             System.out.println(define(n).getCanonicalName());
         }
+        Class<?> pointerClass = Class.forName("weac.lang.Pointer");
         Class<?> mathClass = Class.forName("weac.lang.Math");
         if(mathClass != null)
         {
-            Method m = mathClass.getDeclaredMethod("fact", Integer.TYPE);
+            Method m = mathClass.getDeclaredMethod("isInteger", Double.TYPE);
             m.setAccessible(true);
             Object instance = mathClass.getDeclaredField("__instance__").get(null);
-            Object val = m.invoke(instance, 5);
-            System.out.println("Math.__instance__.fact(5) = "+val);
+            Object val = m.invoke(instance, 5.5);
+            System.out.println("Math.__instance__.isInteger(5.5) = "+val);
+
+            val = m.invoke(instance, 78.0);
+            System.out.println("Math.__instance__.isInteger(78.0) = "+val);
         }
     }
 

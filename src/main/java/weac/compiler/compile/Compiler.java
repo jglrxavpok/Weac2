@@ -50,7 +50,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             writer.visitSource(source.fileName, "Compiled from WeaC");
 
             if(clazz.classType == EnumClassTypes.OBJECT) {
-                writer.visitField(ACC_PUBLIC + ACC_STATIC, Constants.SINGLETON_INSTANCE_FIELD, type.getDescriptor(), null, null);
+                writer.visitField(ACC_PUBLIC | ACC_STATIC, Constants.SINGLETON_INSTANCE_FIELD, type.getDescriptor(), null, null);
 
                 writeGetter(writer, true, type, type, Constants.SINGLETON_INSTANCE_FIELD);
             }
@@ -202,7 +202,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             if(convertInstanceMethodToStatic) {
                 access |= ACC_STATIC;
             }
-            boolean isAbstract = false;
+            boolean isAbstract = method.isAbstract;
             if(method.isAbstract || clazz.isMixin || clazz.classType == EnumClassTypes.INTERFACE || clazz.classType == EnumClassTypes.ANNOTATION) {
                 access |= ACC_ABSTRACT;
                 isAbstract = true;
@@ -234,39 +234,43 @@ public class Compiler extends CompileUtils implements Opcodes {
 
             if(!isAbstract) {
                 mv.visitCode();
-                mv.visitLabel(start);
 
-                if(!method.isAbstract && method.isConstructor) {
+                if (!method.isAbstract && method.isConstructor) {
                     clazz.fields.stream()
                             .filter(f -> !f.defaultValue.isEmpty())
                             .forEach(f -> {
                                 mv.visitLabel(new org.objectweb.asm.Label());
                                 mv.visitVarInsn(ALOAD, 0);
-                                this.compileSingleExpression(type, mv, f.defaultValue);
+                                this.compileSingleExpression(type, mv, f.defaultValue, start, end);
                                 mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                             });
                     nConstructors++;
                 }
-                mv.visitLabel(new org.objectweb.asm.Label());
-                compileSingleExpression(type, mv, method.instructions);
-                mv.visitLabel(new org.objectweb.asm.Label());
-                mv.visitInsn(RETURN);
+                mv.visitLabel(start);
+                mv.visitLineNumber(100, start);
+                try {
+                    compileSingleExpression(type, mv, method.instructions, start, end);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                }
                 mv.visitLabel(end);
                 try {
-                    mv.visitMaxs(0,0);
+                    mv.visitMaxs(0, 0);
                 } catch (Exception e) {
                     try {
-                        throw new RuntimeException("WARNING in "+method.name+" "+method.argumentTypes.get(0)+" / "+type, e);
+                        throw new RuntimeException("WARNING in " + method.name + " " + method.argumentTypes.get(0) + " / " + type, e);
                     } catch (Exception e1) {
                         e.printStackTrace();
                         e1.printStackTrace();
                     }
                 }
             }
-
             mv.visitEnd();
         }
         if(nConstructors == 0) {
+            if(clazz.isMixin || clazz.classType == EnumClassTypes.INTERFACE || clazz.classType == EnumClassTypes.ANNOTATION) {
+                return;
+            }
             MethodVisitor mv = writer.visitMethod(ACC_PUBLIC, "<init>", Type.getMethodType(Type.VOID_TYPE).getDescriptor(), null, null);
             org.objectweb.asm.Label start = new org.objectweb.asm.Label();
             org.objectweb.asm.Label end = new org.objectweb.asm.Label();
@@ -275,20 +279,22 @@ public class Compiler extends CompileUtils implements Opcodes {
 
             int localIndex = 1; // 'this'
             mv.visitLabel(start);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
+            mv.visitLineNumber(10, start);
+            if(!clazz.isMixin && clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION) {
+                mv.visitVarInsn(ALOAD, 0);
+                mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
+            }
             clazz.fields.stream()
                     .filter(f -> !f.defaultValue.isEmpty())
                     .filter(f -> !(f.defaultValue.size() == 1 && f.defaultValue.get(0) instanceof LocalVariableTableInsn))
                     .forEach(f -> {
                         mv.visitLabel(new org.objectweb.asm.Label());
                         mv.visitVarInsn(ALOAD, 0);
-                        this.compileSingleExpression(type, mv, f.defaultValue);
+                        this.compileSingleExpression(type, mv, f.defaultValue, start, end);
                         mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                     });
-            mv.visitLabel(new org.objectweb.asm.Label());
-            mv.visitInsn(RETURN);
             mv.visitLabel(end);
+            mv.visitInsn(RETURN);
             mv.visitMaxs(0,0);
             mv.visitEnd();
         }
@@ -311,8 +317,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         mv.visitEnd();
     }
 
-    private void compileSingleExpression(Type type, MethodVisitor writer, List<ResolvedInsn> l) {
-        boolean localDefined = false;
+    private void compileSingleExpression(Type type, MethodVisitor writer, List<ResolvedInsn> l, org.objectweb.asm.Label start, org.objectweb.asm.Label end) {
         System.out.println("=== INSNS "+type.getInternalName()+" ===");
         l.forEach(System.out::println);
         System.out.println("=============");
@@ -350,7 +355,8 @@ public class Compiler extends CompileUtils implements Opcodes {
                 writer.visitInsn(b ? ICONST_1 : ICONST_0);
             } else if(insn instanceof ResolvedLabelInsn) {
                 Label b = ((ResolvedLabelInsn) insn).getLabel();
-                writer.visitLabel(labelMap.get(b));
+                if(b.getIndex() != -1) // TODO: better fix?
+                    writer.visitLabel(labelMap.get(b));
             } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
                 int code = insn.getOpcode();
                 int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
@@ -359,7 +365,13 @@ public class Compiler extends CompileUtils implements Opcodes {
             } else if(insn instanceof StoreVarInsn) {
                 StoreVarInsn varInsn = (StoreVarInsn)insn;
                 int localIndex = varInsn.getLocalIndex();
-                writer.visitVarInsn(ASTORE, localIndex);
+                WeacType weacType = varInsn.getVarType();
+                Type primitive = getPrimitiveType(weacType);
+                if(primitive != null) {
+                    writer.visitVarInsn(primitive.getOpcode(ISTORE), localIndex);
+                } else {
+                    writer.visitVarInsn(ASTORE, localIndex);
+                }
             } else if(insn instanceof StoreFieldInsn) {
                 StoreFieldInsn fieldInsn = (StoreFieldInsn)insn;
                 int opcode;
@@ -376,27 +388,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 LoadVariableInsn variableInsn = (LoadVariableInsn)insn;
                 Type primitiveType = getPrimitiveType(variableInsn.getVarType());
                 if(primitiveType != null) {
-                    int loadType = ALOAD;
-                    if(primitiveType == Type.BOOLEAN_TYPE) {
-                        loadType = ILOAD;
-                    } else if(primitiveType == Type.BYTE_TYPE) {
-                        loadType = ILOAD;
-                    } else if(primitiveType == Type.CHAR_TYPE) {
-                        loadType = ILOAD;
-                    } else if(primitiveType == Type.DOUBLE_TYPE) {
-                        loadType = DLOAD;
-                    } else if(primitiveType == Type.FLOAT_TYPE) {
-                        loadType = FLOAD;
-                    } else if(primitiveType == Type.INT_TYPE) {
-                        loadType = ILOAD;
-                    } else if(primitiveType == Type.LONG_TYPE) {
-                        loadType = LLOAD;
-                    } else if(primitiveType == Type.SHORT_TYPE) {
-                        loadType = ILOAD;
-                    } else if(primitiveType == Type.VOID_TYPE) {
-                        loadType = ALOAD;
-                    }
-                    writer.visitVarInsn(loadType, variableInsn.getVarIndex());
+                    writer.visitVarInsn(primitiveType.getOpcode(ILOAD), variableInsn.getVarIndex());
                 } else {
                     writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
                 }
@@ -425,25 +417,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 int startingOpcode = startingOpcodes.getOrDefault(multInsn.getOpcode(), -100);
                 Type primitiveType = getPrimitiveType(multInsn.getResultType());
                 if(primitiveType != null) {
-                    int loadType = -1; // TODO: custom operators
-                    if(primitiveType == Type.BOOLEAN_TYPE) {
-                        loadType = startingOpcode;
-                    } else if(primitiveType == Type.BYTE_TYPE) {
-                        loadType = startingOpcode;
-                    } else if(primitiveType == Type.CHAR_TYPE) {
-                        loadType = startingOpcode;
-                    } else if(primitiveType == Type.DOUBLE_TYPE) {
-                        loadType = startingOpcode+3;
-                    } else if(primitiveType == Type.FLOAT_TYPE) {
-                        loadType = startingOpcode+2;
-                    } else if(primitiveType == Type.INT_TYPE) {
-                        loadType = startingOpcode;
-                    } else if(primitiveType == Type.LONG_TYPE) {
-                        loadType = startingOpcode+1;
-                    } else if(primitiveType == Type.SHORT_TYPE) {
-                        loadType = startingOpcode;
-                    }
-                    writer.visitInsn(loadType);
+                    writer.visitInsn(primitiveType.getOpcode(startingOpcode));
                 } else {
                     //writer.visitVarInsn(ALOAD, multInsn.getVarIndex());
                 }
@@ -513,7 +487,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 List<VariableValue> locals = ((LocalVariableTableInsn) insn).getLocals();
                 for(VariableValue local : locals) {
                     writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
-                            new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex());
+                            start, end, local.getLocalVariableIndex());
                 }
                 // TODO: avoid duplicate entries
             } else if(insn instanceof CastInsn) {
