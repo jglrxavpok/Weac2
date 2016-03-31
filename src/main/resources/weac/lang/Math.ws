@@ -29,10 +29,18 @@ object Math {
     }
 
     Int fact(Int number) {
-        if(number == 1) {
+       /* if(number == 1) {
             return 1;
         }
-        return number*fact(number-1);
+        return number*fact(number-1);*/
+        return fact_tail(1, number);
+    }
+
+    private Int fact_tail(Int acc, Int n) {
+        if(n < 2) {
+            return acc;
+        }
+        return fact_tail(n * acc, n-1);
     }
 
 }

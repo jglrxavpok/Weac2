@@ -318,9 +318,9 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private void compileSingleExpression(Type type, MethodVisitor writer, List<ResolvedInsn> l, org.objectweb.asm.Label start, org.objectweb.asm.Label end) {
-        System.out.println("=== INSNS "+type.getInternalName()+" ===");
+       /* System.out.println("=== INSNS "+type.getInternalName()+" ===");
         l.forEach(System.out::println);
-        System.out.println("=============");
+        System.out.println("=============");*/
         ResolvedInsn last = null;
         LabelMap labelMap = new LabelMap();
         for (int i = 0; i < l.size(); i++) {
@@ -412,9 +412,22 @@ public class Compiler extends CompileUtils implements Opcodes {
                     // TODO
                     // invalid
                 }
+            } else if(insn.getOpcode() >= ResolveOpcodes.LESS && insn.getOpcode() <= ResolveOpcodes.GREATER_OR_EQUAL) {
+                int[] opcodes = {IFLT, IFLE, IFGT, IFGE};
+                int index = insn.getOpcode() - ResolveOpcodes.LESS;
+                int opcode = opcodes[index];
+                org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
+                org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
+                writer.visitLabel(new org.objectweb.asm.Label());
+                writer.visitJumpInsn(opcode, lbl);
+                writer.visitInsn(ICONST_1);
+                writer.visitJumpInsn(GOTO, lbl1);
+                writer.visitLabel(lbl);
+                writer.visitInsn(ICONST_0);
+                writer.visitLabel(lbl1);
             } else if(insn instanceof OperationInsn) {
                 OperationInsn multInsn = (OperationInsn)insn;
-                int startingOpcode = startingOpcodes.getOrDefault(multInsn.getOpcode(), -100);
+                int startingOpcode = startingOpcodes.getOrDefault(multInsn.getOpcode(), -101);
                 Type primitiveType = getPrimitiveType(multInsn.getResultType());
                 if(primitiveType != null) {
                     writer.visitInsn(primitiveType.getOpcode(startingOpcode));
@@ -468,20 +481,20 @@ public class Compiler extends CompileUtils implements Opcodes {
                 org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
                 writer.visitLabel(new org.objectweb.asm.Label());
                 writer.visitJumpInsn(IF_ACMPNE, lbl);
-                writer.visitInsn(ICONST_0);
+                writer.visitInsn(ICONST_1);
                 writer.visitJumpInsn(GOTO, lbl1);
                 writer.visitLabel(lbl);
-                writer.visitInsn(ICONST_1);
+                writer.visitInsn(ICONST_0);
                 writer.visitLabel(lbl1);
             } else if(insn instanceof CheckZero) {
                 org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
                 org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
                 writer.visitLabel(new org.objectweb.asm.Label());
                 writer.visitJumpInsn(IFNE, lbl);
-                writer.visitInsn(ICONST_0);
+                writer.visitInsn(ICONST_1);
                 writer.visitJumpInsn(GOTO, lbl1);
                 writer.visitLabel(lbl);
-                writer.visitInsn(ICONST_1);
+                writer.visitInsn(ICONST_0);
                 writer.visitLabel(lbl1);
             } else if(insn instanceof LocalVariableTableInsn) {
                 List<VariableValue> locals = ((LocalVariableTableInsn) insn).getLocals();

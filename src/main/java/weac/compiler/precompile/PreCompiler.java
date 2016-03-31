@@ -688,8 +688,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 argCountStack.push(argCount);
                 argCount = 0;
             } else if(token.getType() == TokenType.ARGUMENT_SEPARATOR) {
-                out.add(token);
-                instanceStack.setCurrent(false);
                 if(stack.isEmpty()) {
                     newError("Unmatched parenthesises, please fix", -1);
                     return Collections.EMPTY_LIST;
@@ -701,6 +699,8 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         return Collections.EMPTY_LIST;
                     }
                 }
+                out.add(token);
+                instanceStack.setCurrent(false);
             } else if(token.getType() == TokenType.UNARY_OPERATOR || token.getType() == TokenType.BINARY_OPERATOR || token.getType() == TokenType.CAST) {
                 EnumOperators operator = EnumOperators.get(token.getContent());
                 if(operator == null && token.getType() == TokenType.CAST) {
@@ -754,7 +754,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     } else {
                         if(!operator.isUnary()) {
                             instanceStack.pop();
-                            //argCount--;
+                            argCount--;
                             instanceStack.setCurrent(false).push();
                         }
                         stack.push(new Token(operator.raw(), token.getType(), token.length));
@@ -779,7 +779,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         out.add(val);
                         if(val.getType() == TokenType.BINARY_OPERATOR) {
                             instanceStack.pop();
-                            argCount--;
+                            //argCount--;
                             instanceStack.setCurrent(false).push();
                         }
                     }

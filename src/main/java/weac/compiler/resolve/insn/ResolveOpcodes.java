@@ -57,8 +57,13 @@ public interface ResolveOpcodes {
             DIVIDE = 0x33,
             MODULUS = 0x34,
 
+            // comparison
             IS_ZERO = 0x40,
             COMPARE_ZERO = 0x41,
+            LESS = 0x42,
+            LESS_OR_EQUAL = 0x43,
+            GREATER = 0x44,
+            GREATER_OR_EQUAL = 0x45,
 
             LOCAL_VARIABLE_TABLE = 0x50,
             CAST = 0x51

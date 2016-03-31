@@ -34,6 +34,12 @@ public class Resolver extends CompileUtils {
         operatorsInsnFactories.put(EnumOperators.MOD, ModulusInsn::new);
         operatorsInsnFactories.put(EnumOperators.MULTIPLY, MultiplyInsn::new);
         operatorsInsnFactories.put(EnumOperators.DIVIDE, DivideInsn::new);
+
+        operatorsInsnFactories.put(EnumOperators.LESS_OR_EQUAL, LessOrEqualInsn::new);
+        operatorsInsnFactories.put(EnumOperators.LESS_THAN, LessInsn::new);
+
+        operatorsInsnFactories.put(EnumOperators.GREATER_OR_EQUAL, GreaterOrEqualInsn::new);
+        operatorsInsnFactories.put(EnumOperators.GREATER_THAN, GreaterInsn::new);
     }
 
     public ResolvedSource process(ResolvingContext context) {
@@ -467,6 +473,9 @@ public class Resolver extends CompileUtils {
     }
 
     private List<ResolvedInsn> resolveSingleExpression(List<PrecompiledInsn> precompiled, WeacType selfType, ResolvingContext context, VariableMap varMap, Stack<Value> valueStack) {
+        System.out.println("IN "+selfType);
+        precompiled.forEach(System.out::println);
+        System.out.println("====");
         List<ResolvedInsn> insns = new LinkedList<>();
         VariableTopStack<Boolean> staticness = new VariableTopStack<>();
         staticness.setCurrent(false).push();
@@ -810,6 +819,37 @@ public class Resolver extends CompileUtils {
                         }
                         break;
 
+                        case LESS_THAN:
+                        case GREATER_THAN:
+                        case LESS_OR_EQUAL:
+                        case GREATER_OR_EQUAL: {
+                            Value right = valueStack.pop();
+                            Value left = valueStack.pop();
+                            WeacType resultType = findResultType(left.getType(), right.getType(), context);
+
+                            insns.add(new SubtractInsn(resultType));
+
+                            if (!left.getType().equals(resultType)) {
+                                int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), right.getType());
+                                insns.add(new StoreVarInsn(tmpVarIndex, right.getType()));
+
+                                insns.add(new CastInsn(left.getType(), resultType));
+                                insns.add(new LoadVariableInsn(tmpVarIndex, right.getType()));
+                            }
+
+                            if (!right.getType().equals(resultType)) {
+                                insns.add(new CastInsn(right.getType(), resultType));
+                            }
+
+                            valueStack.push(new ConstantValue(resultType));
+                            staticness.pop();
+                            staticness.pop();
+                            staticness.setCurrent(false).push();
+
+                            insns.add(createOperatorInsn(resultType, op));
+                        }
+                        break;
+
                         case MINUS:
                         case MOD:
                         case PLUS:
@@ -867,6 +907,11 @@ public class Resolver extends CompileUtils {
                 insns.add(new IfNotJumpResInsn(((IfNotJumpInsn) precompiledInsn).getJumpTo()));
             } else if(precompiledInsn instanceof GotoInsn) {
                 insns.add(new GotoResInsn(((GotoInsn) precompiledInsn).getLabel()));
+            } else if(precompiledInsn instanceof CastPreInsn) {
+                WeacType destination = resolveType(new Identifier(((CastPreInsn) precompiledInsn).getType()), context);
+                Value from = valueStack.pop();
+                insns.add(new CastInsn(from.getType(), destination));
+                valueStack.push(new ConstantValue(destination));
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }
