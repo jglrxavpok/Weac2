@@ -281,6 +281,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 }
             }
         }
+
         return instructions;
     }
 

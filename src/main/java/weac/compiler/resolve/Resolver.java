@@ -501,9 +501,11 @@ public class Resolver extends CompileUtils {
                 staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.FUNCTION_START) {
                 FunctionStartInsn startInsn = (FunctionStartInsn)precompiledInsn;
+                WeacType owner = valueStack.isEmpty() ? selfType : valueStack.peek().getType();
                 if(!startInsn.shouldLookForInstance()) {
                     insns.add(new LoadThisInsn(selfType));
                 }
+                insns.add(new FunctionStartResInsn(startInsn.getFunctionName(), startInsn.getArgCount(), owner));
                 currentVarType = selfType;
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_BOOLEAN_CONSTANT) {
                 LoadBooleanConstant cst = ((LoadBooleanConstant) precompiledInsn);

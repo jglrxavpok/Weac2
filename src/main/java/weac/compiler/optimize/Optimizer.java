@@ -9,7 +9,6 @@ import weac.compiler.resolve.structure.ResolvedMethod;
 import weac.compiler.resolve.structure.ResolvedSource;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -46,7 +45,8 @@ public class Optimizer extends CompilePhase<ResolvedSource, ResolvedSource> {
      */
     private void applyTCOptimization(ResolvedMethod method, ResolvedClass owner) {
         Label startLabel = new Label(-50);
-        method.instructions.add(0, new ResolvedLabelInsn(startLabel));
+        // 1 because the 0th instruction is the local variable table
+        method.instructions.add(1, new ResolvedLabelInsn(startLabel));
         for (int i = 0; i < method.instructions.size(); i++) {
             ResolvedInsn prev = null;
             int prevIndex = i-1;
@@ -58,6 +58,11 @@ public class Optimizer extends CompilePhase<ResolvedSource, ResolvedSource> {
                 if(prev instanceof FunctionCallInsn) {
                     FunctionCallInsn call = ((FunctionCallInsn) prev);
                     if(isCallToSelf(call, method, owner)) {
+
+                        // replace corresponding function start instruction by pop instruction
+                        int index = findCorrespondingFuncStart(method.instructions, call, i);
+                        method.instructions.set(index, new PopInsn());
+
                         method.instructions.remove(i);
                         i--;
                         for(int j = 0;j<call.getArgCount();j++) {
@@ -68,6 +73,19 @@ public class Optimizer extends CompilePhase<ResolvedSource, ResolvedSource> {
                 }
             }
         }
+    }
+
+    private int findCorrespondingFuncStart(List<ResolvedInsn> instructions, FunctionCallInsn call, int index) {
+        for(;index >= 0;index--) {
+            ResolvedInsn in = instructions.get(index);
+            if(in instanceof FunctionStartResInsn) {
+                FunctionStartResInsn startInsn = ((FunctionStartResInsn) in);
+                if(call.getName().equals(startInsn.getFunctionName()) && call.getArgCount() == startInsn.getArgCount() && call.getOwner().equals(startInsn.getOwner())) {
+                    return index;
+                }
+            }
+        }
+        return -1;
     }
 
     /**

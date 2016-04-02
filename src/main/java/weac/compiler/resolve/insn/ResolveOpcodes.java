@@ -65,8 +65,13 @@ public interface ResolveOpcodes {
             GREATER = 0x44,
             GREATER_OR_EQUAL = 0x45,
 
-            LOCAL_VARIABLE_TABLE = 0x50,
-            CAST = 0x51
+            CAST = 0x50,
+
+
+            // Helper opcodes, not used by the JVM compiler
+            FUNCTION_START = 0x100,
+            LOCAL_VARIABLE_TABLE = 0x101,
+            MAXS = 0x102
 
     ;
 

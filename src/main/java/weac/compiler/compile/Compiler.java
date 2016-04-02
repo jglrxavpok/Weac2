@@ -284,6 +284,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
             }
+            mv.visitMaxs(1,1);
             clazz.fields.stream()
                     .filter(f -> !f.defaultValue.isEmpty())
                     .filter(f -> !(f.defaultValue.size() == 1 && f.defaultValue.get(0) instanceof LocalVariableTableInsn))
@@ -295,7 +296,6 @@ public class Compiler extends CompileUtils implements Opcodes {
                     });
             mv.visitLabel(end);
             mv.visitInsn(RETURN);
-            mv.visitMaxs(0,0);
             mv.visitEnd();
         }
     }
@@ -313,7 +313,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         mv.visitMethodInsn(INVOKEINTERFACE, type.getInternalName(), "start", mainDesc, true); // call Application::start(String[])
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitInsn(RETURN);
-        mv.visitMaxs(0, 0);
+        mv.visitMaxs(3, 0);
         mv.visitEnd();
     }
 
@@ -470,10 +470,10 @@ public class Compiler extends CompileUtils implements Opcodes {
             } else if(insn instanceof NewInsn) {
                 writer.visitTypeInsn(NEW, toJVMType(((NewInsn) insn).getType()).getInternalName());
             } else if(insn instanceof GotoResInsn) {
-                org.objectweb.asm.Label lbl = labelMap.get(((GotoResInsn) insn).getLabel());
+                org.objectweb.asm.Label lbl = labelMap.get(((GotoResInsn) insn).getDestination());
                 writer.visitJumpInsn(GOTO, lbl);
             } else if(insn instanceof IfNotJumpResInsn) {
-                org.objectweb.asm.Label lbl = labelMap.get(((IfNotJumpResInsn) insn).getJumpTo());
+                org.objectweb.asm.Label lbl = labelMap.get(((IfNotJumpResInsn) insn).getDestination());
                 writer.visitLabel(new org.objectweb.asm.Label());
                 writer.visitJumpInsn(IFNE, lbl);
             } else if(insn instanceof ObjectEqualInsn) {
@@ -514,6 +514,11 @@ public class Compiler extends CompileUtils implements Opcodes {
                 } else {
                     System.out.println("HALP: "+from+" -> "+to);
                 }
+            } else if(insn instanceof MaxsInsn) {
+                MaxsInsn maxInsn = ((MaxsInsn) insn);
+                int maxStack = maxInsn.getMaxStack();
+                int maxLocal = maxInsn.getMaxLocal();
+                writer.visitMaxs(maxStack, maxLocal);
             } else {
                 System.err.println("unknown: "+insn);
             }
@@ -567,7 +572,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         mv.visitFieldInsn(isStatic ? GETSTATIC : GETFIELD, owner.getInternalName(), fieldName, fieldType.getDescriptor());
         mv.visitInsn(ARETURN);
 
-        mv.visitMaxs(0,0);
+        mv.visitMaxs(1+(isStatic ? 0 : 1),0);
         mv.visitEnd();
     }
 
@@ -584,7 +589,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         }
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitInsn(RETURN);
-        mv.visitMaxs(0,0);
+        mv.visitMaxs(2,0);
         mv.visitEnd();
     }
 
