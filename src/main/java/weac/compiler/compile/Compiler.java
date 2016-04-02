@@ -37,7 +37,7 @@ public class Compiler extends CompileUtils implements Opcodes {
 
         for(ResolvedClass clazz : source.classes) {
             System.out.println("COMPILING "+clazz.fullName);
-            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+            ClassWriter writer = new ClassWriter(0);
             String internalName = toInternal(clazz.fullName);
             Type type = Type.getType("L"+internalName+";");
 
@@ -228,7 +228,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             for (int i = 0; i < argumentNames.size(); i++) {
                 Identifier argName = argumentNames.get(i);
                 Type argType = argTypes.get(i);
-                mv.visitParameter(argName.getId(), ACC_FINAL);
+                mv.visitParameter(argName.getId(), ACC_MANDATED);
             //    mv.visitLocalVariable(argName.getId(), argType.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), localIndex++);
             }
 
@@ -255,7 +255,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 }
                 mv.visitLabel(end);
                 try {
-                    mv.visitMaxs(0, 0);
+               //     mv.visitMaxs(0, 0);
                 } catch (Exception e) {
                     try {
                         throw new RuntimeException("WARNING in " + method.name + " " + method.argumentTypes.get(0) + " / " + type, e);
@@ -318,9 +318,9 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private void compileSingleExpression(Type type, MethodVisitor writer, List<ResolvedInsn> l, org.objectweb.asm.Label start, org.objectweb.asm.Label end) {
-       /* System.out.println("=== INSNS "+type.getInternalName()+" ===");
+        System.out.println("=== INSNS "+type.getInternalName()+" ===");
         l.forEach(System.out::println);
-        System.out.println("=============");*/
+        System.out.println("=============");
         ResolvedInsn last = null;
         LabelMap labelMap = new LabelMap();
         for (int i = 0; i < l.size(); i++) {
@@ -396,7 +396,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 CompareInsn compInsn = (CompareInsn)insn;
                 Type primitiveType = getPrimitiveType(compInsn.getResultType());
                 if(primitiveType != null) {
-                    int loadType = -1; // TODO: custom operators
+                    int loadType = -1;
                     if(primitiveType == Type.DOUBLE_TYPE) {
                         writer.visitInsn(DCONST_0);
                         loadType = DCMPL;

@@ -205,4 +205,8 @@ public class ResolvedClass {
             writer.write('\n');
         }
     }
+
+    public List<ResolvedMethod> getMethods() {
+        return this.methods;
+    }
 }

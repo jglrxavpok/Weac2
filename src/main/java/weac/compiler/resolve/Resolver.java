@@ -4,7 +4,6 @@ import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.patterns.InstructionPattern;
-import weac.compiler.precompile.Label;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.structure.*;
 import weac.compiler.resolve.insn.*;
@@ -473,9 +472,6 @@ public class Resolver extends CompileUtils {
     }
 
     private List<ResolvedInsn> resolveSingleExpression(List<PrecompiledInsn> precompiled, WeacType selfType, ResolvingContext context, VariableMap varMap, Stack<Value> valueStack) {
-        System.out.println("IN "+selfType);
-        precompiled.forEach(System.out::println);
-        System.out.println("====");
         List<ResolvedInsn> insns = new LinkedList<>();
         VariableTopStack<Boolean> staticness = new VariableTopStack<>();
         staticness.setCurrent(false).push();
@@ -638,7 +634,7 @@ public class Resolver extends CompileUtils {
                 }
 
                 WeacType returnType = resolveType(realMethod.returnType, context);
-                insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), cst.shouldLookForInstance() && !realMethod.isJavaImported, argTypes, returnType, isStatic));
+                insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), argTypes, returnType, isStatic));
 
                 staticness.setCurrent(false).push();
                 int toPop = cst.getArgCount();
@@ -918,6 +914,7 @@ public class Resolver extends CompileUtils {
         }
 
         insns.add(0, new LocalVariableTableInsn(varMap));
+        // TODO
         return insns;
     }
 

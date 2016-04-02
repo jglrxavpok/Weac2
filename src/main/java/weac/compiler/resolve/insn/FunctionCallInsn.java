@@ -6,17 +6,15 @@ public class FunctionCallInsn extends ResolvedInsn {
     private final String name;
     private final WeacType owner;
     private final int nArgs;
-    private final boolean instanceInStack;
     private final WeacType[] argTypes;
     private final WeacType returnType;
     private final boolean isStatic;
 
-    public FunctionCallInsn(String name, WeacType owner, int nArgs, boolean instanceInStack, WeacType[] argTypes, WeacType returnType, boolean isStatic) {
+    public FunctionCallInsn(String name, WeacType owner, int nArgs, WeacType[] argTypes, WeacType returnType, boolean isStatic) {
         super(FUNCTION_CALL);
         this.name = name;
         this.owner = owner;
         this.nArgs = nArgs;
-        this.instanceInStack = instanceInStack;
         this.argTypes = argTypes;
         this.returnType = returnType;
         this.isStatic = isStatic;
@@ -30,13 +28,10 @@ public class FunctionCallInsn extends ResolvedInsn {
         return nArgs;
     }
 
-    public boolean isInstanceInStack() {
-        return instanceInStack;
-    }
 
     @Override
     public String toString() {
-        return super.toString()+" "+owner.getIdentifier()+" "+name+" "+nArgs+" ("+instanceInStack+", "+isStatic+")";
+        return super.toString()+" "+owner.getIdentifier()+" "+name+" "+nArgs+" (static: "+isStatic+")";
     }
 
     public WeacType getOwner() {

@@ -48,16 +48,8 @@ public class ParsingVerifier extends CompilePhase<ParsedSource, ParsedSource> {
     }
 
     private void verifyValidName(String name, int line) {
-        char[] chars = name.toCharArray();
-        if(!Identifier.isIdentifierStart(chars[0])) {
+        if(!Identifier.isValid(name)) {
             newError("Invalid identifier start in name "+name, line);
-            return;
-        }
-        for(int i = 1;i<chars.length;i++) {
-            if(!Identifier.isIdentifierPart(chars[i])) {
-                newError("Invalid identifier part in name "+name, line);
-                return;
-            }
         }
     }
 

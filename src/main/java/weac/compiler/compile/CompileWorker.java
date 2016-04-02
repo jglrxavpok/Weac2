@@ -1,8 +1,10 @@
 package weac.compiler.compile;
 
 import org.jglr.flows.io.IndentableWriter;
+import weac.compiler.optimize.Optimizer;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.precompile.structure.PrecompiledSource;
+import weac.compiler.resolve.MethodInfoSolver;
 import weac.compiler.resolve.Resolver;
 import weac.compiler.resolve.ResolvingContext;
 import weac.compiler.resolve.structure.ResolvedClass;
@@ -34,7 +36,11 @@ public class CompileWorker implements Runnable {
     public void run() {
         Resolver resolver = new Resolver();
         Compiler compiler = new Compiler();
+        Optimizer optimizer = new Optimizer();
         ResolvedSource resolvedSource = resolver.process(readImports(source, sideSources));
+        MethodInfoSolver infoSolver = new MethodInfoSolver();
+        resolvedSource = optimizer.process(resolvedSource);
+        infoSolver.solveInfos(resolvedSource);
         if(stopAt.equals("resolution")) {
             for(ResolvedClass c : resolvedSource.classes) {
                 String fileName = c.fullName.replace(".", "/");
