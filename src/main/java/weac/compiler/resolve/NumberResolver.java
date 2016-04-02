@@ -57,12 +57,6 @@ public class NumberResolver extends CompileUtils {
                     if(convertedNumber <= Integer.MAX_VALUE) {
                         type = "int";
                     }
-                    if(convertedNumber <= Short.MAX_VALUE) {
-                        type = "short";
-                    }
-                    if(convertedNumber <= Byte.MAX_VALUE) {
-                        type = "byte";
-                    }
                 }
 
                 switch (type) {
