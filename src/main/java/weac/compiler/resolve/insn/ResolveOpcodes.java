@@ -68,10 +68,11 @@ public interface ResolveOpcodes {
             CAST = 0x50,
 
 
-            // Helper opcodes, not used by the JVM compiler
+            // Helper opcodes, not translated directly to bytecode by the JVM compiler
             FUNCTION_START = 0x100,
             LOCAL_VARIABLE_TABLE = 0x101,
-            MAXS = 0x102
+            MAXS = 0x102,
+            STACK_MAP_FRAME = 0x103
 
     ;
 

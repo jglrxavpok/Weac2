@@ -4,7 +4,10 @@ import weac.compiler.CompileUtils;
 import weac.compiler.precompile.Label;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.ResolvedClass;
+import weac.compiler.resolve.structure.ResolvedMethod;
 import weac.compiler.resolve.structure.ResolvedSource;
+import weac.compiler.resolve.structure.StackmapFrame;
+import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;
 
 import java.util.HashMap;
@@ -229,6 +232,11 @@ public class MethodInfoSolver extends CompileUtils implements ResolveOpcodes {
         maxStack = Math.max(stackSize, maxStack);
     }
 
+    public void computeFrames(List<ResolvedInsn> insns, StackmapFrame initialFrame) {
+        insns.add(0, new StackMapFrameInsn(initialFrame)); // TEST
+
+    }
+
     public int getMaxStack() {
         return maxStack;
     }
@@ -238,10 +246,15 @@ public class MethodInfoSolver extends CompileUtils implements ResolveOpcodes {
     }
 
     public void solveInfos(ResolvedSource resolvedSource) {
-        resolvedSource.classes.stream().map(ResolvedClass::getMethods).forEach(list -> {
-            list.forEach(m -> {
+        resolvedSource.classes.stream().forEach(owner -> {
+            List<ResolvedMethod> methodList = owner.getMethods();
+            methodList.forEach(m -> {
                 computeMaxs(m.instructions);
                 m.instructions.add(new MaxsInsn(maxStack, maxLocal));
+
+                // create initial frame
+                StackmapFrame initialFrame = new StackmapFrame().append(owner.fullName).append(m.argumentTypes);
+                computeFrames(m.instructions, initialFrame);
             });
         });
     }
