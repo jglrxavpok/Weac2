@@ -29,10 +29,6 @@ object Math {
     }
 
     Int fact(Int number) {
-       /* if(number == 1) {
-            return 1;
-        }
-        return number*fact(number-1);*/
         return fact_tail(1, number);
     }
 

@@ -11,14 +11,14 @@ public class TestIntegration extends Tests {
         String[] names = {
                 "weac.lang.Object", "weac.lang.Void", "weac.lang.Primitive", "weac.lang.JavaPrimitive",
                 "weac.lang.Double", "weac.lang.Float", "weac.lang.Int", "weac.lang.Boolean", "weac.lang.Pointer",
-                "weac.lang.Math"
+                "weac.lang.Math", "weac.lang.Console", "tests.TestMixin", "weac.lang.Application", "tests.HelloWorld"
         };
         for(String n : names)
         {
             System.out.println(define(n).getCanonicalName());
         }
-        Class<?> pointerClass = Class.forName("weac.lang.Pointer");
         Class<?> mathClass = Class.forName("weac.lang.Math");
+        Class<?> pointerClass = Class.forName("weac.lang.Pointer");
         if(mathClass != null)
         {
             Method m = mathClass.getDeclaredMethod("isInteger", Double.TYPE);
@@ -27,8 +27,18 @@ public class TestIntegration extends Tests {
             Object val = m.invoke(instance, 5.5);
             System.out.println("Math.__instance__.isInteger(5.5) = "+val);
 
-            val = m.invoke(instance, 78.0);
-            System.out.println("Math.__instance__.isInteger(78.0) = "+val);
+            Method fact = mathClass.getDeclaredMethod("fact", Integer.TYPE);
+            fact.setAccessible(true);
+            val = fact.invoke(instance, 5);
+            System.out.println("Math.__instance__.fact(5) = "+val);
+        }
+
+        Class<?> helloWorldClass = Class.forName("tests.HelloWorld");
+        if(helloWorldClass != null) {
+            Method m = helloWorldClass.getDeclaredMethod("main", String[].class);
+            m.setAccessible(true);
+            System.out.println("Helloworld: "+m.toGenericString());
+            m.invoke(null, new Object[]{new String[] {"Test"}});
         }
     }
 

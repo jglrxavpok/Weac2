@@ -698,7 +698,7 @@ public class Resolver extends CompileUtils {
                     if(selfType.getIdentifier().getId().endsWith("Console")) {
                         System.out.println("POP:"+val);
                     }
-                    insns.add(new PopInsn());
+                    insns.add(new PopInsn(val.getType()));
                 }
                 LabelInsn cst = ((LabelInsn) precompiledInsn);
                 insns.add(new ResolvedLabelInsn(cst.getLabel()));

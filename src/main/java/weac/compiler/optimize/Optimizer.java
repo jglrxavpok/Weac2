@@ -61,7 +61,7 @@ public class Optimizer extends CompilePhase<ResolvedSource, ResolvedSource> {
 
                         // replace corresponding function start instruction by pop instruction
                         int index = findCorrespondingFuncStart(method.instructions, call, i);
-                        method.instructions.set(index, new PopInsn());
+                        method.instructions.set(index, new PopInsn(owner.name));
 
                         method.instructions.remove(i);
                         i--;

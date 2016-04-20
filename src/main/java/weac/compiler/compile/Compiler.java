@@ -37,7 +37,7 @@ public class Compiler extends CompileUtils implements Opcodes {
 
         for(ResolvedClass clazz : source.classes) {
             System.out.println("COMPILING "+clazz.fullName);
-            ClassWriter writer = new ClassWriter(0);
+            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
             String internalName = toInternal(clazz.fullName);
             Type type = Type.getType("L"+internalName+";");
 
@@ -46,7 +46,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             if(clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION && !clazz.isMixin) {
                superclass = toInternal(clazz.parents.getSuperclass());
             }
-            writer.visit(V1_8, convertAccessToASM(clazz), internalName, signature, superclass, convertToASM(clazz.parents.getInterfaces()));
+            writer.visit(V1_6, convertAccessToASM(clazz), internalName, signature, superclass, convertToASM(clazz.parents.getInterfaces()));
             writer.visitSource(source.fileName, "Compiled from WeaC");
 
             if(clazz.classType == EnumClassTypes.OBJECT) {
@@ -255,7 +255,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 }
                 mv.visitLabel(end);
                 try {
-               //     mv.visitMaxs(0, 0);
+                    mv.visitMaxs(0, 0);
                 } catch (Exception e) {
                     try {
                         throw new RuntimeException("WARNING in " + method.name + " " + method.argumentTypes.get(0) + " / " + type, e);
@@ -264,6 +264,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                         e1.printStackTrace();
                     }
                 }
+                mv.visitInsn(RETURN);
             }
             mv.visitEnd();
         }
@@ -284,7 +285,6 @@ public class Compiler extends CompileUtils implements Opcodes {
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
             }
-            mv.visitMaxs(1,1);
             clazz.fields.stream()
                     .filter(f -> !f.defaultValue.isEmpty())
                     .filter(f -> !(f.defaultValue.size() == 1 && f.defaultValue.get(0) instanceof LocalVariableTableInsn))
@@ -296,6 +296,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                     });
             mv.visitLabel(end);
             mv.visitInsn(RETURN);
+            mv.visitMaxs(0,0);
             mv.visitEnd();
         }
     }
@@ -310,7 +311,8 @@ public class Compiler extends CompileUtils implements Opcodes {
         mv.visitInsn(DUP);
         mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false); // call constructor
 
-        mv.visitMethodInsn(INVOKEINTERFACE, type.getInternalName(), "start", mainDesc, true); // call Application::start(String[])
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "start", mainDesc, false); // call Application::start(String[])
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitInsn(RETURN);
         mv.visitMaxs(3, 0);
@@ -437,7 +439,13 @@ public class Compiler extends CompileUtils implements Opcodes {
             } else if(insn instanceof LoadNullInsn) {
                 writer.visitInsn(ACONST_NULL);
             } else if(insn instanceof PopInsn) {
-                writer.visitInsn(POP);
+                WeacType removed = ((PopInsn)insn).getRemovedType();
+                Type primitive = getPrimitiveType(removed);
+                if(primitive == Type.LONG_TYPE || primitive == Type.DOUBLE_TYPE) {
+                    writer.visitInsn(POP2);
+                } else {
+                    writer.visitInsn(POP);
+                }
             } else if(insn instanceof FunctionCallInsn) {
                 FunctionCallInsn callInsn = (FunctionCallInsn)insn;
                 Type[] argTypes = new Type[callInsn.getArgCount()];
@@ -454,7 +462,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 if(owner.getSuperType() != null) {
                     if(owner.getSuperType().equals(WeacType.PRIMITIVE_TYPE)) {
                         String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), toJVMType(owner, false));
-                        writer.visitMethodInsn(INVOKESTATIC, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
+                        writer.visitMethodInsn(INVOKESTATIC, toJVMType(owner, true, false).getInternalName(), callInsn.getName(), methodDesc, false);
                     } else {
                         String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
                         writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
@@ -519,6 +527,8 @@ public class Compiler extends CompileUtils implements Opcodes {
                 int maxStack = maxInsn.getMaxStack();
                 int maxLocal = maxInsn.getMaxLocal();
                 writer.visitMaxs(maxStack, maxLocal);
+            } else if(insn instanceof FunctionStartResInsn) {
+                // discard
             } else {
                 System.err.println("unknown: "+insn);
             }
@@ -615,15 +625,26 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private Type toJVMType(WeacType type, boolean isFunctionOwner) {
+        return toJVMType(type, isFunctionOwner, true);
+    }
+
+    private Type toJVMType(WeacType type, boolean isFunctionOwner, boolean convertPrimitives) {
         if(!isFunctionOwner) {
             Type primitiveType = getPrimitiveType(type);
             if(primitiveType != null)
                 return primitiveType;
         }
-        return Type.getType(toDescriptor(type));
+        return Type.getType(toDescriptor(type, convertPrimitives));
     }
 
     private String toDescriptor(WeacType type) {
+        return toDescriptor(type, true);
+    }
+
+    private String toDescriptor(WeacType type, boolean convertPrimitives) {
+        Type primitiveType = getPrimitiveType(type);
+        if(primitiveType != null && convertPrimitives)
+            return primitiveType.getDescriptor();
         if(type.equals(WeacType.VOID_TYPE)) {
             return "V";
         }
@@ -634,7 +655,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         StringBuilder builder = new StringBuilder();
         if(type.isArray()) {
             builder.append("[");
-            builder.append(toDescriptor(type.getArrayType()));
+            builder.append(toDescriptor(type.getArrayType(), convertPrimitives));
         } else {
             builder.append("L").append(type.getIdentifier().getId()).append(";");
         }
