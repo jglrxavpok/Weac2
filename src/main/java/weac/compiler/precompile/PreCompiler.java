@@ -268,7 +268,17 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
         tokens = solvePatterns(tokens);
 
+        if(expression.contains("Boolean")) {
+            System.out.println("==== START TOKENS "+expression+" INFIX ====");
+            tokens.forEach(System.out::println);
+            System.out.println("=====================================");
+        }
         List<Token> output = convertToRPN(expression, tokens);
+        if(expression.contains("Boolean")) {
+            System.out.println("==== START TOKENS "+expression+" POSTFIX ====");
+            output.forEach(System.out::println);
+            System.out.println("=====================================");
+        }
         List<PrecompiledInsn> instructions = toInstructions(output, insns);
         if(ditchLabels) {
             ListIterator<PrecompiledInsn> insnIterator = instructions.listIterator();
@@ -729,6 +739,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                                 instanceStack.setCurrent(false).push();
                                             }
                                         } else {
+                                            stack.push(stackTop);
                                             break;
                                         }
                                     } else {
@@ -740,6 +751,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                                 instanceStack.setCurrent(false).push();
                                             }
                                         } else {
+                                            stack.push(stackTop);
                                             break;
                                         }
                                     }
