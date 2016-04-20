@@ -4,7 +4,7 @@ import weac.compiler.utils.WeacType;
 
 public class NullValue extends Value {
     public NullValue() {
-        super(WeacType.OBJECT_TYPE);
+        super(WeacType.NULL_TYPE);
     }
 
     @Override

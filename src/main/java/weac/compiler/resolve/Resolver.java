@@ -13,6 +13,7 @@ import weac.compiler.utils.*;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class Resolver extends CompileUtils {
 
@@ -961,7 +962,7 @@ public class Resolver extends CompileUtils {
 
     private PrecompiledMethod findMethodFromHierarchy(WeacType topType, String name, int argCount, WeacType[] argTypes, ResolvingContext context) {
         PrecompiledClass topClass = findClass(topType.getIdentifier().getId(), context);
-        Optional<PrecompiledMethod> foundMethod = topClass.methods.stream()
+        List<PrecompiledMethod> result = topClass.methods.stream()
                 .filter(m -> m.name.getId().equals(name) || (m.isConstructor && topType.getIdentifier().getId().endsWith(name)))
                 .filter(m -> m.argumentNames.size() == argCount)
                 .filter(m -> {
@@ -975,13 +976,22 @@ public class Resolver extends CompileUtils {
                     return true;
                 })
                 .sorted((a, b) -> {
-
-                    // TODO: make methods that have the correct types go towards the first indexes
-                    return 0;
+                    int aMethodScore = computeMethodScore(a, argTypes, context);
+                    int bMethodScore = computeMethodScore(b, argTypes, context);
+                    a.score = aMethodScore;
+                    b.score = bMethodScore;
+                    return Integer.compare(aMethodScore, bMethodScore); // the lower the better
                 })
-                .findFirst();
-        if(foundMethod.isPresent()) {
-            return foundMethod.get();
+                .collect(Collectors.toList());
+        if(result.size() > 0) {
+            if(result.size() > 1) {
+                PrecompiledMethod first = result.get(0);
+                PrecompiledMethod second = result.get(1);
+                if(first.score == second.score) {
+                    newError("Ambiguous method call ("+name+"): "+Arrays.toString(first.argumentTypes.toArray())+" or "+Arrays.toString(second.argumentTypes.toArray())+" for arguments "+Arrays.toString(argTypes)+"?", -1); // todo line
+                }
+            }
+            return result.get(0);
         }
 
         if(topClass.fullName.equals(Object.class.getCanonicalName())) {
@@ -1027,6 +1037,37 @@ public class Resolver extends CompileUtils {
         }
 
         return null;
+    }
+
+    private int computeMethodScore(PrecompiledMethod method, WeacType[] givenTypes, ResolvingContext context) {
+        int totalScore = 0;
+        for (int i = 0; i < givenTypes.length; i++) {
+            WeacType requiredType = resolveType(method.argumentTypes.get(i), context);
+            totalScore += computeScore(requiredType, givenTypes[i]);
+        }
+        return totalScore;
+    }
+
+    /**
+     * Method call solving involves a score-system. For each argument, a score will be computed, it corresponds to
+     * the number of classes in the hierarchy separating the given argument type and the required one.
+     * <code>null</code> corresponds to a score of 0.
+     * @param requiredType
+     * @param givenType
+     * @return
+     */
+    private int computeScore(WeacType requiredType, WeacType givenType) {
+        if(givenType.equals(WeacType.NULL_TYPE) || requiredType.equals(givenType))
+            return 0;
+        if(primitiveCasts.isPrimitiveCast(givenType, requiredType))
+            if(primitiveCasts.isCastable(givenType, requiredType)) {
+                return primitiveCasts.size(requiredType) - primitiveCasts.size(givenType);
+            }
+        WeacType superType = givenType.getSuperType();
+        if(superType != null && superType != WeacType.JOBJECT_TYPE) {
+            return 1+computeScore(requiredType, superType);
+        }
+        return 10;
     }
 
     private boolean isCastable(WeacType from, WeacType to, ResolvingContext context) {

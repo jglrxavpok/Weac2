@@ -26,10 +26,6 @@ object Console {
         System.out.println(d);
     }
 
-    Void writeLine(Long l) {
-        System.out.println(l);
-    }
-
     Void writeLine(Char c) {
         System.out.println(c);
     }

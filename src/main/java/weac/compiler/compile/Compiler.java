@@ -303,7 +303,7 @@ public class Compiler extends CompileUtils implements Opcodes {
 
     private void writeMainMethod(ClassWriter writer, Type type, ResolvedClass clazz) {
         String mainDesc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String[].class));
-        MethodVisitor mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "main", mainDesc, null, null);
+        MethodVisitor mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "main", mainDesc, mainDesc, null);
         mv.visitCode();
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitTypeInsn(NEW, type.getInternalName());
@@ -587,7 +587,7 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private void writeStaticBlock(ClassWriter writer, Type type, ResolvedClass clazz) {
-        MethodVisitor mv = writer.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null);
+        MethodVisitor mv = writer.visitMethod(ACC_STATIC, "<clinit>", "()V", "()V", null);
         mv.visitCode();
         if(clazz.classType == EnumClassTypes.OBJECT) {
             mv.visitLabel(new org.objectweb.asm.Label());

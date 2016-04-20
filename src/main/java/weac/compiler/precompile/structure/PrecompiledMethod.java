@@ -46,6 +46,11 @@ public class PrecompiledMethod {
 
     public boolean isCompilerSpecial;
 
+    /**
+     * Field used by the resolver to assign this method a score in order to avoid ambiguous method calls
+     */
+    public int score;
+
     public PrecompiledMethod() {
         instructions = new LinkedList<>();
         annotations = new LinkedList<>();

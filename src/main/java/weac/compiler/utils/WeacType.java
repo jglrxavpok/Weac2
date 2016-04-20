@@ -18,8 +18,10 @@ public class WeacType {
     public static final WeacType CHAR_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Char", true);
 
     public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
+    public static final WeacType NULL_TYPE = new WeacType(JOBJECT_TYPE, OBJECT_TYPE.identifier);
 
     public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Pointer<Type>", true);
+
     public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
 
     private final WeacType superType;
