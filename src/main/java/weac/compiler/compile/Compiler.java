@@ -435,10 +435,10 @@ public class Compiler extends CompileUtils implements Opcodes {
                 org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
                 writer.visitLabel(new org.objectweb.asm.Label());
                 writer.visitJumpInsn(opcode, lbl);
-                writer.visitInsn(ICONST_1);
+                writer.visitInsn(ICONST_0);
                 writer.visitJumpInsn(GOTO, lbl1);
                 writer.visitLabel(lbl);
-                writer.visitInsn(ICONST_0);
+                writer.visitInsn(ICONST_1);
                 writer.visitLabel(lbl1);
             } else if(insn instanceof OperationInsn) {
                 OperationInsn multInsn = (OperationInsn)insn;
@@ -496,7 +496,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             } else if(insn instanceof IfNotJumpResInsn) {
                 org.objectweb.asm.Label lbl = labelMap.get(((IfNotJumpResInsn) insn).getDestination());
                 writer.visitLabel(new org.objectweb.asm.Label());
-                writer.visitJumpInsn(IFNE, lbl);
+                writer.visitJumpInsn(IFEQ, lbl);
             } else if(insn instanceof ObjectEqualInsn) {
                 org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
                 org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();

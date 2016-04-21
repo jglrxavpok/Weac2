@@ -46,9 +46,31 @@ public class TestIntegration extends Tests {
 
 
         if(intervalClass != null) {
-            Object intervalInstance = intervalClass.getDeclaredConstructor(Double.TYPE, Double.TYPE, Double.TYPE).newInstance(0, 100, 1);
-
+            double start = 0;
+            double end = 100;
+            double step = 0;
+            Object intervalInstance = intervalClass.getDeclaredConstructor(Double.TYPE, Double.TYPE, Double.TYPE).newInstance(start, end, step);
+            Method m = intervalClass.getDeclaredMethod("isIn", Double.TYPE);
+            double index = 10;
+            boolean result = (boolean) m.invoke(intervalInstance, index);
+            System.out.println("["+start+".."+end+":"+step+"]isIn("+index+") = "+result);
+            System.out.println("Java: "+isIn(index, start, end, step));
         }
+    }
+
+    private boolean isIn(double value, double start, double end, double step) {
+        Boolean inRange = value >= start & value <= end;
+        Boolean isValue;
+        if(step == 0D) {
+            isValue = true;
+        } else {
+            isValue = isInteger((value-start)/step);
+        }
+        return inRange & isValue;
+    }
+
+    private boolean isInteger(double value) {
+        return (value % 1) == 0;
     }
 
     private Class<?> define(String name) throws InvocationTargetException, IllegalAccessException, IOException {
