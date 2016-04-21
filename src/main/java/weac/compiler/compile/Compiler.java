@@ -307,7 +307,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         for (ResolvedInsn i : method.instructions) {
             if(i.getOpcode() == ResolveOpcodes.FUNCTION_CALL) {
                 FunctionCallInsn callInsn = (FunctionCallInsn) i;
-                if(callInsn.getOwner().equals(owner.name) && callInsn.getName().equals("<init>"))
+                if(callInsn.getOwner().getIdentifier().getId().equals(owner.fullName) && callInsn.getName().equals("<init>"))
                     return true;
             }
         }
