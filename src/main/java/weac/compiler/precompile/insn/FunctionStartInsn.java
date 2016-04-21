@@ -23,4 +23,9 @@ public class FunctionStartInsn extends PrecompiledInsn {
     public boolean shouldLookForInstance() {
         return shouldLookForInstance;
     }
+
+    @Override
+    public String toString() {
+        return super.toString()+" "+funcName+" "+nArgs+" lookForInstance: "+shouldLookForInstance;
+    }
 }

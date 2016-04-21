@@ -1,17 +1,19 @@
 import org.junit.Test;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
 
 public class TestIntegration extends Tests {
 
     @Test
-    public void test0() throws IOException, InvocationTargetException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, NoSuchFieldException {
+    public void test0() throws IOException, InvocationTargetException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, NoSuchFieldException, InstantiationException {
         String[] names = {
                 "weac.lang.Object", "weac.lang.Void", "weac.lang.Primitive", "weac.lang.JavaPrimitive",
                 "weac.lang.Double", "weac.lang.Float", "weac.lang.Int", "weac.lang.Boolean", "weac.lang.Pointer",
-                "weac.lang.Math", "weac.lang.Console", "tests.TestMixin", "weac.lang.Application", "tests.HelloWorld"
+                "weac.lang.Math", "weac.lang.Console", "tests.TestMixin", "weac.lang.Application", "weac.lang.Interval", "tests.HelloWorld"
         };
         for(String n : names)
         {
@@ -19,6 +21,7 @@ public class TestIntegration extends Tests {
         }
         Class<?> mathClass = Class.forName("weac.lang.Math");
         Class<?> pointerClass = Class.forName("weac.lang.Pointer");
+        Class<?> intervalClass = Class.forName("weac.lang.Interval");
         if(mathClass != null)
         {
             Method m = mathClass.getDeclaredMethod("isInteger", Double.TYPE);
@@ -39,6 +42,12 @@ public class TestIntegration extends Tests {
             m.setAccessible(true);
             System.out.println("Helloworld: "+m.toGenericString());
             m.invoke(null, new Object[]{new String[] {"Test"}});
+        }
+
+
+        if(intervalClass != null) {
+            Object intervalInstance = intervalClass.getDeclaredConstructor(Double.TYPE, Double.TYPE, Double.TYPE).newInstance(0, 100, 1);
+
         }
     }
 

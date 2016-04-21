@@ -3,6 +3,7 @@ package weac.compiler.compile;
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.precompile.Label;
+import weac.compiler.precompile.insn.FunctionCall;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
@@ -211,7 +212,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             org.objectweb.asm.Label start = new org.objectweb.asm.Label();
             org.objectweb.asm.Label end = new org.objectweb.asm.Label();
 
-            if(method.isConstructor) {
+            if(method.isConstructor && !hasConstructorCall(clazz, method)) {
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
             }
@@ -238,6 +239,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 if (!method.isAbstract && method.isConstructor) {
                     clazz.fields.stream()
                             .filter(f -> !f.defaultValue.isEmpty())
+                            .filter(f -> !(f.defaultValue.size() == 1 && f.defaultValue.get(0) instanceof LocalVariableTableInsn))
                             .forEach(f -> {
                                 mv.visitLabel(new org.objectweb.asm.Label());
                                 mv.visitVarInsn(ALOAD, 0);
@@ -258,7 +260,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                     mv.visitMaxs(0, 0);
                 } catch (Exception e) {
                     try {
-                        throw new RuntimeException("WARNING in " + method.name + " " + method.argumentTypes.get(0) + " / " + type, e);
+                        throw new RuntimeException("WARNING in " + method.name + " " + Arrays.toString(method.argumentTypes.toArray()) + " / " + type, e);
                     } catch (Exception e1) {
                         e.printStackTrace();
                         e1.printStackTrace();
@@ -299,6 +301,17 @@ public class Compiler extends CompileUtils implements Opcodes {
             mv.visitMaxs(0,0);
             mv.visitEnd();
         }
+    }
+
+    private boolean hasConstructorCall(ResolvedClass owner, ResolvedMethod method) {
+        for (ResolvedInsn i : method.instructions) {
+            if(i.getOpcode() == ResolveOpcodes.FUNCTION_CALL) {
+                FunctionCallInsn callInsn = (FunctionCallInsn) i;
+                if(callInsn.getOwner().equals(owner.name) && callInsn.getName().equals("<init>"))
+                    return true;
+            }
+        }
+        return false;
     }
 
     private void writeMainMethod(ClassWriter writer, Type type, ResolvedClass clazz) {
@@ -508,7 +521,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 List<VariableValue> locals = ((LocalVariableTableInsn) insn).getLocals();
                 for(VariableValue local : locals) {
                     writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
-                            start, end, local.getLocalVariableIndex());
+                            /*start, end*/new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex());
                 }
                 // TODO: avoid duplicate entries
             } else if(insn instanceof CastInsn) {

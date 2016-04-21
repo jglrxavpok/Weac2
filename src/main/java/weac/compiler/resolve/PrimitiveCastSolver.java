@@ -19,7 +19,7 @@ public class PrimitiveCastSolver extends CompileUtils {
         addCasts(WeacType.CHAR_TYPE, WeacType.DOUBLE_TYPE, WeacType.FLOAT_TYPE, WeacType.INTEGER_TYPE, WeacType.LONG_TYPE, WeacType.SHORT_TYPE);
         addCasts(WeacType.DOUBLE_TYPE);
         addCasts(WeacType.FLOAT_TYPE, WeacType.DOUBLE_TYPE);
-        addCasts(WeacType.INTEGER_TYPE, WeacType.LONG_TYPE);
+        addCasts(WeacType.INTEGER_TYPE, WeacType.LONG_TYPE, WeacType.DOUBLE_TYPE, WeacType.FLOAT_TYPE);
         addCasts(WeacType.LONG_TYPE, WeacType.DOUBLE_TYPE);
         addCasts(WeacType.SHORT_TYPE, WeacType.CHAR_TYPE, WeacType.DOUBLE_TYPE, WeacType.FLOAT_TYPE, WeacType.INTEGER_TYPE, WeacType.LONG_TYPE);
 

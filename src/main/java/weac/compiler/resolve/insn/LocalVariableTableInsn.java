@@ -17,9 +17,11 @@ public class LocalVariableTableInsn extends ResolvedInsn {
         int count = varMap.getCurrentLocalIndex();
         locals = new LinkedList<>();
         for(int i = 0;i<count;i++) {
-            String name = varMap.getLocalName(i);
-            WeacType type = varMap.getLocalType(name);
-            locals.add(new VariableValue(name, type, i));
+            if(varMap.localExists(i)) {
+                String name = varMap.getLocalName(i);
+                WeacType type = varMap.getLocalType(name);
+                locals.add(new VariableValue(name, type, i));
+            }
         }
     }
 

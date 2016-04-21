@@ -93,6 +93,7 @@ public class ClassBodyParser extends CompileUtils {
                     function.annotations = annotations;
                     function.startingLine = lineIndex+startingLine;
                     function.isConstructor = true;
+                    function.name = new Identifier("<init>");
                     parsedClass.methods.add(function);
                     i += function.off;
 

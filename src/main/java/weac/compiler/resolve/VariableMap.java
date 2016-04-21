@@ -29,6 +29,9 @@ public class VariableMap {
         localIDs.put(name, index);
         localNames.put(index, name);
         localTypes.put(name, type);
+        if(type.equals(WeacType.LONG_TYPE) || type.equals(WeacType.DOUBLE_TYPE)) {
+            localIndex++;
+        }
         localIndex++;
         return index;
     }
@@ -59,5 +62,9 @@ public class VariableMap {
 
     public int getLocalIndex(String name) {
         return localIDs.getOrDefault(name, -1);
+    }
+
+    public boolean localExists(int i) {
+        return localNames.containsKey(i);
     }
 }

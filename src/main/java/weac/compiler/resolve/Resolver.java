@@ -4,6 +4,7 @@ import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.patterns.InstructionPattern;
+import weac.compiler.precompile.Label;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.structure.*;
 import weac.compiler.resolve.insn.*;
@@ -22,6 +23,7 @@ public class Resolver extends CompileUtils {
     private final StringResolver stringResolver;
     private final PrimitiveCastSolver primitiveCasts;
     private final Map<EnumOperators, Function<WeacType, OperationInsn>> operatorsInsnFactories;
+    private int labelID = -100;
 
     public Resolver() {
         patterns = new LinkedList<>();
@@ -176,9 +178,6 @@ public class Resolver extends CompileUtils {
         }
         Stack<Value> valStack = new Stack<>();
         resolveSingleExpression(precompiledMethod.instructions, currentType, context, localVariables, valStack).forEach(method.instructions::add);
-        if(valStack.isEmpty()) {
-            method.instructions.add(new ResolvedInsn(ResolveOpcodes.RETURN));
-        }
         return method;
     }
 
@@ -637,7 +636,7 @@ public class Resolver extends CompileUtils {
                 }
 
                 WeacType returnType = resolveType(realMethod.returnType, context);
-                insns.add(new FunctionCallInsn(name, owner.getType(), cst.getArgCount(), argTypes, returnType, isStatic));
+                insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), cst.getArgCount(), argTypes, returnType, isStatic));
 
                 staticness.setCurrent(false).push();
                 int toPop = cst.getArgCount();
@@ -809,7 +808,7 @@ public class Resolver extends CompileUtils {
                             } else if (first.getType().isPrimitive() && !second.getType().isPrimitive()
                                     || !first.getType().isPrimitive() && second.getType().isPrimitive()) {
                                 // TODO
-                                newError("Dunno what to do", -1);
+                                newError("Dunno what to do, == operation between "+first+" and "+second+" in "+context.getSource().classes.get(0).fullName, -1);
                             } else {
                                 insns.add(new ObjectEqualInsn());
                             }
@@ -840,10 +839,14 @@ public class Resolver extends CompileUtils {
                                 insns.add(new CastInsn(right.getType(), resultType));
                             }
 
-                            valueStack.push(new ConstantValue(resultType));
+                            valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
                             staticness.pop();
                             staticness.pop();
                             staticness.setCurrent(false).push();
+
+                            if(!resultType.equals(WeacType.INTEGER_TYPE)) {
+                                insns.add(new CompareInsn(resultType));
+                            }
 
                             insns.add(createOperatorInsn(resultType, op));
                         }
@@ -879,6 +882,43 @@ public class Resolver extends CompileUtils {
                         }
                         break;
 
+                        case DOUBLE_OR:
+                        case DOUBLE_AND: {
+                            // TODO: Probably will be up to the precompiler to actually support those and convert them to & and |
+                            throw new UnsupportedOperationException("&& and || are not supported yet, please use & or | for the moment");
+                        }
+
+                        case AND: {
+                            Value right = valueStack.pop();
+                            Value left = valueStack.pop();
+                            if(!left.getType().equals(WeacType.BOOLEAN_TYPE) || !right.getType().equals(WeacType.BOOLEAN_TYPE)) {
+                                newError("Cannot perform AND operation "+left.getType()+" & "+right.getType(), -1); // todo line
+                            }
+                            Label labelFalse1 = newLabel();
+                            Label labelFalse0 = newLabel();
+                            Label labelTrue = newLabel();
+                            Label endLabel = newLabel();
+                            insns.add(new IfNotJumpResInsn(labelFalse1));
+                            insns.add(new IfNotJumpResInsn(labelFalse0));
+                            insns.add(new GotoResInsn(labelTrue));
+
+                            insns.add(new ResolvedLabelInsn(labelFalse1));
+                            insns.add(new PopInsn(WeacType.BOOLEAN_TYPE));
+                            insns.add(new ResolvedLabelInsn(labelFalse0));
+                            insns.add(new LoadBooleanInsn(false));
+                            insns.add(new GotoResInsn(endLabel));
+                            insns.add(new ResolvedLabelInsn(labelTrue));
+                            insns.add(new LoadBooleanInsn(true));
+
+                            insns.add(new ResolvedLabelInsn(endLabel));
+
+                            valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
+                            staticness.pop();
+                            staticness.pop();
+                            staticness.setCurrent(false).push();
+                        }
+                        break;
+
                         default:
                             System.err.println("UNRESOLVED OP: " + op.name());
                             break;
@@ -911,6 +951,8 @@ public class Resolver extends CompileUtils {
                 Value from = valueStack.pop();
                 insns.add(new CastInsn(from.getType(), destination));
                 valueStack.push(new ConstantValue(destination));
+            } else if(precompiledInsn instanceof PopInstanceStack) {
+                currentVarType = selfType;
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }
@@ -919,6 +961,10 @@ public class Resolver extends CompileUtils {
         insns.add(0, new LocalVariableTableInsn(varMap));
         // TODO
         return insns;
+    }
+
+    private Label newLabel() {
+        return new Label(labelID--);
     }
 
     private WeacType findResultType(WeacType left, WeacType right, ResolvingContext context) {
@@ -1140,6 +1186,9 @@ public class Resolver extends CompileUtils {
         if(cst.shouldLookForInstance()) {
             int args = cst.getArgCount();
             int index = stack.size()-args-1;
+            if(index < 0) {
+                System.err.println(">>>> "+cst);
+            }
             return stack.get(index);
         } else {
             return new ThisValue(currentType);

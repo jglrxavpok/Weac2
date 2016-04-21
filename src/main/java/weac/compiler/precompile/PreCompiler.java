@@ -267,18 +267,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         handleBuiltins(tokens);
 
         tokens = solvePatterns(tokens);
+        addInstancePops(tokens);
 
-        if(expression.contains("Boolean")) {
-            System.out.println("==== START TOKENS "+expression+" INFIX ====");
-            tokens.forEach(System.out::println);
-            System.out.println("=====================================");
-        }
         List<Token> output = convertToRPN(expression, tokens);
-        if(expression.contains("Boolean")) {
-            System.out.println("==== START TOKENS "+expression+" POSTFIX ====");
-            output.forEach(System.out::println);
-            System.out.println("=====================================");
-        }
         List<PrecompiledInsn> instructions = toInstructions(output, insns);
         if(ditchLabels) {
             ListIterator<PrecompiledInsn> insnIterator = instructions.listIterator();
@@ -292,7 +283,23 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
             }
         }
 
+        if(expression.contains("isInteger")) {
+            System.out.println("==== START INSNS "+expression+" POSTFIX ====");
+            instructions.forEach(System.out::println);
+            System.out.println("=====================================");
+        }
+
         return instructions;
+    }
+
+    private void addInstancePops(List<Token> tokens) {
+        for (int i = 0; i < tokens.size(); i++) {
+            Token token = tokens.get(i);
+            if(token.getType() == TokenType.UNARY_OPERATOR || token.getType() == TokenType.BINARY_OPERATOR) {
+                tokens.add(i+1, new Token("", TokenType.POP_INSTANCE, 0));
+                i++;
+            }
+        }
     }
 
     private void resolveOperators(List<Token> tokens) {
@@ -545,6 +552,8 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                             String[] parts = funcToken.getContent().split(";");
                             String funcName = parts[0];
                             int nArgs = Integer.parseInt(parts[1]);
+                            if(funcName.contains("NullPointer"))
+                                System.out.println("<<< "+parts[2]);
                             boolean shouldLookForInstance = Boolean.parseBoolean(parts[2]);
                             insns.add(new FunctionStartInsn(funcName, nArgs, shouldLookForInstance));
                         }
@@ -564,6 +573,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         if(prev.getOpcode() == PrecompileOpcodes.LOAD_VARIABLE) {
                             LoadVariable var = (LoadVariable)prev;
                             typeName = var.getName();
+
+                            insns.add(new InstanciateInsn(typeName));
+                            insns.add(new SimplePreInsn(PrecompileOpcodes.DUP));
                         } else if(prev.getOpcode() == PrecompileOpcodes.FUNCTION_CALL) {
                             FunctionCall call = (FunctionCall)prev;
                             typeName = call.getName();
@@ -571,13 +583,17 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                             //if(call.shouldLookForInstance()) {
                             //    newError("Incorrect call to constructor "+prev, -1); // todo: line
                             //}
+
+                            System.out.println(">>>>>>>>>>> "+call);
+                            int startIndex = findCorrespondingFunctionStart(insns.size()-1, call, insns);
+                            insns.set(startIndex, new FunctionStartInsn("<init>", constructorArgCount, true));
+                            insns.add(startIndex, new InstanciateInsn(typeName));
+                            insns.add(startIndex+1, new SimplePreInsn(PrecompileOpcodes.DUP));
+
                         } else {
                             newError("Invalid token before constructor (opcode is "+prev.getOpcode()+")", -1); // todo: line
                             typeName = "INVALID$$";
                         }
-                        insns.add(new InstanciateInsn(typeName));
-                        insns.add(new SimplePreInsn(PrecompileOpcodes.DUP));
-
                         // look into the stack, as the value as just be added via the WeacInstanceInsn
                         insns.add(new FunctionCall("<init>", constructorArgCount, true));
 
@@ -595,6 +611,10 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     }
                     break;
 
+                case POP_INSTANCE:
+                    insns.add(new PopInstanceStack());
+                    break;
+
                 default:
                     System.err.println("Precompilation: unknown "+token);
                     break;
@@ -603,6 +623,19 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         }
 
         return postProcessInstructions(insns);
+    }
+
+    private int findCorrespondingFunctionStart(int index, FunctionCall call, List<PrecompiledInsn> insns) {
+        for (int i = index; i >= 0; i--) {
+            PrecompiledInsn insn = insns.get(i);
+            if(insn instanceof FunctionStartInsn) {
+                FunctionStartInsn startInsn = (FunctionStartInsn) insn;
+                if(call.getArgCount() == startInsn.getArgCount() && call.getName().equals(startInsn.getFunctionName())) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     private int findEndOfBlock(Token start, int off, List<Token> tokens) {
@@ -659,7 +692,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         int argCount = 0;
         Stack<Integer> argCountStack = new Stack<>();
         VariableTopStack<Boolean> instanceStack = new VariableTopStack<>();
-        instanceStack.setCurrent(false).push();
+        instanceStack.setCurrent(false);
         for(int i = 0;i<tokens.size();i++) {
             Token token = tokens.get(i);
             if(token.getType() == TokenType.INSTRUCTION_END) {
@@ -701,13 +734,13 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
             } else if(token.getType() == TokenType.ARGUMENT_SEPARATOR) {
                 if(stack.isEmpty()) {
                     newError("Unmatched parenthesises, please fix", -1);
-                    return Collections.EMPTY_LIST;
+                    return Collections.emptyList();
                 }
                 while(!stack.peek().isOpeningBracketLike()) {
                     out.add(stack.pop());
                     if(stack.isEmpty()) {
                         newError("Unmatched parenthesises, please fix", -1);
-                        return Collections.EMPTY_LIST;
+                        return Collections.emptyList();
                     }
                 }
                 out.add(token);
@@ -734,9 +767,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                         if (operator.precedence() > operator2.precedence()) {
                                             out.add(stackTop);
                                             if(!operator2.isUnary()) {
-                                                instanceStack.pop();
+                                                //instanceStack.pop();
                                                 argCount--;
-                                                instanceStack.setCurrent(false).push();
+                                                instanceStack.setCurrent(false);
                                             }
                                         } else {
                                             stack.push(stackTop);
@@ -746,9 +779,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                         if (operator.precedence() >= operator2.precedence()) {
                                             out.add(stackTop);
                                             if(!operator2.isUnary()) {
-                                                instanceStack.pop();
+                                                //instanceStack.pop();
                                                 argCount--;
-                                                instanceStack.setCurrent(false).push();
+                                                instanceStack.setCurrent(false);
                                             }
                                         } else {
                                             stack.push(stackTop);
@@ -766,9 +799,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         stack.push(token);
                     } else {
                         if(!operator.isUnary()) {
-                            instanceStack.pop();
+//                            instanceStack.pop();
                             argCount--;
-                            instanceStack.setCurrent(false).push();
+                            instanceStack.setCurrent(false);
                         }
                         stack.push(new Token(operator.raw(), token.getType(), token.length));
                     }
@@ -791,15 +824,17 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         Token val = stack.pop();
                         out.add(val);
                         if(val.getType() == TokenType.BINARY_OPERATOR) {
-                            instanceStack.pop();
+                            //instanceStack.pop();
                             //argCount--;
-                            instanceStack.setCurrent(false).push();
+                            instanceStack.setCurrent(false);
                         }
                     }
 
+                    //shouldLookForInstance = instanceStack.getCurrent();
+
                     if(stack.isEmpty()) {
                         newError("Unmatched parenthesises0, please fix in "+expr+" / "+Arrays.toString(tokens.toArray()), -1);
-                        return Collections.EMPTY_LIST;
+                        return Collections.emptyList();
                     }
 
                     Token previous = stack.pop(); // pop opening bracket
@@ -815,16 +850,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                                 Token top = stack.peek();
                                 if(top.getType() == TokenType.FUNCTION || top.getType() == TokenType.IF || top.getType() == TokenType.ELSEIF) {
                                     Token originalToken = stack.pop();
-                                    /*if(!stack.isEmpty()) {
-                                        if(stack.peek().getType() == TokenType.MEMBER_ACCESSING) {
-                                            shouldLookForInstance = true;
-                                            stack.pop();
-                                        }
-                                    } else if(stack.isEmpty() && out.size()-argCount > 0) {
-                                        shouldLookForInstance = true;
-                                    }*/
-                                    /*for(int j = 0;j<argCount;i++)
-                                        instanceStack.pop();*/
                                     // function name;argument count;true if we should look for the object to call it on in the stack
                                     originalToken.setContent(originalToken.getContent()+";"+argCount+";"+String.valueOf(shouldLookForInstance));
                                     originalToken.setType(top.getType());
@@ -844,11 +869,14 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                     }
                 } else {
                     newError("Unmatched parenthesises, please fix in "+expr, -1);
-                    return Collections.EMPTY_LIST;
+                    return Collections.emptyList();
                 }
                 instanceStack.setCurrent(true);
             } else if(token.getType() == TokenType.ELSE) {
                 out.add(token);
+            } else if(token.getType() == TokenType.POP_INSTANCE) {
+                out.add(token);
+                instanceStack.setCurrent(false);
             }
         }
         while(!stack.isEmpty()) {
@@ -858,6 +886,8 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 break;
             }
             out.add(token);
+            if(expr.contains("isInteger"))
+                System.out.println("Remaining: "+token.toString());
         }
         return out;
     }
