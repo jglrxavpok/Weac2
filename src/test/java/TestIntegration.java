@@ -46,12 +46,12 @@ public class TestIntegration extends Tests {
 
 
         if(intervalClass != null) {
-            double start = 0;
-            double end = 100;
-            double step = 0;
+            double start = 0.1;
+            double end = 100.1;
+            double step = 1;
             Object intervalInstance = intervalClass.getDeclaredConstructor(Double.TYPE, Double.TYPE, Double.TYPE).newInstance(start, end, step);
             Method m = intervalClass.getDeclaredMethod("isIn", Double.TYPE);
-            double index = 10;
+            double index = 10.1;
             boolean result = (boolean) m.invoke(intervalInstance, index);
             System.out.println("["+start+".."+end+":"+step+"]isIn("+index+") = "+result);
             System.out.println("Java: "+isIn(index, start, end, step));

@@ -802,9 +802,8 @@ public class Resolver extends CompileUtils {
                                 insns.add(new SubtractInsn(resultType));
                                 if (!isCastable(resultType, WeacType.INTEGER_TYPE, context)) {
                                     insns.add(new CompareInsn(resultType));
-                                } else {
-                                    insns.add(new CheckZero());
                                 }
+                                insns.add(new CheckZero());
                             } else if (first.getType().isPrimitive() && !second.getType().isPrimitive()
                                     || !first.getType().isPrimitive() && second.getType().isPrimitive()) {
                                 // TODO

@@ -340,211 +340,214 @@ public class Compiler extends CompileUtils implements Opcodes {
         LabelMap labelMap = new LabelMap();
         for (int i = 0; i < l.size(); i++) {
             ResolvedInsn insn = l.get(i);
-            last = insn;
-            if(insn instanceof LoadByteInsn) {
-                byte n = ((LoadByteInsn) insn).getNumber();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadDoubleInsn) {
-                double n = ((LoadDoubleInsn) insn).getNumber();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadFloatInsn) {
-                float n = ((LoadFloatInsn) insn).getNumber();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadIntInsn) {
-                int n = ((LoadIntInsn) insn).getNumber();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadLongInsn) {
-                long n = ((LoadLongInsn) insn).getNumber();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadShortInsn) {
-                short n = ((LoadShortInsn) insn).getNumber();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadCharInsn) {
-                char n = ((LoadCharInsn) insn).getNumber();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadStringInsn) {
-                String n = ((LoadStringInsn) insn).getValue();
-                writer.visitLdcInsn(n);
-            } else if(insn instanceof LoadBooleanInsn) {
-                boolean b = ((LoadBooleanInsn) insn).getValue();
-                writer.visitInsn(b ? ICONST_1 : ICONST_0);
-            } else if(insn instanceof ResolvedLabelInsn) {
-                Label b = ((ResolvedLabelInsn) insn).getLabel();
-                if(b.getIndex() != -1) // TODO: better fix?
-                    writer.visitLabel(labelMap.get(b));
-            } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
-                int code = insn.getOpcode();
-                int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
-                int[] returnOpcodes = new int[] {RETURN, ARETURN, IRETURN, FRETURN, IRETURN, LRETURN, IRETURN, IRETURN, DRETURN, IRETURN};
-                writer.visitInsn(returnOpcodes[returnIndex]);
-            } else if(insn instanceof StoreVarInsn) {
-                StoreVarInsn varInsn = (StoreVarInsn)insn;
-                int localIndex = varInsn.getLocalIndex();
-                WeacType weacType = varInsn.getVarType();
-                Type primitive = getPrimitiveType(weacType);
-                if(primitive != null) {
-                    writer.visitVarInsn(primitive.getOpcode(ISTORE), localIndex);
-                } else {
-                    writer.visitVarInsn(ASTORE, localIndex);
+            compileInstruction(insn, labelMap, writer, start, end);
+        }
+    }
+
+    private void compileInstruction(ResolvedInsn insn, LabelMap labelMap, MethodVisitor writer, org.objectweb.asm.Label start, org.objectweb.asm.Label end) {
+        if(insn instanceof LoadByteInsn) {
+            byte n = ((LoadByteInsn) insn).getNumber();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadDoubleInsn) {
+            double n = ((LoadDoubleInsn) insn).getNumber();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadFloatInsn) {
+            float n = ((LoadFloatInsn) insn).getNumber();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadIntInsn) {
+            int n = ((LoadIntInsn) insn).getNumber();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadLongInsn) {
+            long n = ((LoadLongInsn) insn).getNumber();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadShortInsn) {
+            short n = ((LoadShortInsn) insn).getNumber();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadCharInsn) {
+            char n = ((LoadCharInsn) insn).getNumber();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadStringInsn) {
+            String n = ((LoadStringInsn) insn).getValue();
+            writer.visitLdcInsn(n);
+        } else if(insn instanceof LoadBooleanInsn) {
+            boolean b = ((LoadBooleanInsn) insn).getValue();
+            writer.visitInsn(b ? ICONST_1 : ICONST_0);
+        } else if(insn instanceof ResolvedLabelInsn) {
+            Label b = ((ResolvedLabelInsn) insn).getLabel();
+            if(b.getIndex() != -1) // TODO: better fix?
+                writer.visitLabel(labelMap.get(b));
+        } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
+            int code = insn.getOpcode();
+            int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
+            int[] returnOpcodes = new int[] {RETURN, ARETURN, IRETURN, FRETURN, IRETURN, LRETURN, IRETURN, IRETURN, DRETURN, IRETURN};
+            writer.visitInsn(returnOpcodes[returnIndex]);
+        } else if(insn instanceof StoreVarInsn) {
+            StoreVarInsn varInsn = (StoreVarInsn)insn;
+            int localIndex = varInsn.getLocalIndex();
+            WeacType weacType = varInsn.getVarType();
+            Type primitive = getPrimitiveType(weacType);
+            if(primitive != null) {
+                writer.visitVarInsn(primitive.getOpcode(ISTORE), localIndex);
+            } else {
+                writer.visitVarInsn(ASTORE, localIndex);
+            }
+        } else if(insn instanceof StoreFieldInsn) {
+            StoreFieldInsn fieldInsn = (StoreFieldInsn)insn;
+            int opcode;
+            if(fieldInsn.isStatic()) {
+                opcode = PUTSTATIC;
+            } else {
+                opcode = PUTFIELD;
+            }
+            writer.visitFieldInsn(opcode, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getName(), toDescriptor(fieldInsn.getType()));
+        } else if(insn instanceof LoadFieldInsn) {
+            LoadFieldInsn fieldInsn = (LoadFieldInsn)insn;
+            writer.visitFieldInsn(fieldInsn.isStatic() ? GETSTATIC : GETFIELD, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getFieldName(), toDescriptor(fieldInsn.getType()));
+        } else if(insn instanceof LoadVariableInsn) {
+            LoadVariableInsn variableInsn = (LoadVariableInsn)insn;
+            Type primitiveType = getPrimitiveType(variableInsn.getVarType());
+            if(primitiveType != null) {
+                writer.visitVarInsn(primitiveType.getOpcode(ILOAD), variableInsn.getVarIndex());
+            } else {
+                writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
+            }
+        } else if(insn instanceof CompareInsn) {
+            CompareInsn compInsn = (CompareInsn)insn;
+            Type primitiveType = getPrimitiveType(compInsn.getResultType());
+            if(primitiveType != null) {
+                int loadType = -1;
+                if(primitiveType == Type.DOUBLE_TYPE) {
+                    writer.visitInsn(DCONST_0);
+                    loadType = DCMPL;
+                } else if(primitiveType == Type.FLOAT_TYPE) {
+                    writer.visitInsn(FCONST_0);
+                    loadType = FCMPL;
+                } else if(primitiveType == Type.LONG_TYPE) {
+                    writer.visitInsn(LCONST_0);
+                    loadType = LCMP;
                 }
-            } else if(insn instanceof StoreFieldInsn) {
-                StoreFieldInsn fieldInsn = (StoreFieldInsn)insn;
-                int opcode;
-                if(fieldInsn.isStatic()) {
-                    opcode = PUTSTATIC;
-                } else {
-                    opcode = PUTFIELD;
-                }
-                writer.visitFieldInsn(opcode, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getName(), toDescriptor(fieldInsn.getType()));
-            } else if(insn instanceof LoadFieldInsn) {
-                LoadFieldInsn fieldInsn = (LoadFieldInsn)insn;
-                writer.visitFieldInsn(fieldInsn.isStatic() ? GETSTATIC : GETFIELD, toJVMType(fieldInsn.getOwner()).getInternalName(), fieldInsn.getFieldName(), toDescriptor(fieldInsn.getType()));
-            } else if(insn instanceof LoadVariableInsn) {
-                LoadVariableInsn variableInsn = (LoadVariableInsn)insn;
-                Type primitiveType = getPrimitiveType(variableInsn.getVarType());
-                if(primitiveType != null) {
-                    writer.visitVarInsn(primitiveType.getOpcode(ILOAD), variableInsn.getVarIndex());
-                } else {
-                    writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
-                }
-            } else if(insn instanceof CompareInsn) {
-                CompareInsn compInsn = (CompareInsn)insn;
-                Type primitiveType = getPrimitiveType(compInsn.getResultType());
-                if(primitiveType != null) {
-                    int loadType = -1;
-                    if(primitiveType == Type.DOUBLE_TYPE) {
-                        writer.visitInsn(DCONST_0);
-                        loadType = DCMPL;
-                    } else if(primitiveType == Type.FLOAT_TYPE) {
-                        writer.visitInsn(FCONST_0);
-                        loadType = FCMPL;
-                    } else if(primitiveType == Type.LONG_TYPE) {
-                        writer.visitInsn(LCONST_0);
-                        loadType = LCMP;
-                    }
-                    writer.visitInsn(loadType);
-                } else {
-                    // TODO
-                    // invalid
-                }
-            } else if(insn.getOpcode() >= ResolveOpcodes.LESS && insn.getOpcode() <= ResolveOpcodes.GREATER_OR_EQUAL) {
-                int[] opcodes = {IFLT, IFLE, IFGT, IFGE};
-                int index = insn.getOpcode() - ResolveOpcodes.LESS;
-                int opcode = opcodes[index];
-                org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
-                org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
-                writer.visitLabel(new org.objectweb.asm.Label());
-                writer.visitJumpInsn(opcode, lbl);
-                writer.visitInsn(ICONST_0);
-                writer.visitJumpInsn(GOTO, lbl1);
-                writer.visitLabel(lbl);
-                writer.visitInsn(ICONST_1);
-                writer.visitLabel(lbl1);
-            } else if(insn instanceof OperationInsn) {
-                OperationInsn multInsn = (OperationInsn)insn;
-                int startingOpcode = startingOpcodes.getOrDefault(multInsn.getOpcode(), -101);
-                Type primitiveType = getPrimitiveType(multInsn.getResultType());
-                if(primitiveType != null) {
-                    writer.visitInsn(primitiveType.getOpcode(startingOpcode));
-                } else {
-                    //writer.visitVarInsn(ALOAD, multInsn.getVarIndex());
-                }
-            } else if(insn instanceof LoadNullInsn) {
-                writer.visitInsn(ACONST_NULL);
-            } else if(insn instanceof PopInsn) {
-                WeacType removed = ((PopInsn)insn).getRemovedType();
-                Type primitive = getPrimitiveType(removed);
-                if(primitive == Type.LONG_TYPE || primitive == Type.DOUBLE_TYPE) {
-                    writer.visitInsn(POP2);
-                } else {
-                    writer.visitInsn(POP);
-                }
-            } else if(insn instanceof FunctionCallInsn) {
-                FunctionCallInsn callInsn = (FunctionCallInsn)insn;
-                Type[] argTypes = new Type[callInsn.getArgCount()];
-                for(int i0 = 0;i0<callInsn.getArgCount();i0++) {
-                    argTypes[i0] = toJVMType(callInsn.getArgTypes()[i0]);
-                }
-                int invokeType = INVOKEVIRTUAL;
-                if(callInsn.isStatic()) {
-                    invokeType = INVOKESTATIC;
-                } else if(callInsn.getName().equals("<init>")) {
-                    invokeType = INVOKESPECIAL;
-                }
-                WeacType owner = callInsn.getOwner();
-                if(owner.getSuperType() != null) {
-                    if(owner.getSuperType().equals(WeacType.PRIMITIVE_TYPE)) {
-                        String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), toJVMType(owner, false));
-                        writer.visitMethodInsn(INVOKESTATIC, toJVMType(owner, true, false).getInternalName(), callInsn.getName(), methodDesc, false);
-                    } else {
-                        String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
-                        writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
-                    }
+                writer.visitInsn(loadType);
+            } else {
+                // TODO
+                // invalid
+            }
+        } else if(insn.getOpcode() >= ResolveOpcodes.LESS && insn.getOpcode() <= ResolveOpcodes.GREATER_OR_EQUAL) {
+            int[] opcodes = {IFLT, IFLE, IFGT, IFGE};
+            int index = insn.getOpcode() - ResolveOpcodes.LESS;
+            int opcode = opcodes[index];
+            org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
+            org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
+            writer.visitLabel(new org.objectweb.asm.Label());
+            writer.visitJumpInsn(opcode, lbl);
+            writer.visitInsn(ICONST_0);
+            writer.visitJumpInsn(GOTO, lbl1);
+            writer.visitLabel(lbl);
+            writer.visitInsn(ICONST_1);
+            writer.visitLabel(lbl1);
+        } else if(insn instanceof OperationInsn) {
+            OperationInsn multInsn = (OperationInsn)insn;
+            int startingOpcode = startingOpcodes.getOrDefault(multInsn.getOpcode(), -101);
+            Type primitiveType = getPrimitiveType(multInsn.getResultType());
+            if(primitiveType != null) {
+                writer.visitInsn(primitiveType.getOpcode(startingOpcode));
+            } else {
+                //writer.visitVarInsn(ALOAD, multInsn.getVarIndex());
+            }
+        } else if(insn instanceof LoadNullInsn) {
+            writer.visitInsn(ACONST_NULL);
+        } else if(insn instanceof PopInsn) {
+            WeacType removed = ((PopInsn)insn).getRemovedType();
+            Type primitive = getPrimitiveType(removed);
+            if(primitive == Type.LONG_TYPE || primitive == Type.DOUBLE_TYPE) {
+                writer.visitInsn(POP2);
+            } else {
+                writer.visitInsn(POP);
+            }
+        } else if(insn instanceof FunctionCallInsn) {
+            FunctionCallInsn callInsn = (FunctionCallInsn)insn;
+            Type[] argTypes = new Type[callInsn.getArgCount()];
+            for(int i0 = 0;i0<callInsn.getArgCount();i0++) {
+                argTypes[i0] = toJVMType(callInsn.getArgTypes()[i0]);
+            }
+            int invokeType = INVOKEVIRTUAL;
+            if(callInsn.isStatic()) {
+                invokeType = INVOKESTATIC;
+            } else if(callInsn.getName().equals("<init>")) {
+                invokeType = INVOKESPECIAL;
+            }
+            WeacType owner = callInsn.getOwner();
+            if(owner.getSuperType() != null) {
+                if(owner.getSuperType().equals(WeacType.PRIMITIVE_TYPE)) {
+                    String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), toJVMType(owner, false));
+                    writer.visitMethodInsn(INVOKESTATIC, toJVMType(owner, true, false).getInternalName(), callInsn.getName(), methodDesc, false);
                 } else {
                     String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
                     writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
                 }
-            } else if(insn.getOpcode() == ResolveOpcodes.DUP) {
-                writer.visitInsn(DUP);
-            } else if(insn.getOpcode() == ResolveOpcodes.THROW) {
-                writer.visitInsn(ATHROW);
-            } else if(insn instanceof NewInsn) {
-                writer.visitTypeInsn(NEW, toJVMType(((NewInsn) insn).getType()).getInternalName());
-            } else if(insn instanceof GotoResInsn) {
-                org.objectweb.asm.Label lbl = labelMap.get(((GotoResInsn) insn).getDestination());
-                writer.visitJumpInsn(GOTO, lbl);
-            } else if(insn instanceof IfNotJumpResInsn) {
-                org.objectweb.asm.Label lbl = labelMap.get(((IfNotJumpResInsn) insn).getDestination());
-                writer.visitLabel(new org.objectweb.asm.Label());
-                writer.visitJumpInsn(IFEQ, lbl);
-            } else if(insn instanceof ObjectEqualInsn) {
-                org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
-                org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
-                writer.visitLabel(new org.objectweb.asm.Label());
-                writer.visitJumpInsn(IF_ACMPNE, lbl);
-                writer.visitInsn(ICONST_1);
-                writer.visitJumpInsn(GOTO, lbl1);
-                writer.visitLabel(lbl);
-                writer.visitInsn(ICONST_0);
-                writer.visitLabel(lbl1);
-            } else if(insn instanceof CheckZero) {
-                org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
-                org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
-                writer.visitLabel(new org.objectweb.asm.Label());
-                writer.visitJumpInsn(IFNE, lbl);
-                writer.visitInsn(ICONST_1);
-                writer.visitJumpInsn(GOTO, lbl1);
-                writer.visitLabel(lbl);
-                writer.visitInsn(ICONST_0);
-                writer.visitLabel(lbl1);
-            } else if(insn instanceof LocalVariableTableInsn) {
-                List<VariableValue> locals = ((LocalVariableTableInsn) insn).getLocals();
-                for(VariableValue local : locals) {
-                    writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
-                            /*start, end*/new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex());
-                }
-                // TODO: avoid duplicate entries
-            } else if(insn instanceof CastInsn) {
-                CastInsn cInsn = ((CastInsn) insn);
-                WeacType from = cInsn.getFrom();
-                WeacType to = cInsn.getTo();
-                if(from.isPrimitive() && to.isPrimitive()) {
-                    handlePrimitiveCast(from, to, writer);
-                } else if(!from.isPrimitive() && !to.isPrimitive()) {
-                    writer.visitTypeInsn(CHECKCAST, toJVMType(to).getInternalName());
-                } else {
-                    System.out.println("HALP: "+from+" -> "+to);
-                }
-            } else if(insn instanceof MaxsInsn) {
-                MaxsInsn maxInsn = ((MaxsInsn) insn);
-                int maxStack = maxInsn.getMaxStack();
-                int maxLocal = maxInsn.getMaxLocal();
-                writer.visitMaxs(maxStack, maxLocal);
-            } else if(insn instanceof FunctionStartResInsn) {
-                // discard
             } else {
-                System.err.println("unknown: "+insn);
+                String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
+                writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
             }
+        } else if(insn.getOpcode() == ResolveOpcodes.DUP) {
+            writer.visitInsn(DUP);
+        } else if(insn.getOpcode() == ResolveOpcodes.THROW) {
+            writer.visitInsn(ATHROW);
+        } else if(insn instanceof NewInsn) {
+            writer.visitTypeInsn(NEW, toJVMType(((NewInsn) insn).getType()).getInternalName());
+        } else if(insn instanceof GotoResInsn) {
+            org.objectweb.asm.Label lbl = labelMap.get(((GotoResInsn) insn).getDestination());
+            writer.visitJumpInsn(GOTO, lbl);
+        } else if(insn instanceof IfNotJumpResInsn) {
+            org.objectweb.asm.Label lbl = labelMap.get(((IfNotJumpResInsn) insn).getDestination());
+            writer.visitLabel(new org.objectweb.asm.Label());
+            writer.visitJumpInsn(IFEQ, lbl);
+        } else if(insn instanceof ObjectEqualInsn) {
+            org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
+            org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
+            writer.visitLabel(new org.objectweb.asm.Label());
+            writer.visitJumpInsn(IF_ACMPNE, lbl);
+            writer.visitInsn(ICONST_1);
+            writer.visitJumpInsn(GOTO, lbl1);
+            writer.visitLabel(lbl);
+            writer.visitInsn(ICONST_0);
+            writer.visitLabel(lbl1);
+        } else if(insn instanceof CheckZero) {
+            org.objectweb.asm.Label lbl = new org.objectweb.asm.Label();
+            org.objectweb.asm.Label lbl1 = new org.objectweb.asm.Label();
+            writer.visitLabel(new org.objectweb.asm.Label());
+            writer.visitJumpInsn(IFNE, lbl);
+            writer.visitInsn(ICONST_1);
+            writer.visitJumpInsn(GOTO, lbl1);
+            writer.visitLabel(lbl);
+            writer.visitInsn(ICONST_0);
+            writer.visitLabel(lbl1);
+        } else if(insn instanceof LocalVariableTableInsn) {
+            List<VariableValue> locals = ((LocalVariableTableInsn) insn).getLocals();
+            for(VariableValue local : locals) {
+                writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
+                            /*start, end*/new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex());
+            }
+            // TODO: avoid duplicate entries
+        } else if(insn instanceof CastInsn) {
+            CastInsn cInsn = ((CastInsn) insn);
+            WeacType from = cInsn.getFrom();
+            WeacType to = cInsn.getTo();
+            if(from.isPrimitive() && to.isPrimitive()) {
+                handlePrimitiveCast(from, to, writer);
+            } else if(!from.isPrimitive() && !to.isPrimitive()) {
+                writer.visitTypeInsn(CHECKCAST, toJVMType(to).getInternalName());
+            } else {
+                System.out.println("HALP: "+from+" -> "+to);
+            }
+        } else if(insn instanceof MaxsInsn) {
+            MaxsInsn maxInsn = ((MaxsInsn) insn);
+            int maxStack = maxInsn.getMaxStack();
+            int maxLocal = maxInsn.getMaxLocal();
+            writer.visitMaxs(maxStack, maxLocal);
+        } else if(insn instanceof FunctionStartResInsn) {
+            // discard
+        } else {
+            System.err.println("unknown: "+insn);
         }
     }
 

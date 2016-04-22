@@ -442,7 +442,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                             int secondJump = Integer.parseInt(jumps[1]);
 
                             output.set(index, new Token(String.valueOf(jumpTo), TokenType.CLOSING_CURLY_BRACKETS, -1));
-                            insns.add(new GotoInsn(new Label(firstJump)));
+                            //insns.add(new GotoInsn(new Label(firstJump)));
 
                             insns.add(new LabelInsn(new Label(secondJump)));
                             insns.add(new GotoInsn(new Label(jumpTo)));
@@ -534,15 +534,13 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                         if(((FunctionStartToken) token).getFunctionType() == TokenType.ELSEIF) {
                             if (previous != null && previous.getType() == TokenType.CLOSING_CURLY_BRACKETS && !previous.getContent().equals("}")) {
                                 int jumpTo = labelIndex;
-                                //insns.add(new GotoInsn(new Label(jumpTo)));
-
                                 String[] jumps = previous.getContent().split(";");
+
                                 int firstJump = Integer.parseInt(jumps[0]);
                                 int secondJump = Integer.parseInt(jumps[1]);
 
                                 insns.add(new LabelInsn(new Label(secondJump)));
                                 insns.add(new GotoInsn(new Label(jumpTo+1)));
-
                                 insns.add(new LabelInsn(new Label(firstJump)));
                             } else {
                                 newError("Not supported, yet", -1);
@@ -623,6 +621,10 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         }
 
         return postProcessInstructions(insns);
+    }
+
+    private String nextLabel() {
+        return null; // TODO
     }
 
     private int findCorrespondingFunctionStart(int index, FunctionCall call, List<PrecompiledInsn> insns) {
