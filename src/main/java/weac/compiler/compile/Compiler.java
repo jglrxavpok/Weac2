@@ -544,6 +544,14 @@ public class Compiler extends CompileUtils implements Opcodes {
             int maxStack = maxInsn.getMaxStack();
             int maxLocal = maxInsn.getMaxLocal();
             writer.visitMaxs(maxStack, maxLocal);
+        } else if(insn instanceof IfNotNullJumpInsn) {
+            org.objectweb.asm.Label lbl = labelMap.get(((IfNotNullJumpInsn) insn).getDestination());
+            writer.visitLabel(new org.objectweb.asm.Label());
+            writer.visitJumpInsn(IFNONNULL, lbl);
+        } else if(insn instanceof IfNullJumpInsn) {
+            org.objectweb.asm.Label lbl = labelMap.get(((IfNullJumpInsn) insn).getDestination());
+            writer.visitLabel(new org.objectweb.asm.Label());
+            writer.visitJumpInsn(IFNULL, lbl);
         } else if(insn instanceof FunctionStartResInsn) {
             // discard
         } else {

@@ -49,6 +49,8 @@ public interface ResolveOpcodes {
             THROW = 0x28,
             IF_NOT_TRUE_JUMP = 0x29,
             JUMP = 0x2A,
+            IF_NOT_NULL = 0x2B,
+            IF_NULL = 0x2C,
 
             // Operations
             MULTIPLY = 0x30,

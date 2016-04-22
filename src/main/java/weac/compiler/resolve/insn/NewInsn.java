@@ -13,4 +13,9 @@ public class NewInsn extends ResolvedInsn {
     public WeacType getType() {
         return type;
     }
+
+    @Override
+    public String toString() {
+        return super.toString()+" "+type;
+    }
 }

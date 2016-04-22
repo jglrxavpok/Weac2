@@ -3,13 +3,16 @@ package weac.compiler.optimize;
 import weac.compiler.resolve.insn.PopInsn;
 import weac.compiler.resolve.insn.ResolveOpcodes;
 import weac.compiler.resolve.insn.ResolvedInsn;
+import weac.compiler.resolve.structure.ResolvedClass;
+import weac.compiler.resolve.structure.ResolvedField;
+import weac.compiler.resolve.structure.ResolvedMethod;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class UnnecessaryPopOptimizer implements InstructionOptimizer, ResolveOpcodes {
+public class UnnecessaryLoadLayer implements OptimizationLayer, ResolveOpcodes {
     @Override
-    public List<ResolvedInsn> optimize(List<ResolvedInsn> instructions) {
+    public List<ResolvedInsn> optimize(ResolvedMethod method, ResolvedField field, ResolvedClass owner, List<ResolvedInsn> instructions) {
         List<ResolvedInsn> optimized = new ArrayList<>();
         for (int i = 0; i < instructions.size(); i++) {
             ResolvedInsn insn = instructions.get(i);
