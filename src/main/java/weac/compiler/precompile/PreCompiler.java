@@ -204,7 +204,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
                     precompiledConstant.parameters.add(precompileExpression(arg));
                 }
-
+                constants.add(precompiledConstant);
             } else {
                 PrecompiledEnumConstant precompiledConstant = new PrecompiledEnumConstant();
                 precompiledConstant.name = constant;

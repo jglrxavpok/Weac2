@@ -17,7 +17,7 @@ public abstract class CompileUtils {
      *          The line of said error
      */
     protected void newError(String s, int lineIndex) {
-        System.err.println("Error at line "+lineIndex+": "+s); // TODO: Collect errors
+        System.err.println("["+getClass().getSimpleName()+"] Error at line "+lineIndex+": "+s); // TODO: Collect errors
     }
 
     /**

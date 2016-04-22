@@ -458,9 +458,10 @@ public class Resolver extends CompileUtils {
             ResolvedEnumConstant resolved = new ResolvedEnumConstant();
             resolved.name = cst.name;
 
-            cst.parameters.stream()
-                    .map(m -> resolveSingleExpression(m, currentType, context, enumVarMap))
-                    .forEach(resolved.parameters::add);
+            if(cst.parameters != null)
+                cst.parameters.stream()
+                        .map(m -> resolveSingleExpression(m, currentType, context, enumVarMap))
+                        .forEach(resolved.parameters::add);
 
             resolvedConstants.add(resolved);
         }

@@ -62,6 +62,9 @@ public class Compiler extends CompileUtils implements Opcodes {
 
             writeFields(writer, type, clazz, primitiveType);
 
+            if(clazz.classType == EnumClassTypes.ENUM)
+                writeEnumConstants(writer, type, clazz, primitiveType);
+
             writeMethods(writer, type, clazz, primitiveType);
 
             writer.visitEnd();
@@ -69,6 +72,12 @@ public class Compiler extends CompileUtils implements Opcodes {
             compiledClasses.put(clazz.fullName, writer.toByteArray());
         }
         return compiledClasses;
+    }
+
+    private void writeEnumConstants(ClassWriter writer, Type type, ResolvedClass clazz, Type primitiveType) {
+        clazz.enumConstants.forEach(constant -> {
+            writer.visitField(ACC_PUBLIC | ACC_STATIC | ACC_FINAL, constant.name, type.getDescriptor(), null, null);
+        });
     }
 
     private Type writeClassAnnotations(List<ResolvedAnnotation> annotations, ResolvedClass clazz, Type type, ClassWriter writer) {

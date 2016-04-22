@@ -27,13 +27,39 @@ public class ClassBodyParser extends CompileUtils {
      */
     public void parseBody(ParsedClass parsedClass, String body, int startingLine) {
         body = trimStartingSpace(body);
+        int i = 0;
         char[] chars = body.toCharArray();
+        i += readUntilNot(chars, i, ' ', '\n').length();
+
+        if(parsedClass.classType == EnumClassTypes.ENUM) {
+            if(i >= chars.length) {
+                return;
+            }
+            if(parsedClass.classType == EnumClassTypes.ENUM) {
+                String constants = readUntilInsnEnd(chars, i);
+
+                i += constants.length()+1;
+                i += readUntilNot(chars, i, ' ', '\n').length();
+
+                fillEnumConstants(constants, parsedClass.enumConstants);
+
+                if(i >= chars.length) // We might have reached end of file
+                {
+                    return;
+                }
+            }
+        }
+
         int lineIndex = 0;
         List<Modifier> modifiers = new LinkedList<>();
-        for(int i = 0;i<chars.length;i++) {
+        for(;i<chars.length;i++) {
             char c = chars[i];
             if(c == '\n') {
                 lineIndex++;
+            }
+            i += readUntilNot(chars, i, ' ', '\n').length();
+            if(i >= chars.length) {
+                break;
             }
             i += readModifiers(chars, i, modifiers);
             ModifierType currentAccess = null;
@@ -62,20 +88,6 @@ public class ClassBodyParser extends CompileUtils {
             modifiers.clear();
             if(currentAccess == null)
                 currentAccess = ModifierType.PUBLIC;
-            i += readUntilNot(chars, i, ' ', '\n').length();
-            if(i >= chars.length)
-                break;
-            if(parsedClass.classType == EnumClassTypes.ENUM) {
-                String constants = readUntilInsnEnd(chars, i);
-
-                i += constants.length()+1;
-                i += readUntilNot(chars, i, ' ', '\n').length();
-
-                fillEnumConstants(constants, parsedClass.enumConstants);
-
-                if(i >= chars.length) // We might have reached end of file
-                    break;
-            }
             if(parsedClass.classType == EnumClassTypes.INTERFACE)
                 isAbstract = true; // interfaces methods are always abstract
             else if(parsedClass.isMixin)

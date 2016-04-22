@@ -41,5 +41,11 @@ mixin class TestMixin {
 }
 
 enum TestEnum {
+    VALUE1("Test"), VALUE2("Test2");
 
+    private String name;
+
+    TestEnum(String _name) {
+        this.name = _name;
+    }
 }
