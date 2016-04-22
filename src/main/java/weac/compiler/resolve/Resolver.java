@@ -938,7 +938,7 @@ public class Resolver extends CompileUtils {
                             insns.add(startIndex+1, new ResolvedInsn(ResolveOpcodes.DUP));
 
                             insns.add(new FunctionStartResInsn("<init>", 2, WeacType.INTERVAL_TYPE));
-                            insns.add(new FunctionCallInsn("<init>", WeacType.VOID_TYPE, 2, new WeacType[]{WeacType.DOUBLE_TYPE, WeacType.DOUBLE_TYPE}, WeacType.INTERVAL_TYPE, false));
+                            insns.add(new FunctionCallInsn("<init>", WeacType.INTERVAL_TYPE, 2, new WeacType[]{WeacType.DOUBLE_TYPE, WeacType.DOUBLE_TYPE}, WeacType.VOID_TYPE, false));
 
                             valueStack.push(new ConstantValue(WeacType.INTERVAL_TYPE));
                             staticness.pop();

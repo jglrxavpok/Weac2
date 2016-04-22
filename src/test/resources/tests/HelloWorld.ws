@@ -39,3 +39,7 @@ mixin class TestMixin {
         Console.writeLine(([0..10]).toString());
     }
 }
+
+enum TestEnum {
+
+}
