@@ -47,7 +47,8 @@ public enum TokenType {
     UNARY_OPERATOR,
     CAST,
 
-    POP_INSTANCE;
+    POP_INSTANCE,
+    ARRAY_START;
 
     private final boolean isValue;
 

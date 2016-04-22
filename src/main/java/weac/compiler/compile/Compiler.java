@@ -177,7 +177,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             if(method.isCompilerSpecial) {
                 continue;
             }
-            Type returnType = toJVMType(method.returnType);
+            Type returnType = method.isConstructor ? Type.VOID_TYPE : toJVMType(method.returnType);
             Type methodType;
             String name;
             List<Type> argTypes = new LinkedList<>();
@@ -316,7 +316,7 @@ public class Compiler extends CompileUtils implements Opcodes {
 
     private void writeMainMethod(ClassWriter writer, Type type, ResolvedClass clazz) {
         String mainDesc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(String[].class));
-        MethodVisitor mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "main", mainDesc, mainDesc, null);
+        MethodVisitor mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "main", mainDesc, null, null);
         mv.visitCode();
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitTypeInsn(NEW, type.getInternalName());
@@ -478,14 +478,14 @@ public class Compiler extends CompileUtils implements Opcodes {
             WeacType owner = callInsn.getOwner();
             if(owner.getSuperType() != null) {
                 if(owner.getSuperType().equals(WeacType.PRIMITIVE_TYPE)) {
-                    String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), toJVMType(owner, false));
+                    String methodDesc = Type.getMethodDescriptor(invokeType == INVOKESPECIAL ? Type.VOID_TYPE : toJVMType(callInsn.getReturnType()), toJVMType(owner, false));
                     writer.visitMethodInsn(INVOKESTATIC, toJVMType(owner, true, false).getInternalName(), callInsn.getName(), methodDesc, false);
                 } else {
-                    String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
+                    String methodDesc = Type.getMethodDescriptor(invokeType == INVOKESPECIAL ? Type.VOID_TYPE : toJVMType(callInsn.getReturnType()), argTypes);
                     writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
                 }
             } else {
-                String methodDesc = Type.getMethodDescriptor(toJVMType(callInsn.getReturnType()), argTypes);
+                String methodDesc = Type.getMethodDescriptor(invokeType == INVOKESPECIAL ? Type.VOID_TYPE : toJVMType(callInsn.getReturnType()), argTypes);
                 writer.visitMethodInsn(invokeType, toJVMType(owner, true).getInternalName(), callInsn.getName(), methodDesc, false);
             }
         } else if(insn.getOpcode() == ResolveOpcodes.DUP) {
@@ -611,7 +611,7 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private void writeStaticBlock(ClassWriter writer, Type type, ResolvedClass clazz) {
-        MethodVisitor mv = writer.visitMethod(ACC_STATIC, "<clinit>", "()V", "()V", null);
+        MethodVisitor mv = writer.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null);
         mv.visitCode();
         if(clazz.classType == EnumClassTypes.OBJECT) {
             mv.visitLabel(new org.objectweb.asm.Label());

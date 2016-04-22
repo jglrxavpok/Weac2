@@ -283,7 +283,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
             }
         }
 
-        if(expression.contains("isInteger")) {
+        if(expression.contains("[0..10]")) {
             System.out.println("==== START INSNS "+expression+" POSTFIX ====");
             instructions.forEach(System.out::println);
             System.out.println("=====================================");
@@ -550,8 +550,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                             String[] parts = funcToken.getContent().split(";");
                             String funcName = parts[0];
                             int nArgs = Integer.parseInt(parts[1]);
-                            if(funcName.contains("NullPointer"))
-                                System.out.println("<<< "+parts[2]);
                             boolean shouldLookForInstance = Boolean.parseBoolean(parts[2]);
                             insns.add(new FunctionStartInsn(funcName, nArgs, shouldLookForInstance));
                         }
@@ -582,7 +580,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                             //    newError("Incorrect call to constructor "+prev, -1); // todo: line
                             //}
 
-                            System.out.println(">>>>>>>>>>> "+call);
                             int startIndex = findCorrespondingFunctionStart(insns.size()-1, call, insns);
                             insns.set(startIndex, new FunctionStartInsn("<init>", constructorArgCount, true));
                             insns.add(startIndex, new InstanciateInsn(typeName));
@@ -611,6 +608,10 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
                 case POP_INSTANCE:
                     insns.add(new PopInstanceStack());
+                    break;
+
+                case ARRAY_START:
+                    insns.add(new PrecompiledInsn(PrecompileOpcodes.ARRAY_START));
                     break;
 
                 default:
@@ -816,6 +817,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 if(token.getType() == TokenType.OPENING_CURLY_BRACKETS) {
                     out.add(token);
                 } else if(token.getType() == TokenType.OPENING_SQUARE_BRACKETS) {
+                    out.add(new Token("", TokenType.ARRAY_START, -1));
                     argCountStack.push(argCount);
                     argCount = 0;
                 }
@@ -888,8 +890,6 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 break;
             }
             out.add(token);
-            if(expr.contains("isInteger"))
-                System.out.println("Remaining: "+token.toString());
         }
         return out;
     }

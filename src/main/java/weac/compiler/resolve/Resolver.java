@@ -636,7 +636,7 @@ public class Resolver extends CompileUtils {
                 }
 
                 WeacType returnType = resolveType(realMethod.returnType, context);
-                insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), cst.getArgCount(), argTypes, returnType, isStatic));
+                insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), cst.getArgCount(), argTypes, realMethod.isConstructor ? WeacType.VOID_TYPE : returnType, isStatic));
 
                 staticness.setCurrent(false).push();
                 int toPop = cst.getArgCount();
@@ -918,6 +918,35 @@ public class Resolver extends CompileUtils {
                         }
                         break;
 
+                        case INTERVAL_SEPARATOR: {
+                            Value upperBound = valueStack.pop();
+                            Value lowerBound = valueStack.pop();
+                            if(!lowerBound.getType().equals(WeacType.DOUBLE_TYPE)) {
+                                int tmpVarIndex = varMap.registerLocal("$temp"+varMap.getCurrentLocalIndex(), upperBound.getType());
+                                insns.add(new StoreVarInsn(tmpVarIndex, upperBound.getType()));
+
+                                insns.add(new CastInsn(lowerBound.getType(), WeacType.DOUBLE_TYPE));
+                                insns.add(new LoadVariableInsn(tmpVarIndex, upperBound.getType()));
+                            }
+
+                            if(!upperBound.getType().equals(WeacType.DOUBLE_TYPE)) {
+                                insns.add(new CastInsn(upperBound.getType(), WeacType.DOUBLE_TYPE));
+                            }
+
+                            int startIndex = findPreviousArrayStart(i, precompiled);
+                            insns.add(startIndex, new NewInsn(WeacType.INTERVAL_TYPE));
+                            insns.add(startIndex+1, new ResolvedInsn(ResolveOpcodes.DUP));
+
+                            insns.add(new FunctionStartResInsn("<init>", 2, WeacType.INTERVAL_TYPE));
+                            insns.add(new FunctionCallInsn("<init>", WeacType.VOID_TYPE, 2, new WeacType[]{WeacType.DOUBLE_TYPE, WeacType.DOUBLE_TYPE}, WeacType.INTERVAL_TYPE, false));
+
+                            valueStack.push(new ConstantValue(WeacType.INTERVAL_TYPE));
+                            staticness.pop();
+                            staticness.pop();
+                            staticness.setCurrent(false).push();
+                        }
+                        break;
+
                         default:
                             System.err.println("UNRESOLVED OP: " + op.name());
                             break;
@@ -960,6 +989,15 @@ public class Resolver extends CompileUtils {
         insns.add(0, new LocalVariableTableInsn(varMap));
         // TODO
         return insns;
+    }
+
+    private int findPreviousArrayStart(int index, List<PrecompiledInsn> insns) {
+        for(int i = index;i>=0;i--) {
+            if(insns.get(i).getOpcode() == PrecompileOpcodes.ARRAY_START) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private Label newLabel() {
@@ -1186,7 +1224,7 @@ public class Resolver extends CompileUtils {
             int args = cst.getArgCount();
             int index = stack.size()-args-1;
             if(index < 0) {
-                System.err.println(">>>> "+cst);
+                System.err.println(">>>> "+cst+", "+Arrays.toString(stack.toArray()));
             }
             return stack.get(index);
         } else {

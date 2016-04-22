@@ -23,6 +23,7 @@ object HelloWorld > Application + TestMixin {
         Math.sin(Math.random());
         this.myField = args;
         Console.writeLine(fieldWithDefaultValue0.factorial());
+        myMethodMixin();
     }
 
     String test(String a) {
@@ -35,6 +36,6 @@ mixin class TestMixin {
     Void myMethodMixin() {
         // some code
         Console.writeLine("Test");
-        Console.writeLine((10).toString());
+        Console.writeLine(([0..10]).toString());
     }
 }

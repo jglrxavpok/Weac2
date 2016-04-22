@@ -38,6 +38,7 @@ public class IntervalPattern extends InstructionPattern<PrecompiledInsn> {
             if(insns.get(index).getOpcode() != PrecompileOpcodes.STORE_ARRAY)
                 break;
         }
+        index++;
         return index-start;
     }
 
