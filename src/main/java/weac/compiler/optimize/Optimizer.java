@@ -8,11 +8,20 @@ import weac.compiler.resolve.structure.ResolvedField;
 import weac.compiler.resolve.structure.ResolvedMethod;
 import weac.compiler.resolve.structure.ResolvedSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 
 public class Optimizer extends CompilePhase<ResolvedSource, ResolvedSource> {
+
+    private final ArrayList<InstructionOptimizer> optimizers;
+
+    public Optimizer() {
+        optimizers = new ArrayList<>();
+        optimizers.add(new UnnecessaryPopOptimizer());
+    }
+
     @Override
     public ResolvedSource process(ResolvedSource resolvedSource) {
         resolvedSource.classes.forEach(this::optimizeClassMembers);
@@ -28,15 +37,20 @@ public class Optimizer extends CompilePhase<ResolvedSource, ResolvedSource> {
         optimize(resolvedField.defaultValue);
     }
 
-    private void optimize(List<ResolvedInsn> insns) {
-
+    private List<ResolvedInsn> optimize(List<ResolvedInsn> insns) {
+        for (InstructionOptimizer o : optimizers) {
+            insns = o.optimize(insns);
+        }
+        return insns;
     }
 
     private void optimizeMethod(ResolvedMethod method, ResolvedClass owner) {
         boolean eligibleForTCO = isTCOptimizable(method, owner);
         if(eligibleForTCO)
             applyTCOptimization(method, owner);
-        optimize(method.instructions);
+        List<ResolvedInsn> result = optimize(method.instructions);
+        method.instructions.clear();
+        method.instructions.addAll(result);
     }
 
     /**
