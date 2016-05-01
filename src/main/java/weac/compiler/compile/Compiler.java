@@ -5,6 +5,8 @@ import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.precompile.Label;
 import weac.compiler.precompile.insn.FunctionCall;
 import weac.compiler.precompile.structure.PrecompiledClass;
+import weac.compiler.precompile.structure.PrecompiledMethod;
+import weac.compiler.resolve.ConstructorInfos;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
 import weac.compiler.resolve.values.VariableValue;
@@ -622,13 +624,28 @@ public class Compiler extends CompileUtils implements Opcodes {
     private void writeStaticBlock(ClassWriter writer, Type type, ResolvedClass clazz) {
         MethodVisitor mv = writer.visitMethod(ACC_STATIC, "<clinit>", "()V", null, null);
         mv.visitCode();
+        mv.visitLabel(new org.objectweb.asm.Label());
         if(clazz.classType == EnumClassTypes.OBJECT) {
-            mv.visitLabel(new org.objectweb.asm.Label());
             mv.visitTypeInsn(NEW, type.getInternalName());
             mv.visitInsn(DUP);
             mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE), false);
             // store it in the field
             mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), Constants.SINGLETON_INSTANCE_FIELD, type.getDescriptor());
+        } else if(clazz.classType == EnumClassTypes.ENUM) {
+            clazz.enumConstants.forEach(cst -> {
+                mv.visitTypeInsn(NEW, type.getInternalName());
+                mv.visitInsn(DUP);
+                cst.parameters.forEach(instructions -> {
+                    compileSingleExpression(type, mv, instructions, new org.objectweb.asm.Label(), new org.objectweb.asm.Label());
+                });
+                ConstructorInfos cons = cst.usedConstructor;
+                Type[] arguments = new Type[cons.argTypes.size()];
+                for (int i = 0; i < arguments.length; i++) {
+                    arguments[i] = toJVMType(cons.argTypes.get(i));
+                }
+                mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, arguments), false);
+                mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), cst.name, type.getDescriptor());
+            });
         }
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitInsn(RETURN);

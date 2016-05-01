@@ -189,24 +189,25 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
     private List<PrecompiledEnumConstant> precompileEnumConstants(List<String> enumConstants) {
         List<PrecompiledEnumConstant> constants = new ArrayList<>();
         for(String constant : enumConstants) {
+            PrecompiledEnumConstant precompiledConstant = new PrecompiledEnumConstant();
+            precompiledConstant.parameters = new ArrayList<>();
             if(constant.contains("(")) {
                 String name = constant.substring(0, constant.indexOf('('));
-                PrecompiledEnumConstant precompiledConstant = new PrecompiledEnumConstant();
                 precompiledConstant.name = name;
 
                 char[] chars = constant.toCharArray();
-                int offset = name.length()+1; // +1 to avoid the '('
-                String arg = readSingleArgument(name, offset, false);
+                int offset = name.length()+1; // +1 to skip the '(' character
+                String arg = readSingleArgument(constant, offset, false);
                 while(!arg.isEmpty()) {
-                    arg = readSingleArgument(name, offset, false);
+                    if(arg.endsWith(")"))
+                        arg = arg.substring(0, arg.indexOf(")"));
                     offset += arg.length()+1;
                     offset += readUntilNot(chars, offset, ' ', '\n').length();
-
                     precompiledConstant.parameters.add(precompileExpression(arg));
+                    arg = readSingleArgument(name, offset, false);
                 }
                 constants.add(precompiledConstant);
             } else {
-                PrecompiledEnumConstant precompiledConstant = new PrecompiledEnumConstant();
                 precompiledConstant.name = constant;
                 constants.add(precompiledConstant);
             }

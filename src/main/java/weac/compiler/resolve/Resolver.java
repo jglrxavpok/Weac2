@@ -431,10 +431,6 @@ public class Resolver extends CompileUtils {
     }
 
     private String transform(String name, List<Import> imports) {
-        if(imports.isEmpty()) {
-            //System.err.println("EMPTY IMPORTS ME IS SAD ;(");
-            //new Exception(name).printStackTrace();
-        }
         for(Import imp : imports) {
             if(imp.usageName != null) {
                 if (imp.usageName.equals(name)) {
@@ -458,10 +454,19 @@ public class Resolver extends CompileUtils {
             ResolvedEnumConstant resolved = new ResolvedEnumConstant();
             resolved.name = cst.name;
 
-            if(cst.parameters != null)
+            Stack<Value> valueStack = new Stack<>();
+            if(cst.parameters != null) {
                 cst.parameters.stream()
-                        .map(m -> resolveSingleExpression(m, currentType, context, enumVarMap))
+                        .map(m -> resolveSingleExpression(m, currentType, context, enumVarMap, valueStack))
                         .forEach(resolved.parameters::add);
+            }
+            PrecompiledMethod constructor = findMethod(currentType, "<init>", cst.parameters == null ? 0 : cst.parameters.size(), valueStack, context);
+            ConstructorInfos constructorInfos = new ConstructorInfos();
+            constructorInfos.argNames.addAll(constructor.argumentNames);
+            constructor.argumentTypes.stream()
+                    .map(t -> resolveType(t, context))
+                    .forEach(constructorInfos.argTypes::add);
+            resolved.usedConstructor = constructorInfos;
 
             resolvedConstants.add(resolved);
         }
