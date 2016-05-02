@@ -13,7 +13,7 @@ public class TestIntegration extends Tests {
         String[] names = {
                 "weac.lang.Object", "weac.lang.Void", "weac.lang.Primitive", "weac.lang.JavaPrimitive",
                 "weac.lang.Double", "weac.lang.Float", "weac.lang.Int", "weac.lang.Boolean", "weac.lang.Pointer",
-                "weac.lang.Math", "weac.lang.Console", "tests.TestMixin", "weac.lang.Application", "weac.lang.Interval", "tests.HelloWorld"
+                "weac.lang.Math", "weac.lang.Console", "tests.TestEnum", "tests.TestMixin", "weac.lang.Application", "weac.lang.Interval", "tests.HelloWorld"
         };
         for(String n : names)
         {
@@ -56,6 +56,8 @@ public class TestIntegration extends Tests {
             System.out.println("["+start+".."+end+":"+step+"]isIn("+index+") = "+result);
             System.out.println("Java: "+isIn(index, start, end, step));
         }
+
+        Class<?> testEnumClass = Class.forName("tests.TestEnum");
     }
 
     private boolean isIn(double value, double start, double end, double step) {

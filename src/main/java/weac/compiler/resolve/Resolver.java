@@ -453,6 +453,7 @@ public class Resolver extends CompileUtils {
             enumVarMap.registerLocal(cst.name, currentType);
             ResolvedEnumConstant resolved = new ResolvedEnumConstant();
             resolved.name = cst.name;
+            resolved.ordinal = cst.ordinal;
 
             Stack<Value> valueStack = new Stack<>();
             if(cst.parameters != null) {

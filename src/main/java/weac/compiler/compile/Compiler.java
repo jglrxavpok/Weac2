@@ -46,7 +46,9 @@ public class Compiler extends CompileUtils implements Opcodes {
 
             String signature = null;
             String superclass = Type.getInternalName(Object.class);
-            if(clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION && !clazz.isMixin) {
+            if(clazz.classType == EnumClassTypes.ENUM) {
+                superclass = Type.getInternalName(Enum.class);
+            } else if(clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION && !clazz.isMixin) {
                superclass = toInternal(clazz.parents.getSuperclass());
             }
             writer.visit(V1_6, convertAccessToASM(clazz), internalName, signature, superclass, convertToASM(clazz.parents.getInterfaces()));
@@ -195,6 +197,10 @@ public class Compiler extends CompileUtils implements Opcodes {
             if(convertInstanceMethodToStatic) {
                 argTypes.add(primitiveType);
             }
+            if(clazz.classType == EnumClassTypes.ENUM) {
+                argTypes.add(0, Type.getType(String.class));
+                argTypes.add(1, Type.INT_TYPE);
+            }
             method.argumentTypes.stream()
                     .map(this::toJVMType)
                     .forEach(argTypes::add);
@@ -219,23 +225,42 @@ public class Compiler extends CompileUtils implements Opcodes {
                 access |= ACC_ABSTRACT;
                 isAbstract = true;
             }
-            MethodVisitor mv = writer.visitMethod(access, name, methodType.getDescriptor(), null, null);
+            MethodVisitor mv = writer.visitMethod(access, name, methodType.getDescriptor(), methodType.getDescriptor(), null);
             org.objectweb.asm.Label start = new org.objectweb.asm.Label();
             org.objectweb.asm.Label end = new org.objectweb.asm.Label();
 
+            int varIndexOffset = 0;
+            if(clazz.classType == EnumClassTypes.ENUM) {
+                mv.visitParameter("$name", ACC_SYNTHETIC);
+                mv.visitParameter("$ordinal", ACC_SYNTHETIC);
+                mv.visitLocalVariable("$name", "Ljava/lang/String;", null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 1);
+                mv.visitLocalVariable("$ordinal", "I", null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 2);
+                varIndexOffset += 2;
+            }
+
             if(method.isConstructor && !hasConstructorCall(clazz, method)) {
                 mv.visitVarInsn(ALOAD, 0);
-                mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
+                if(clazz.classType == EnumClassTypes.ENUM) {
+                    mv.visitVarInsn(ALOAD, 1);
+                    mv.visitVarInsn(ILOAD, 2);
+                    mv.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(Enum.class), "<init>", "(Ljava/lang/String;I)V", false);
+                } else {
+                    mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
+                }
             }
 
             int localIndex = 0;
             if(!convertInstanceMethodToStatic) {
+                mv.visitLocalVariable("this", type.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 0);
                 localIndex++; // 'this'
             } else {
                 mv.visitLocalVariable("__value", primitiveType.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 0);
                 mv.visitParameter("__value", ACC_FINAL);
                 localIndex++;
+                varIndexOffset++;
             }
+
+
             List<Identifier> argumentNames = method.argumentNames;
             for (int i = 0; i < argumentNames.size(); i++) {
                 Identifier argName = argumentNames.get(i);
@@ -244,9 +269,12 @@ public class Compiler extends CompileUtils implements Opcodes {
             //    mv.visitLocalVariable(argName.getId(), argType.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), localIndex++);
             }
 
+            ArrayList<String> registredLocals = new ArrayList<>();
+
             if(!isAbstract) {
                 mv.visitCode();
 
+                final int finalVarIndexOffset = varIndexOffset;
                 if (!method.isAbstract && method.isConstructor) {
                     clazz.fields.stream()
                             .filter(f -> !f.defaultValue.isEmpty())
@@ -254,7 +282,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                             .forEach(f -> {
                                 mv.visitLabel(new org.objectweb.asm.Label());
                                 mv.visitVarInsn(ALOAD, 0);
-                                this.compileSingleExpression(type, mv, f.defaultValue, start, end);
+                                this.compileSingleExpression(type, mv, f.defaultValue, start, end, finalVarIndexOffset, registredLocals);
                                 mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                             });
                     nConstructors++;
@@ -262,7 +290,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 mv.visitLabel(start);
                 mv.visitLineNumber(100, start);
                 try {
-                    compileSingleExpression(type, mv, method.instructions, start, end);
+                    compileSingleExpression(type, mv, method.instructions, start, end, varIndexOffset, registredLocals);
                 } catch (Throwable e) {
                     e.printStackTrace();
                 }
@@ -304,7 +332,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                     .forEach(f -> {
                         mv.visitLabel(new org.objectweb.asm.Label());
                         mv.visitVarInsn(ALOAD, 0);
-                        this.compileSingleExpression(type, mv, f.defaultValue, start, end);
+                        this.compileSingleExpression(type, mv, f.defaultValue, start, end, 0, new ArrayList<>());
                         mv.visitFieldInsn(PUTFIELD, type.getInternalName(), f.name.getId(), toJVMType(f.type).getDescriptor());
                     });
             mv.visitLabel(end);
@@ -343,7 +371,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         mv.visitEnd();
     }
 
-    private void compileSingleExpression(Type type, MethodVisitor writer, List<ResolvedInsn> l, org.objectweb.asm.Label start, org.objectweb.asm.Label end) {
+    private void compileSingleExpression(Type type, MethodVisitor writer, List<ResolvedInsn> l, org.objectweb.asm.Label start, org.objectweb.asm.Label end, int varIndexOffset, List<String> registredLocals) {
         System.out.println("=== INSNS "+type.getInternalName()+" ===");
         l.forEach(System.out::println);
         System.out.println("=============");
@@ -351,11 +379,11 @@ public class Compiler extends CompileUtils implements Opcodes {
         LabelMap labelMap = new LabelMap();
         for (int i = 0; i < l.size(); i++) {
             ResolvedInsn insn = l.get(i);
-            compileInstruction(insn, labelMap, writer, start, end);
+            compileInstruction(insn, labelMap, writer, start, end, varIndexOffset, registredLocals);
         }
     }
 
-    private void compileInstruction(ResolvedInsn insn, LabelMap labelMap, MethodVisitor writer, org.objectweb.asm.Label start, org.objectweb.asm.Label end) {
+    private void compileInstruction(ResolvedInsn insn, LabelMap labelMap, MethodVisitor writer, org.objectweb.asm.Label start, org.objectweb.asm.Label end, int varIndexOffset, List<String> registredLocals) {
         if(insn instanceof LoadByteInsn) {
             byte n = ((LoadByteInsn) insn).getNumber();
             writer.visitLdcInsn(n);
@@ -398,9 +426,9 @@ public class Compiler extends CompileUtils implements Opcodes {
             WeacType weacType = varInsn.getVarType();
             Type primitive = getPrimitiveType(weacType);
             if(primitive != null) {
-                writer.visitVarInsn(primitive.getOpcode(ISTORE), localIndex);
+                writer.visitVarInsn(primitive.getOpcode(ISTORE), localIndex+(localIndex == 0 ? 0 : varIndexOffset));
             } else {
-                writer.visitVarInsn(ASTORE, localIndex);
+                writer.visitVarInsn(ASTORE, localIndex+(localIndex == 0 ? 0 : varIndexOffset));
             }
         } else if(insn instanceof StoreFieldInsn) {
             StoreFieldInsn fieldInsn = (StoreFieldInsn)insn;
@@ -418,9 +446,9 @@ public class Compiler extends CompileUtils implements Opcodes {
             LoadVariableInsn variableInsn = (LoadVariableInsn)insn;
             Type primitiveType = getPrimitiveType(variableInsn.getVarType());
             if(primitiveType != null) {
-                writer.visitVarInsn(primitiveType.getOpcode(ILOAD), variableInsn.getVarIndex());
+                writer.visitVarInsn(primitiveType.getOpcode(ILOAD), variableInsn.getVarIndex()+(variableInsn.getVarIndex() == 0 ? 0 : varIndexOffset));
             } else {
-                writer.visitVarInsn(ALOAD, variableInsn.getVarIndex());
+                writer.visitVarInsn(ALOAD, variableInsn.getVarIndex()+(variableInsn.getVarIndex() == 0 ? 0 : varIndexOffset));
             }
         } else if(insn instanceof CompareInsn) {
             CompareInsn compInsn = (CompareInsn)insn;
@@ -535,8 +563,13 @@ public class Compiler extends CompileUtils implements Opcodes {
         } else if(insn instanceof LocalVariableTableInsn) {
             List<VariableValue> locals = ((LocalVariableTableInsn) insn).getLocals();
             for(VariableValue local : locals) {
-                writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
-                            /*start, end*/new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex());
+                if(!local.getName().endsWith("this")) {
+                    if(!registredLocals.contains(local.getName())) {
+                        registredLocals.add(local.getName());
+                        writer.visitLocalVariable(local.getName(), toJVMType(local.getType()).getDescriptor(), null,
+                            /*start, end*/new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), local.getLocalVariableIndex()+varIndexOffset);
+                    }
+                }
             }
             // TODO: avoid duplicate entries
         } else if(insn instanceof CastInsn) {
@@ -632,17 +665,23 @@ public class Compiler extends CompileUtils implements Opcodes {
             // store it in the field
             mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), Constants.SINGLETON_INSTANCE_FIELD, type.getDescriptor());
         } else if(clazz.classType == EnumClassTypes.ENUM) {
+            ArrayList<String> locals = new ArrayList<>();
+            clazz.enumConstants.forEach(cst -> locals.add(cst.name));
             clazz.enumConstants.forEach(cst -> {
                 mv.visitTypeInsn(NEW, type.getInternalName());
                 mv.visitInsn(DUP);
                 cst.parameters.forEach(instructions -> {
-                    compileSingleExpression(type, mv, instructions, new org.objectweb.asm.Label(), new org.objectweb.asm.Label());
+                    mv.visitLdcInsn(cst.name);
+                    mv.visitLdcInsn(cst.ordinal);
+                    compileSingleExpression(type, mv, instructions, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 2, locals);
                 });
                 ConstructorInfos cons = cst.usedConstructor;
-                Type[] arguments = new Type[cons.argTypes.size()];
-                for (int i = 0; i < arguments.length; i++) {
-                    arguments[i] = toJVMType(cons.argTypes.get(i));
+                Type[] arguments = new Type[cons.argTypes.size()+2];
+                for (int i = 0; i < arguments.length-2; i++) {
+                    arguments[i+2] = toJVMType(cons.argTypes.get(i));
                 }
+                arguments[0] = Type.getType(String.class);
+                arguments[1] = Type.INT_TYPE;
                 mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, arguments), false);
                 mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), cst.name, type.getDescriptor());
             });

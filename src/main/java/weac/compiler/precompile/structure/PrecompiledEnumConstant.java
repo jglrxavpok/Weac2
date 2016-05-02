@@ -9,4 +9,5 @@ public class PrecompiledEnumConstant {
     public String name;
 
     public List<List<PrecompiledInsn>> parameters;
+    public int ordinal;
 }

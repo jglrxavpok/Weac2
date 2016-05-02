@@ -17,6 +17,7 @@ public class ResolvedEnumConstant {
      * The constructor used by this enum constant
      */
     public ConstructorInfos usedConstructor;
+    public int ordinal;
 
     public ResolvedEnumConstant() {
         parameters = new LinkedList<>();

@@ -194,6 +194,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
             if(constant.contains("(")) {
                 String name = constant.substring(0, constant.indexOf('('));
                 precompiledConstant.name = name;
+                precompiledConstant.ordinal = constants.size();
 
                 char[] chars = constant.toCharArray();
                 int offset = name.length()+1; // +1 to skip the '(' character
@@ -209,6 +210,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
                 constants.add(precompiledConstant);
             } else {
                 precompiledConstant.name = constant;
+                precompiledConstant.ordinal = constants.size();
                 constants.add(precompiledConstant);
             }
         }
