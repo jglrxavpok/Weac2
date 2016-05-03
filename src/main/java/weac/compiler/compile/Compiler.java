@@ -62,12 +62,12 @@ public class Compiler extends CompileUtils implements Opcodes {
 
             Type primitiveType = writeClassAnnotations(clazz.annotations, clazz, type, writer);
 
+            if(clazz.classType == EnumClassTypes.ENUM)
+                writeEnumConstants(writer, type, clazz, primitiveType);
+
             writeStaticBlock(writer, type, clazz);
 
             writeFields(writer, type, clazz, primitiveType);
-
-            if(clazz.classType == EnumClassTypes.ENUM)
-                writeEnumConstants(writer, type, clazz, primitiveType);
 
             writeMethods(writer, type, clazz, primitiveType);
 
@@ -82,6 +82,30 @@ public class Compiler extends CompileUtils implements Opcodes {
         clazz.enumConstants.forEach(constant -> {
             writer.visitField(ACC_PUBLIC | ACC_STATIC | ACC_FINAL, constant.name, type.getDescriptor(), null, null);
         });
+
+        writer.visitField(ACC_PRIVATE | ACC_STATIC | ACC_FINAL, "$values", "["+type.getDescriptor(), null, null);
+
+        Type objType = Type.getType(Object.class);
+        Type arrayType = Type.getType("["+type.getDescriptor());
+        MethodVisitor mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_FINAL, "values", "()["+type.getDescriptor(), null, null);
+        mv.visitCode();
+        mv.visitLocalVariable("copy", "["+type.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 0);
+        mv.visitFieldInsn(GETSTATIC, type.getInternalName(), "$values", "["+type.getDescriptor());
+        mv.visitMethodInsn(INVOKEVIRTUAL, arrayType.getInternalName(), "clone", "()"+objType.getDescriptor(), false);
+        mv.visitTypeInsn(CHECKCAST, arrayType.getInternalName());
+        mv.visitInsn(ARETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+
+        mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_FINAL, "valueOf", "(Ljava/lang/String;)"+type.getDescriptor(), null, null);
+        mv.visitCode();
+        mv.visitLdcInsn(type);
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitMethodInsn(INVOKESTATIC, "Ljava/lang/Enum", "valueOf", "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;", false);
+        mv.visitTypeInsn(CHECKCAST, type.getInternalName());
+        mv.visitInsn(ARETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
     }
 
     private Type writeClassAnnotations(List<ResolvedAnnotation> annotations, ResolvedClass clazz, Type type, ClassWriter writer) {
@@ -685,6 +709,17 @@ public class Compiler extends CompileUtils implements Opcodes {
                 mv.visitMethodInsn(INVOKESPECIAL, type.getInternalName(), "<init>", Type.getMethodDescriptor(Type.VOID_TYPE, arguments), false);
                 mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), cst.name, type.getDescriptor());
             });
+
+            int size = clazz.enumConstants.size();
+            mv.visitLdcInsn(size);
+            mv.visitTypeInsn(ANEWARRAY, type.getInternalName());
+            for (int i = 0; i < size; i++) {
+                mv.visitInsn(DUP);
+                mv.visitLdcInsn(i);
+                mv.visitFieldInsn(GETSTATIC, type.getInternalName(), clazz.enumConstants.get(i).name, type.getDescriptor());
+                mv.visitInsn(AASTORE);
+            }
+            mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), "$values", "["+type.getDescriptor());
         }
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitInsn(RETURN);
