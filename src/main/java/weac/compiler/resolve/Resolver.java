@@ -24,12 +24,14 @@ public class Resolver extends CompileUtils {
     private final PrimitiveCastSolver primitiveCasts;
     private final Map<EnumOperators, Function<WeacType, OperationInsn>> operatorsInsnFactories;
     private int labelID = -100;
+    private AutoTypeResolver autoTypeResolver;
 
     public Resolver() {
         patterns = new LinkedList<>();
         numberResolver = new NumberResolver();
         stringResolver = new StringResolver();
         primitiveCasts = new PrimitiveCastSolver();
+        autoTypeResolver = new AutoTypeResolver();
         operatorsInsnFactories = new HashMap<>();
         operatorsInsnFactories.put(EnumOperators.MINUS, SubtractInsn::new);
         operatorsInsnFactories.put(EnumOperators.PLUS, AddInsn::new);
@@ -124,11 +126,18 @@ public class Resolver extends CompileUtils {
             if(valStack.size() != 1) {
                 newError("Invalid default value for field "+field.name, -1);
             } else {
+                if(resolvedField.type.equals(WeacType.AUTO)) {
+                    resolvedField.type = autoTypeResolver.findEndType(insns);
+                }
                 Value result = valStack.pop();
                 if(!result.getType().equals(resolvedField.type)) {
                     insns.add(new CastInsn(result.getType(), resolvedField.type));
                 }
             }
+        }
+
+        if(resolvedField.type.equals(WeacType.AUTO) && field.defaultValue.isEmpty()) {
+            newError("Cannot infer type from unitialized field", -1); // todo line
         }
         resolvedField.defaultValue.addAll(insns);
         return resolvedField;
@@ -190,6 +199,9 @@ public class Resolver extends CompileUtils {
     }
 
     private WeacType resolveType(Identifier type, ResolvingContext context) {
+        if(type.equals(WeacType.AUTO.getIdentifier())) {
+            return WeacType.AUTO;
+        }
         WeacType primitiveType = getPotentialPrimitive(type);
         if(primitiveType != null) {
             return primitiveType;
@@ -461,7 +473,7 @@ public class Resolver extends CompileUtils {
                         .map(m -> resolveSingleExpression(m, currentType, context, enumVarMap, valueStack))
                         .forEach(resolved.parameters::add);
             }
-            PrecompiledMethod constructor = findMethod(currentType, "<init>", cst.parameters == null ? 0 : cst.parameters.size(), valueStack, context);
+            PrecompiledMethod constructor = findMethod(currentType, "<init>", cst.parameters == null ? 0 : cst.parameters.size(), valueStack, context, enumVarMap);
             ConstructorInfos constructorInfos = new ConstructorInfos();
             constructorInfos.argNames.addAll(constructor.argumentNames);
             constructor.argumentTypes.stream()
@@ -632,7 +644,7 @@ public class Resolver extends CompileUtils {
 
                 WeacType[] argTypes = new WeacType[cst.getArgCount()];
 
-                PrecompiledMethod realMethod = findMethod(owner.getType(), name, cst.getArgCount(), valueStack, context);
+                PrecompiledMethod realMethod = findMethod(owner.getType(), name, cst.getArgCount(), valueStack, context, varMap);
 
                 if(realMethod == null) {
                     newError("Could not find method named "+name+" in "+owner.getType()+" with "+cst.getArgCount()+" argument(s). (current class: "+selfType+")", -1);
@@ -1041,16 +1053,16 @@ public class Resolver extends CompileUtils {
         variableMaps.put(type, map);
     }
 
-    private PrecompiledMethod findMethod(WeacType topType, String name, int argCount, Stack<Value> valueStack, ResolvingContext context) {
+    private PrecompiledMethod findMethod(WeacType topType, String name, int argCount, Stack<Value> valueStack, ResolvingContext context, VariableMap varMap) {
         WeacType[] potentialArgTypes = new WeacType[argCount];
         for(int i = 0;i<argCount;i++) {
             int index = valueStack.size()-(argCount-i-1)-1;
             potentialArgTypes[i] = valueStack.get(index).getType();
         }
-        return findMethodFromHierarchy(topType, name, argCount, potentialArgTypes, context);
+        return findMethodFromHierarchy(topType, name, argCount, potentialArgTypes, context, varMap);
     }
 
-    private PrecompiledMethod findMethodFromHierarchy(WeacType topType, String name, int argCount, WeacType[] argTypes, ResolvingContext context) {
+    private PrecompiledMethod findMethodFromHierarchy(WeacType topType, String name, int argCount, WeacType[] argTypes, ResolvingContext context, VariableMap varMap) {
         PrecompiledClass topClass = findClass(topType.getIdentifier().getId(), context);
         List<PrecompiledMethod> result = topClass.methods.stream()
                 .filter(m -> m.name.getId().equals(name) || (m.isConstructor && topType.getIdentifier().getId().endsWith(name)))
@@ -1107,12 +1119,12 @@ public class Resolver extends CompileUtils {
         PrecompiledClass superclass = hierarchy.getSuperclass();
         if(superclass != null && !superclass.fullName.equals(topClass.fullName)) {
             WeacType superType = resolveType(new Identifier(superclass.fullName, true), context);
-            PrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, context);
+            PrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, context, varMap);
             if(supermethod == null) {
                 List<PrecompiledClass> interfaces = hierarchy.getInterfaces();
                 for(PrecompiledClass in : interfaces) {
                     WeacType interType = resolveType(new Identifier(in.fullName, true), context);
-                    PrecompiledMethod m = findMethodFromHierarchy(interType, name, argCount, argTypes, context);
+                    PrecompiledMethod m = findMethodFromHierarchy(interType, name, argCount, argTypes, context, varMap);
                     if(m != null) {
                         return m;
                     }

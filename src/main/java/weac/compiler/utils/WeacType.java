@@ -24,6 +24,7 @@ public class WeacType {
     public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Pointer<Type>", true);
 
     public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
+    public static final WeacType AUTO = new WeacType(OBJECT_TYPE, "auto", true);
 
     private final WeacType superType;
     private final Identifier identifier;

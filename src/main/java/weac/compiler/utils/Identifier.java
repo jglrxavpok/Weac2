@@ -248,6 +248,14 @@ public class Identifier {
         return Character.isJavaIdentifierStart(c)  || isAllowedCharacter(c, fullName) || (c >= '0' && c <= '9');
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof Identifier) {
+            return ((Identifier) obj).id.equals(id);
+        }
+        return false;
+    }
+
     /**
      * Returns the raw id
      * @return

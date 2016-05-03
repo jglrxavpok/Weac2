@@ -15,7 +15,7 @@ object HelloWorld > Application + TestMixin {
     private Double fieldWithDefaultValue9 = 10000000L;
     private Boolean fieldWithDefaultValue10 = false;
     private Boolean fieldWithDefaultValue11 = true;
-    private String simpleField = "Test \n";
+    private auto simpleField = "Test \n";
 
 
     Void start(String[] args) {
@@ -24,6 +24,7 @@ object HelloWorld > Application + TestMixin {
         this.myField = args;
         Console.writeLine(fieldWithDefaultValue0.factorial());
         myMethodMixin();
+        //Console.writeLine(myField(0));
     }
 
     String test(String a) {
