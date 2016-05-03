@@ -50,12 +50,21 @@ public class PreProcessor extends CompilePhase<SourceCode, SourceCode> {
                     newError("Unknown precompile command "+command, lineIndex);
                 }
             } else if(conditions.peek()) {
-                builder.append(l);
+                builder.append(replaceDefined(l, compilerDefinitions));
                 builder.append("\n");
             }
             lineIndex++;
         }
         return new SourceCode(source.getFileName(), builder.toString());
+    }
+
+    private String replaceDefined(String l, Map<String, String> compilerDefinitions) {
+        for(Map.Entry<String, String> entry : compilerDefinitions.entrySet()) {
+            if(entry != null) {
+                l = l.replace(entry.getKey(), entry.getValue());
+            }
+        }
+        return l;
     }
 
     @Override
@@ -76,6 +85,7 @@ public class PreProcessor extends CompilePhase<SourceCode, SourceCode> {
      *          Returns true if it was a valid command, false if not
      */
     private boolean processCommand(String command) {
+        command = command.replace("\r", "");
         int end = command.indexOf(' ');
         if(end < 0)
             end = command.indexOf('\r');
@@ -85,8 +95,9 @@ public class PreProcessor extends CompilePhase<SourceCode, SourceCode> {
             end = command.length();
         String actualCommand = command.substring(0, end);
         switch (actualCommand) {
-            case "ifdef": if(conditions.peek()) {
-                String valueToCheck = command.replace(command+" ", "");
+            case "ifdef":
+                if(conditions.peek()) {
+                String valueToCheck = command.replace(actualCommand+" ", "");
                 boolean result = compilerDefinitions.containsKey(valueToCheck);
                 conditions.push(result);
             }
@@ -97,22 +108,24 @@ public class PreProcessor extends CompilePhase<SourceCode, SourceCode> {
             }
                 break;
 
-            case "ifndef": if(conditions.peek()) {
-                String valueToCheck = command.replace(command+" ", "");
-                boolean result = compilerDefinitions.containsKey(valueToCheck);
-                conditions.push(!result);
-            }
+            case "ifndef":
+                if(conditions.peek()) {
+                    String valueToCheck = command.replace(actualCommand+" ", "");
+                    boolean result = compilerDefinitions.containsKey(valueToCheck);
+                    conditions.push(!result);
+                }
             break;
 
             case "define": if(conditions.peek()) {
-                String[] arg = command.replace(command+" ", "").split(" ");
+                String[] arg = command.replace(actualCommand+" ", "").split(" ");
                 String name = arg[0];
                 String val;
                 if(arg.length > 1) {
-                    val = arg[1];
+                    val = String.join(" ", arg).replace(name+" ", "");
                 } else {
                     val = "1";
                 }
+                val = val.replace("\r", "").replace("\n", "");
                 compilerDefinitions.put(name, val);
             }
             break;
