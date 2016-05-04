@@ -83,14 +83,14 @@ public class Compiler extends CompileUtils implements Opcodes {
             writer.visitField(ACC_PUBLIC | ACC_STATIC | ACC_FINAL, constant.name, type.getDescriptor(), null, null);
         });
 
-        writer.visitField(ACC_PRIVATE | ACC_STATIC | ACC_FINAL, "$values", "["+type.getDescriptor(), null, null);
+        writer.visitField(ACC_PRIVATE | ACC_STATIC | ACC_FINAL, "$VALUES", "["+type.getDescriptor(), null, null);
 
         Type objType = Type.getType(Object.class);
         Type arrayType = Type.getType("["+type.getDescriptor());
         MethodVisitor mv = writer.visitMethod(ACC_PUBLIC | ACC_STATIC | ACC_FINAL, "values", "()["+type.getDescriptor(), null, null);
         mv.visitCode();
         mv.visitLocalVariable("copy", "["+type.getDescriptor(), null, new org.objectweb.asm.Label(), new org.objectweb.asm.Label(), 0);
-        mv.visitFieldInsn(GETSTATIC, type.getInternalName(), "$values", "["+type.getDescriptor());
+        mv.visitFieldInsn(GETSTATIC, type.getInternalName(), "$VALUES", "["+type.getDescriptor());
         mv.visitMethodInsn(INVOKEVIRTUAL, arrayType.getInternalName(), "clone", "()"+objType.getDescriptor(), false);
         mv.visitTypeInsn(CHECKCAST, arrayType.getInternalName());
         mv.visitInsn(ARETURN);
@@ -719,7 +719,7 @@ public class Compiler extends CompileUtils implements Opcodes {
                 mv.visitFieldInsn(GETSTATIC, type.getInternalName(), clazz.enumConstants.get(i).name, type.getDescriptor());
                 mv.visitInsn(AASTORE);
             }
-            mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), "$values", "["+type.getDescriptor());
+            mv.visitFieldInsn(PUTSTATIC, type.getInternalName(), "$VALUES", "["+type.getDescriptor());
         }
         mv.visitLabel(new org.objectweb.asm.Label());
         mv.visitInsn(RETURN);
