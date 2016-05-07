@@ -1,5 +1,6 @@
 package weac.compiler.resolve;
 
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.WeacType;
 
 import java.util.HashMap;
@@ -29,7 +30,7 @@ public class VariableMap {
         localIDs.put(name, index);
         localNames.put(index, name);
         localTypes.put(name, type);
-        if(type.equals(WeacType.LONG_TYPE) || type.equals(WeacType.DOUBLE_TYPE)) {
+        if(type.equals(JVMWeacTypes.LONG_TYPE) || type.equals(JVMWeacTypes.DOUBLE_TYPE)) {
             localIndex++;
         }
         localIndex++;
@@ -53,11 +54,11 @@ public class VariableMap {
     }
 
     public WeacType getLocalType(String name) {
-        return localTypes.getOrDefault(name, WeacType.VOID_TYPE);
+        return localTypes.getOrDefault(name, JVMWeacTypes.VOID_TYPE);
     }
 
     public WeacType getFieldType(String name) {
-        return fieldTypes.getOrDefault(name, WeacType.VOID_TYPE);
+        return fieldTypes.getOrDefault(name, JVMWeacTypes.VOID_TYPE);
     }
 
     public int getLocalIndex(String name) {

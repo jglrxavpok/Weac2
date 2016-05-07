@@ -1,30 +1,11 @@
 package weac.compiler.utils;
 
 import weac.compiler.CompileUtils;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 
 public class WeacType {
 
-    public static final WeacType JOBJECT_TYPE = new WeacType(null, "java.lang.Object", true);
-    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, Constants.BASE_CLASS, true);
-    public static final WeacType PRIMITIVE_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Primitive", true);
-    public static final WeacType VOID_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Void", false);
-    public static final WeacType BOOLEAN_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Boolean", true);
-    public static final WeacType BYTE_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Byte", true);
-    public static final WeacType DOUBLE_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Double", true);
-    public static final WeacType FLOAT_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Float", true);
-    public static final WeacType INTEGER_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Int", true);
-    public static final WeacType LONG_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Long", true);
-    public static final WeacType SHORT_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Short", true);
-    public static final WeacType CHAR_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Char", true);
-
-    public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
-    public static final WeacType INTERVAL_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Interval", true);
-    public static final WeacType NULL_TYPE = new WeacType(JOBJECT_TYPE, OBJECT_TYPE.identifier);
-
-    public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Pointer<Type>", true);
-
-    public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
-    public static final WeacType AUTO = new WeacType(OBJECT_TYPE, "auto", true);
+    public static final WeacType AUTO = new WeacType(JVMWeacTypes.OBJECT_TYPE, "auto", true);
 
     private final WeacType superType;
     private final Identifier identifier;
@@ -50,12 +31,12 @@ public class WeacType {
             if(id.endsWith("*")) {
                 isPointer = true;
                 id = id.substring(0, id.length()-1); // removes the '*' from the id
-                pointerType = new WeacType(POINTER_TYPE, id, true);
+                pointerType = new WeacType(JVMWeacTypes.POINTER_TYPE, id, true);
                 coreType = pointerType.getCoreType();
             } else if(id.endsWith("[]")) {
                 isArray = true;
                 id = id.substring(0, id.length()-2); // removes the '[]' from the id
-                arrayType = new WeacType(ARRAY_TYPE, id, true);
+                arrayType = new WeacType(JVMWeacTypes.ARRAY_TYPE, id, true);
                 coreType = arrayType.getCoreType();
             } else {
                 coreType = this;
@@ -73,16 +54,16 @@ public class WeacType {
                     String[] params = genericParametersRaw.split(",");
                     genericParameters = new WeacType[params.length];
                     for (int i = 0; i < genericParameters.length; i++) {
-                        genericParameters[i] = new WeacType(OBJECT_TYPE, CompileUtils.trimStartingSpace(params[i]), true);
+                        genericParameters[i] = new WeacType(JVMWeacTypes.OBJECT_TYPE, CompileUtils.trimStartingSpace(params[i]), true);
                     }
-                    coreType = new WeacType(OBJECT_TYPE, id.substring(0, start), true).getCoreType();
+                    coreType = new WeacType(JVMWeacTypes.OBJECT_TYPE, id.substring(0, start), true).getCoreType();
                 }
             } else if(id.contains(">")) { // unmatched
                 isValid = false;
             }
         } else {
             isValid = false;
-            coreType = VOID_TYPE;
+            coreType = JVMWeacTypes.VOID_TYPE;
         }
     }
 
@@ -151,7 +132,7 @@ public class WeacType {
     }
 
     public boolean isPrimitive() {
-        return superType != null && superType.equals(PRIMITIVE_TYPE);
+        return superType != null && superType.equals(JVMWeacTypes.PRIMITIVE_TYPE);
     }
 
     @Override

@@ -3,13 +3,9 @@ package weac.compiler.resolve.structure;
 import org.jglr.flows.io.IndentableWriter;
 import weac.compiler.compile.PseudoInterpreter;
 import weac.compiler.parse.EnumClassTypes;
-import weac.compiler.precompile.insn.PrecompiledInsn;
-import weac.compiler.precompile.structure.PrecompiledAnnotation;
-import weac.compiler.precompile.structure.PrecompiledField;
-import weac.compiler.precompile.structure.PrecompiledMethod;
 import weac.compiler.resolve.ClassHierarchy;
 import weac.compiler.resolve.insn.ResolvedInsn;
-import weac.compiler.utils.Import;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.ModifierType;
 import weac.compiler.utils.WeacType;
 
@@ -91,8 +87,8 @@ public class ResolvedClass {
     }
 
     public boolean isAnnotationRuntimeVisible(PseudoInterpreter pseudoInterpreter) {
-        if(classType == EnumClassTypes.ANNOTATION && hasField("__runtime", WeacType.BOOLEAN_TYPE)) {
-            ResolvedField field = getField("__runtime", WeacType.BOOLEAN_TYPE);
+        if(classType == EnumClassTypes.ANNOTATION && hasField("__runtime", JVMWeacTypes.BOOLEAN_TYPE)) {
+            ResolvedField field = getField("__runtime", JVMWeacTypes.BOOLEAN_TYPE);
             List<ResolvedInsn> insns = field.defaultValue;
             if(!insns.isEmpty()) {
                 Object value = pseudoInterpreter.interpret(insns);

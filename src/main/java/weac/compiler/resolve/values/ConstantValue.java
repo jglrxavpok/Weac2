@@ -1,12 +1,11 @@
 package weac.compiler.resolve.values;
 
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.WeacType;
 
 public class ConstantValue extends Value {
     public ConstantValue(WeacType type) {
         super(type);
-        if(type.equals(WeacType.JOBJECT_TYPE))
-            new Exception().printStackTrace();
     }
 
     @Override

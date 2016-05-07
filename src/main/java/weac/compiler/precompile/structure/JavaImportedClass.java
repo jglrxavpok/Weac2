@@ -1,6 +1,7 @@
 package weac.compiler.precompile.structure;
 
 import weac.compiler.parse.EnumClassTypes;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;
 
@@ -49,7 +50,7 @@ public class JavaImportedClass extends PrecompiledClass {
         if(superclass != null)
             motherClass = superclass.fullName;
 
-        name = new WeacType(superclass != null ? superclass.name : WeacType.OBJECT_TYPE, clazz.getSimpleName(), false);
+        name = new WeacType(superclass != null ? superclass.name : JVMWeacTypes.OBJECT_TYPE, clazz.getSimpleName(), false);
     }
 
     private void importMethod(String name, Class<?> returnType, Parameter[] parameters) {
@@ -83,43 +84,43 @@ public class JavaImportedClass extends PrecompiledClass {
         WeacType fieldType = null;
         switch (id) {
             case "boolean":
-                fieldType = WeacType.BOOLEAN_TYPE;
+                fieldType = JVMWeacTypes.BOOLEAN_TYPE;
                 break;
 
             case "byte":
-                fieldType = WeacType.BYTE_TYPE;
+                fieldType = JVMWeacTypes.BYTE_TYPE;
                 break;
 
             case "char":
-                fieldType = WeacType.CHAR_TYPE;
+                fieldType = JVMWeacTypes.CHAR_TYPE;
                 break;
 
             case "double":
-                fieldType = WeacType.DOUBLE_TYPE;
+                fieldType = JVMWeacTypes.DOUBLE_TYPE;
                 break;
 
             case "float":
-                fieldType = WeacType.FLOAT_TYPE;
+                fieldType = JVMWeacTypes.FLOAT_TYPE;
                 break;
 
             case "int":
-                fieldType = WeacType.INTEGER_TYPE;
+                fieldType = JVMWeacTypes.INTEGER_TYPE;
                 break;
 
             case "long":
-                fieldType = WeacType.LONG_TYPE;
+                fieldType = JVMWeacTypes.LONG_TYPE;
                 break;
 
             case "short":
-                fieldType = WeacType.SHORT_TYPE;
+                fieldType = JVMWeacTypes.SHORT_TYPE;
                 break;
 
             case "java.lang.String":
-                fieldType = WeacType.STRING_TYPE;
+                fieldType = JVMWeacTypes.STRING_TYPE;
                 break;
 
             case "void":
-                fieldType = WeacType.VOID_TYPE;
+                fieldType = JVMWeacTypes.VOID_TYPE;
                 break;
         }
         return fieldType;

@@ -3,13 +3,12 @@ package weac.compiler.compile;
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.precompile.Label;
-import weac.compiler.precompile.insn.FunctionCall;
 import weac.compiler.precompile.structure.PrecompiledClass;
-import weac.compiler.precompile.structure.PrecompiledMethod;
 import weac.compiler.resolve.ConstructorInfos;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
 import weac.compiler.resolve.values.VariableValue;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.Constants;
 import weac.compiler.utils.ModifierType;
@@ -174,23 +173,23 @@ public class Compiler extends CompileUtils implements Opcodes {
     }
 
     private Type getPrimitiveType(WeacType type) {
-        if(type.equals(WeacType.BOOLEAN_TYPE)) {
+        if(type.equals(JVMWeacTypes.BOOLEAN_TYPE)) {
             return Type.BOOLEAN_TYPE;
-        } else if(type.equals(WeacType.BYTE_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.BYTE_TYPE)) {
             return Type.BYTE_TYPE;
-        } else if(type.equals(WeacType.CHAR_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.CHAR_TYPE)) {
             return Type.CHAR_TYPE;
-        } else if(type.equals(WeacType.DOUBLE_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.DOUBLE_TYPE)) {
             return Type.DOUBLE_TYPE;
-        } else if(type.equals(WeacType.FLOAT_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.FLOAT_TYPE)) {
             return Type.FLOAT_TYPE;
-        } else if(type.equals(WeacType.INTEGER_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.INTEGER_TYPE)) {
             return Type.INT_TYPE;
-        } else if(type.equals(WeacType.LONG_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.LONG_TYPE)) {
             return Type.LONG_TYPE;
-        } else if(type.equals(WeacType.SHORT_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.SHORT_TYPE)) {
             return Type.SHORT_TYPE;
-        } else if(type.equals(WeacType.VOID_TYPE)) {
+        } else if(type.equals(JVMWeacTypes.VOID_TYPE)) {
             return Type.VOID_TYPE;
         }
 
@@ -540,7 +539,7 @@ public class Compiler extends CompileUtils implements Opcodes {
             }
             WeacType owner = callInsn.getOwner();
             if(owner.getSuperType() != null) {
-                if(owner.getSuperType().equals(WeacType.PRIMITIVE_TYPE)) {
+                if(owner.getSuperType().equals(JVMWeacTypes.PRIMITIVE_TYPE)) {
                     String methodDesc = Type.getMethodDescriptor(invokeType == INVOKESPECIAL ? Type.VOID_TYPE : toJVMType(callInsn.getReturnType()), toJVMType(owner, false));
                     writer.visitMethodInsn(INVOKESTATIC, toJVMType(owner, true, false).getInternalName(), callInsn.getName(), methodDesc, false);
                 } else {
@@ -769,7 +768,7 @@ public class Compiler extends CompileUtils implements Opcodes {
         Type primitiveType = getPrimitiveType(type);
         if(primitiveType != null && convertPrimitives)
             return primitiveType.getDescriptor();
-        if(type.equals(WeacType.VOID_TYPE)) {
+        if(type.equals(JVMWeacTypes.VOID_TYPE)) {
             return "V";
         }
         if(!type.isValid()) {

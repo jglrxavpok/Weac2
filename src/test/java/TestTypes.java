@@ -1,3 +1,4 @@
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;
 import org.junit.Test;
@@ -8,7 +9,7 @@ public class TestTypes {
 
     @Test
     public void genericType() {
-        WeacType type = new WeacType(WeacType.OBJECT_TYPE, new Identifier("List<String>"));
+        WeacType type = new WeacType(JVMWeacTypes.OBJECT_TYPE, new Identifier("List<String>"));
         assertTrue("Tested type ("+type+") must be valid.", type.isValid());
         assertEquals("List", type.getCoreType().toString());
         assertTrue(type.getGenericParameters().length == 1);
@@ -17,7 +18,7 @@ public class TestTypes {
 
     @Test
     public void arrayOfPointers() {
-        WeacType type = new WeacType(WeacType.OBJECT_TYPE, new Identifier("String*[]"));
+        WeacType type = new WeacType(JVMWeacTypes.OBJECT_TYPE, new Identifier("String*[]"));
         assertTrue("Tested type ("+type+") must be valid.", type.isValid());
         assertEquals(type.getCoreType().toString(), "String");
         assertTrue(type.isArray());
@@ -27,7 +28,7 @@ public class TestTypes {
 
     @Test
     public void pointerOfArray() {
-        WeacType type = new WeacType(WeacType.OBJECT_TYPE, new Identifier("String[]*"));
+        WeacType type = new WeacType(JVMWeacTypes.OBJECT_TYPE, new Identifier("String[]*"));
         assertTrue("Tested type ("+type+") must be valid.", type.isValid());
         assertEquals(type.getCoreType().toString(), "String");
         assertTrue(type.isPointer());
@@ -37,7 +38,7 @@ public class TestTypes {
 
     @Test
     public void pointerType() {
-        WeacType type = new WeacType(WeacType.OBJECT_TYPE, new Identifier("String*"));
+        WeacType type = new WeacType(JVMWeacTypes.OBJECT_TYPE, new Identifier("String*"));
         assertTrue("Tested type ("+type+") must be valid.", type.isValid());
         assertEquals(type.getCoreType().toString(), "String");
         assertTrue(type.isPointer());
@@ -45,7 +46,7 @@ public class TestTypes {
 
     @Test
     public void arrayType() {
-        WeacType type = new WeacType(WeacType.OBJECT_TYPE, new Identifier("Char[]"));
+        WeacType type = new WeacType(JVMWeacTypes.OBJECT_TYPE, new Identifier("Char[]"));
         assertTrue("Tested type ("+type+") must be valid.", type.isValid());
         assertEquals(type.getCoreType().toString(), "Char");
         assertTrue(type.isArray());
@@ -53,7 +54,7 @@ public class TestTypes {
 
     @Test
     public void multipleGenericTypes() {
-        WeacType type = new WeacType(WeacType.OBJECT_TYPE, new Identifier("Either<String, Integer>"));
+        WeacType type = new WeacType(JVMWeacTypes.OBJECT_TYPE, new Identifier("Either<String, Integer>"));
         assertTrue("Tested type ("+type+") must be valid.", type.isValid());
         assertEquals(type.getCoreType().toString(), "Either");
         assertTrue(type.getGenericParameters().length == 2);

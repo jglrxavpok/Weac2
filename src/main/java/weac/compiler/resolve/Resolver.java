@@ -10,6 +10,7 @@ import weac.compiler.precompile.structure.*;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
 import weac.compiler.resolve.values.*;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.*;
 
 import java.util.*;
@@ -212,7 +213,7 @@ public class Resolver extends CompileUtils {
 
         WeacType primitive = getPotentialPrimitive(new Identifier(core));
         if(primitive != null) {
-            return new WeacType(WeacType.PRIMITIVE_TYPE, primitive.getIdentifier().getId()+(type.getId().substring(core.length())), true);
+            return new WeacType(JVMWeacTypes.PRIMITIVE_TYPE, primitive.getIdentifier().getId()+(type.getId().substring(core.length())), true);
         }
         PrecompiledClass typeClass = findClass(core, context);
         if(typeClass == null) {
@@ -220,8 +221,8 @@ public class Resolver extends CompileUtils {
         }
 
         WeacType superclass = null;
-        if (typeClass != null && !typeClass.fullName.equals(WeacType.OBJECT_TYPE.getIdentifier().toString()) // WeacObject
-                && !typeClass.fullName.equals(WeacType.JOBJECT_TYPE.getIdentifier().toString())) { // Java's Object
+        if (typeClass != null && !typeClass.fullName.equals(JVMWeacTypes.OBJECT_TYPE.getIdentifier().toString()) // WeacObject
+                && !typeClass.fullName.equals(JVMWeacTypes.JOBJECT_TYPE.getIdentifier().toString())) { // Java's Object
             String superclassName = typeClass.motherClass;
             if(superclassName != null) {
                 PrecompiledClass superTypeClass = findClass(superclassName, context);
@@ -237,31 +238,31 @@ public class Resolver extends CompileUtils {
 
         switch (type.getId()) {
             case "void":
-                return WeacType.VOID_TYPE;
+                return JVMWeacTypes.VOID_TYPE;
 
             case "boolean":
-                return WeacType.BOOLEAN_TYPE;
+                return JVMWeacTypes.BOOLEAN_TYPE;
 
             case "byte":
-                return WeacType.BYTE_TYPE;
+                return JVMWeacTypes.BYTE_TYPE;
 
             case "char":
-                return WeacType.CHAR_TYPE;
+                return JVMWeacTypes.CHAR_TYPE;
 
             case "double":
-                return WeacType.DOUBLE_TYPE;
+                return JVMWeacTypes.DOUBLE_TYPE;
 
             case "float":
-                return WeacType.FLOAT_TYPE;
+                return JVMWeacTypes.FLOAT_TYPE;
 
             case "int":
-                return WeacType.INTEGER_TYPE;
+                return JVMWeacTypes.INTEGER_TYPE;
 
             case "long":
-                return WeacType.LONG_TYPE;
+                return JVMWeacTypes.LONG_TYPE;
 
             case "short":
-                return WeacType.SHORT_TYPE;
+                return JVMWeacTypes.SHORT_TYPE;
         }
         return null;
     }
@@ -530,22 +531,22 @@ public class Resolver extends CompileUtils {
                 LoadBooleanConstant cst = ((LoadBooleanConstant) precompiledInsn);
                 insns.add(new LoadBooleanInsn(cst.getValue()));
 
-                valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
-                currentVarType = WeacType.BOOLEAN_TYPE;
+                valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
+                currentVarType = JVMWeacTypes.BOOLEAN_TYPE;
                 staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_STRING_CONSTANT) {
                 LoadStringConstant cst = ((LoadStringConstant) precompiledInsn);
                 insns.add(stringResolver.resolve(cst.getValue()));
-                valueStack.push(new ConstantValue(WeacType.STRING_TYPE));
+                valueStack.push(new ConstantValue(JVMWeacTypes.STRING_TYPE));
 
-                currentVarType = WeacType.STRING_TYPE;
+                currentVarType = JVMWeacTypes.STRING_TYPE;
                 staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_CHARACTER_CONSTANT) {
                 LoadCharacterConstant cst = ((LoadCharacterConstant) precompiledInsn);
                 insns.add(new LoadCharInsn(stringResolver.resolveSingleCharacter(cst.getValue().toCharArray(), 0)));
-                valueStack.push(new ConstantValue(WeacType.CHAR_TYPE));
+                valueStack.push(new ConstantValue(JVMWeacTypes.CHAR_TYPE));
 
-                currentVarType = WeacType.CHAR_TYPE;
+                currentVarType = JVMWeacTypes.CHAR_TYPE;
                 staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.ARGUMENT_SEPARATOR) {
                 currentVarType = selfType;
@@ -655,7 +656,7 @@ public class Resolver extends CompileUtils {
                 }
 
                 WeacType returnType = resolveType(realMethod.returnType, context);
-                insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), cst.getArgCount(), argTypes, realMethod.isConstructor ? WeacType.VOID_TYPE : returnType, isStatic));
+                insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), cst.getArgCount(), argTypes, realMethod.isConstructor ? JVMWeacTypes.VOID_TYPE : returnType, isStatic));
 
                 staticness.setCurrent(false).push();
                 int toPop = cst.getArgCount();
@@ -667,7 +668,7 @@ public class Resolver extends CompileUtils {
                 }
                 if(cst.shouldLookForInstance())
                     valueStack.pop();
-                if(!returnType.equals(WeacType.VOID_TYPE))
+                if(!returnType.equals(JVMWeacTypes.VOID_TYPE))
                     valueStack.push(new ConstantValue(returnType));
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.RETURN) {
                 if(valueStack.isEmpty()) {
@@ -678,23 +679,23 @@ public class Resolver extends CompileUtils {
                     int opcode = ResolveOpcodes.OBJ_RETURN;
                     if(type == null) {
                         opcode = ResolveOpcodes.RETURN;
-                    } else if(type.equals(WeacType.BOOLEAN_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.BOOLEAN_TYPE)) {
                         opcode = ResolveOpcodes.BOOL_RETURN;
-                    } else if(type.equals(WeacType.BYTE_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.BYTE_TYPE)) {
                         opcode = ResolveOpcodes.BYTE_RETURN;
-                    } else if(type.equals(WeacType.CHAR_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.CHAR_TYPE)) {
                         opcode = ResolveOpcodes.CHAR_RETURN;
-                    } else if(type.equals(WeacType.DOUBLE_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.DOUBLE_TYPE)) {
                         opcode = ResolveOpcodes.DOUBLE_RETURN;
-                    } else if(type.equals(WeacType.FLOAT_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.FLOAT_TYPE)) {
                         opcode = ResolveOpcodes.FLOAT_RETURN;
-                    } else if(type.equals(WeacType.INTEGER_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.INTEGER_TYPE)) {
                         opcode = ResolveOpcodes.INT_RETURN;
-                    } else if(type.equals(WeacType.LONG_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.LONG_TYPE)) {
                         opcode = ResolveOpcodes.LONG_RETURN;
-                    } else if(type.equals(WeacType.SHORT_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.SHORT_TYPE)) {
                         opcode = ResolveOpcodes.SHORT_RETURN;
-                    } else if(type.equals(WeacType.VOID_TYPE)) {
+                    } else if(type.equals(JVMWeacTypes.VOID_TYPE)) {
                         opcode = ResolveOpcodes.RETURN;
                     }
 
@@ -819,7 +820,7 @@ public class Resolver extends CompileUtils {
 
                             if (second.getType().isPrimitive() && first.getType().isPrimitive()) {
                                 insns.add(new SubtractInsn(resultType));
-                                if (!isCastable(resultType, WeacType.INTEGER_TYPE, context)) {
+                                if (!isCastable(resultType, JVMWeacTypes.INTEGER_TYPE, context)) {
                                     insns.add(new CompareInsn(resultType));
                                 }
                                 insns.add(new CheckZero());
@@ -830,7 +831,7 @@ public class Resolver extends CompileUtils {
                             } else {
                                 insns.add(new ObjectEqualInsn());
                             }
-                            valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
+                            valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
                             staticness.setCurrent(false).push();
                         }
                         break;
@@ -857,12 +858,12 @@ public class Resolver extends CompileUtils {
                                 insns.add(new CastInsn(right.getType(), resultType));
                             }
 
-                            valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
+                            valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
                             staticness.pop();
                             staticness.pop();
                             staticness.setCurrent(false).push();
 
-                            if(!resultType.equals(WeacType.INTEGER_TYPE)) {
+                            if(!resultType.equals(JVMWeacTypes.INTEGER_TYPE)) {
                                 insns.add(new CompareInsn(resultType));
                             }
 
@@ -909,7 +910,7 @@ public class Resolver extends CompileUtils {
                         case AND: {
                             Value right = valueStack.pop();
                             Value left = valueStack.pop();
-                            if(!left.getType().equals(WeacType.BOOLEAN_TYPE) || !right.getType().equals(WeacType.BOOLEAN_TYPE)) {
+                            if(!left.getType().equals(JVMWeacTypes.BOOLEAN_TYPE) || !right.getType().equals(JVMWeacTypes.BOOLEAN_TYPE)) {
                                 newError("Cannot perform AND operation "+left.getType()+" & "+right.getType(), -1); // todo line
                             }
                             Label labelFalse1 = newLabel();
@@ -921,7 +922,7 @@ public class Resolver extends CompileUtils {
                             insns.add(new GotoResInsn(labelTrue));
 
                             insns.add(new ResolvedLabelInsn(labelFalse1));
-                            insns.add(new PopInsn(WeacType.BOOLEAN_TYPE));
+                            insns.add(new PopInsn(JVMWeacTypes.BOOLEAN_TYPE));
                             insns.add(new ResolvedLabelInsn(labelFalse0));
                             insns.add(new LoadBooleanInsn(false));
                             insns.add(new GotoResInsn(endLabel));
@@ -930,7 +931,7 @@ public class Resolver extends CompileUtils {
 
                             insns.add(new ResolvedLabelInsn(endLabel));
 
-                            valueStack.push(new ConstantValue(WeacType.BOOLEAN_TYPE));
+                            valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
                             staticness.pop();
                             staticness.pop();
                             staticness.setCurrent(false).push();
@@ -940,26 +941,26 @@ public class Resolver extends CompileUtils {
                         case INTERVAL_SEPARATOR: {
                             Value upperBound = valueStack.pop();
                             Value lowerBound = valueStack.pop();
-                            if(!lowerBound.getType().equals(WeacType.DOUBLE_TYPE)) {
+                            if(!lowerBound.getType().equals(JVMWeacTypes.DOUBLE_TYPE)) {
                                 int tmpVarIndex = varMap.registerLocal("$temp"+varMap.getCurrentLocalIndex(), upperBound.getType());
                                 insns.add(new StoreVarInsn(tmpVarIndex, upperBound.getType()));
 
-                                insns.add(new CastInsn(lowerBound.getType(), WeacType.DOUBLE_TYPE));
+                                insns.add(new CastInsn(lowerBound.getType(), JVMWeacTypes.DOUBLE_TYPE));
                                 insns.add(new LoadVariableInsn(tmpVarIndex, upperBound.getType()));
                             }
 
-                            if(!upperBound.getType().equals(WeacType.DOUBLE_TYPE)) {
-                                insns.add(new CastInsn(upperBound.getType(), WeacType.DOUBLE_TYPE));
+                            if(!upperBound.getType().equals(JVMWeacTypes.DOUBLE_TYPE)) {
+                                insns.add(new CastInsn(upperBound.getType(), JVMWeacTypes.DOUBLE_TYPE));
                             }
 
                             int startIndex = findPreviousArrayStart(i, precompiled);
-                            insns.add(startIndex, new NewInsn(WeacType.INTERVAL_TYPE));
+                            insns.add(startIndex, new NewInsn(JVMWeacTypes.INTERVAL_TYPE));
                             insns.add(startIndex+1, new ResolvedInsn(ResolveOpcodes.DUP));
 
-                            insns.add(new FunctionStartResInsn("<init>", 2, WeacType.INTERVAL_TYPE));
-                            insns.add(new FunctionCallInsn("<init>", WeacType.INTERVAL_TYPE, 2, new WeacType[]{WeacType.DOUBLE_TYPE, WeacType.DOUBLE_TYPE}, WeacType.VOID_TYPE, false));
+                            insns.add(new FunctionStartResInsn("<init>", 2, JVMWeacTypes.INTERVAL_TYPE));
+                            insns.add(new FunctionCallInsn("<init>", JVMWeacTypes.INTERVAL_TYPE, 2, new WeacType[]{JVMWeacTypes.DOUBLE_TYPE, JVMWeacTypes.DOUBLE_TYPE}, JVMWeacTypes.VOID_TYPE, false));
 
-                            valueStack.push(new ConstantValue(WeacType.INTERVAL_TYPE));
+                            valueStack.push(new ConstantValue(JVMWeacTypes.INTERVAL_TYPE));
                             staticness.pop();
                             staticness.pop();
                             staticness.setCurrent(false).push();
@@ -1031,7 +1032,7 @@ public class Resolver extends CompileUtils {
         } else if(isCastable(right, left, context)) {
             return left;
         }
-        return WeacType.JOBJECT_TYPE;
+        return JVMWeacTypes.JOBJECT_TYPE;
     }
 
     private ResolvedInsn createOperatorInsn(WeacType resultType, EnumOperators op) {
@@ -1130,7 +1131,7 @@ public class Resolver extends CompileUtils {
                     }
                 }
 
-                if(superType.equals(WeacType.OBJECT_TYPE) || superType.equals(WeacType.JOBJECT_TYPE)) {
+                if(superType.equals(JVMWeacTypes.OBJECT_TYPE) || superType.equals(JVMWeacTypes.JOBJECT_TYPE)) {
                     return null;
                 }
             } else {
@@ -1159,14 +1160,14 @@ public class Resolver extends CompileUtils {
      * @return
      */
     private int computeScore(WeacType requiredType, WeacType givenType) {
-        if(givenType.equals(WeacType.NULL_TYPE) || requiredType.equals(givenType))
+        if(givenType.equals(JVMWeacTypes.NULL_TYPE) || requiredType.equals(givenType))
             return 0;
         if(primitiveCasts.isPrimitiveCast(givenType, requiredType))
             if(primitiveCasts.isCastable(givenType, requiredType)) {
                 return primitiveCasts.size(requiredType) - primitiveCasts.size(givenType);
             }
         WeacType superType = givenType.getSuperType();
-        if(superType != null && superType != WeacType.JOBJECT_TYPE) {
+        if(superType != null && superType != JVMWeacTypes.JOBJECT_TYPE) {
             return 1+computeScore(requiredType, superType);
         }
         return 10;
@@ -1216,26 +1217,26 @@ public class Resolver extends CompileUtils {
     private WeacType extractType(ResolvedInsn number) {
         switch (number.getOpcode()) {
             case ResolveOpcodes.LOAD_BYTE_CONSTANT:
-                return WeacType.BYTE_TYPE;
+                return JVMWeacTypes.BYTE_TYPE;
 
             case ResolveOpcodes.LOAD_DOUBLE_CONSTANT:
-                return WeacType.DOUBLE_TYPE;
+                return JVMWeacTypes.DOUBLE_TYPE;
 
             case ResolveOpcodes.LOAD_FLOAT_CONSTANT:
-                return WeacType.FLOAT_TYPE;
+                return JVMWeacTypes.FLOAT_TYPE;
 
             case ResolveOpcodes.LOAD_INTEGER_CONSTANT:
-                return WeacType.INTEGER_TYPE;
+                return JVMWeacTypes.INTEGER_TYPE;
 
             case ResolveOpcodes.LOAD_LONG_CONSTANT:
-                return WeacType.LONG_TYPE;
+                return JVMWeacTypes.LONG_TYPE;
 
             case ResolveOpcodes.LOAD_SHORT_CONSTANT:
-                return WeacType.SHORT_TYPE;
+                return JVMWeacTypes.SHORT_TYPE;
 
         }
         System.out.printf("num: "+number);
-        return WeacType.VOID_TYPE;
+        return JVMWeacTypes.VOID_TYPE;
     }
 
     private Value findFunctionOwner(Stack<Value> stack, WeacType currentType, FunctionCall cst, ResolvingContext context, boolean isStatic) {

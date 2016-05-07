@@ -6,6 +6,7 @@ import weac.compiler.patterns.InstructionPattern;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.patterns.*;
 import weac.compiler.precompile.structure.*;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.EnumOperators;
 import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.utils.GenericType;
@@ -183,7 +184,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         boolean isGeneric = clazz.getGenericParameterNames().stream()
                 .filter(t -> t.getIdentifier().getId().endsWith(type.getId()))
                 .count() != 0L;
-        return isGeneric ? WeacType.OBJECT_TYPE.getIdentifier() : type;
+        return isGeneric ? JVMWeacTypes.OBJECT_TYPE.getIdentifier() : type;
     }
 
     private List<PrecompiledEnumConstant> precompileEnumConstants(List<String> enumConstants) {

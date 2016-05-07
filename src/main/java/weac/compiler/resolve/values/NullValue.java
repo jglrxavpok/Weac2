@@ -1,10 +1,10 @@
 package weac.compiler.resolve.values;
 
-import weac.compiler.utils.WeacType;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 
 public class NullValue extends Value {
     public NullValue() {
-        super(WeacType.NULL_TYPE);
+        super(JVMWeacTypes.NULL_TYPE);
     }
 
     @Override

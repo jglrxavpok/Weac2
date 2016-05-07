@@ -1,6 +1,7 @@
 package weac.compiler.resolve;
 
 import weac.compiler.resolve.insn.*;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.WeacType;
 
 import java.util.List;
@@ -50,7 +51,7 @@ public class AutoTypeResolver implements ResolveOpcodes {
 
                 case COMPARE_ZERO: {
                     popType(2);
-                    pushType(WeacType.BOOLEAN_TYPE);
+                    pushType(JVMWeacTypes.BOOLEAN_TYPE);
                 }
                 break;
 
@@ -67,7 +68,7 @@ public class AutoTypeResolver implements ResolveOpcodes {
                         popType(1);
                     }
                     popType(callInsn.getArgCount());
-                    if (!callInsn.getReturnType().equals(WeacType.VOID_TYPE)) {
+                    if (!callInsn.getReturnType().equals(JVMWeacTypes.VOID_TYPE)) {
                         pushType(callInsn.getReturnType());
                     }
                 }
@@ -78,7 +79,7 @@ public class AutoTypeResolver implements ResolveOpcodes {
                 case LESS:
                 case LESS_OR_EQUAL:
                     popType(1);
-                    pushType(WeacType.BOOLEAN_TYPE);
+                    pushType(JVMWeacTypes.BOOLEAN_TYPE);
                     break;
 
                 case IF_NOT_TRUE_JUMP:
@@ -90,47 +91,47 @@ public class AutoTypeResolver implements ResolveOpcodes {
 
                 case IS_ZERO:
                     popType(1);
-                    pushType(WeacType.BOOLEAN_TYPE);
+                    pushType(JVMWeacTypes.BOOLEAN_TYPE);
                     break;
 
                 case LOAD_BOOL_CONSTANT:
-                    pushType(WeacType.BOOLEAN_TYPE);
+                    pushType(JVMWeacTypes.BOOLEAN_TYPE);
                     break;
 
                 case LOAD_BYTE_CONSTANT:
-                    pushType(WeacType.BYTE_TYPE);
+                    pushType(JVMWeacTypes.BYTE_TYPE);
                     break;
 
                 case LOAD_CHARACTER_CONSTANT:
-                    pushType(WeacType.CHAR_TYPE);
+                    pushType(JVMWeacTypes.CHAR_TYPE);
                     break;
 
                 case LOAD_DOUBLE_CONSTANT:
-                    pushType(WeacType.DOUBLE_TYPE);
+                    pushType(JVMWeacTypes.DOUBLE_TYPE);
                     break;
 
                 case LOAD_FLOAT_CONSTANT:
-                    pushType(WeacType.FLOAT_TYPE);
+                    pushType(JVMWeacTypes.FLOAT_TYPE);
                     break;
 
                 case LOAD_INTEGER_CONSTANT:
-                    pushType(WeacType.INTEGER_TYPE);
+                    pushType(JVMWeacTypes.INTEGER_TYPE);
                     break;
 
                 case LOAD_LONG_CONSTANT:
-                    pushType(WeacType.LONG_TYPE);
+                    pushType(JVMWeacTypes.LONG_TYPE);
                     break;
 
                 case LOAD_SHORT_CONSTANT:
-                    pushType(WeacType.SHORT_TYPE);
+                    pushType(JVMWeacTypes.SHORT_TYPE);
                     break;
 
                 case LOAD_NULL:
-                    pushType(WeacType.JOBJECT_TYPE);
+                    pushType(JVMWeacTypes.JOBJECT_TYPE);
                     break;
 
                 case LOAD_STRING_CONSTANT:
-                    pushType(WeacType.STRING_TYPE);
+                    pushType(JVMWeacTypes.STRING_TYPE);
                     break;
 
                 case LOAD_LOCAL_VARIABLE:
@@ -185,7 +186,7 @@ public class AutoTypeResolver implements ResolveOpcodes {
                     break;
             }
         }
-        return typeStack.isEmpty() ? WeacType.VOID_TYPE : typeStack.pop();
+        return typeStack.isEmpty() ? JVMWeacTypes.VOID_TYPE : typeStack.pop();
     }
 
     private void pushType(WeacType type) {
