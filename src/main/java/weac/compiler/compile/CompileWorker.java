@@ -34,7 +34,7 @@ public class CompileWorker implements Runnable {
     @Override
     public void run() {
         Resolver resolver = new Resolver();
-        Compiler compiler = new Compiler();
+        JVMCompiler JVMCompiler = new JVMCompiler();
         Optimizer optimizer = new Optimizer();
         ResolvedSource resolvedSource = resolver.process(readImports(source, sideSources));
         resolvedSource = optimizer.process(resolvedSource);
@@ -58,7 +58,7 @@ public class CompileWorker implements Runnable {
         } else {
 
             try {
-                Map<String, byte[]> classesBytecode = compiler.process(resolvedSource);
+                Map<String, byte[]> classesBytecode = JVMCompiler.process(resolvedSource);
                 for (String className : classesBytecode.keySet()) {
                     File file = new File(output, className.replace(".", "/") + ".class");
                     if (!file.getParentFile().exists())

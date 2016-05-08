@@ -1,4 +1,4 @@
-package weac.compiler.compile;
+package weac.compiler.targets.jvm.compile;
 
 import org.jglr.flows.collection.DoubleKeyMap;
 import org.objectweb.asm.MethodVisitor;

@@ -1,4 +1,4 @@
-package weac.compiler.compile;
+package weac.compiler.targets.jvm.compile;
 
 import weac.compiler.CompileUtils;
 import weac.compiler.parse.EnumClassTypes;
@@ -8,6 +8,7 @@ import weac.compiler.resolve.ConstructorInfos;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
 import weac.compiler.resolve.values.VariableValue;
+import weac.compiler.targets.TargetCompiler;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.Constants;
@@ -17,13 +18,13 @@ import org.objectweb.asm.*;
 
 import java.util.*;
 
-public class Compiler extends CompileUtils implements Opcodes {
+public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler {
 
     private final PseudoInterpreter pseudoInterpreter;
     private final HashMap<Integer, Integer> startingOpcodes;
     private PrimitiveCastCompiler primitiveCastCompiler;
 
-    public Compiler() {
+    public JVMCompiler() {
         pseudoInterpreter = new PseudoInterpreter();
         primitiveCastCompiler = new PrimitiveCastCompiler();
         startingOpcodes = new HashMap<>();

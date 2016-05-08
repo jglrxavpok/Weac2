@@ -1,4 +1,4 @@
-package weac.compiler.compile;
+package weac.compiler.targets.jvm.compile;
 
 import weac.compiler.precompile.Label;
 

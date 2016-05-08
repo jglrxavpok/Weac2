@@ -1,9 +1,10 @@
 package weac.compiler.targets.jvm;
 
+import weac.compiler.targets.WeacTargetTypes;
 import weac.compiler.utils.Constants;
 import weac.compiler.utils.WeacType;
 
-public class JVMWeacTypes {
+public class JVMWeacTypes implements WeacTargetTypes {
     public static final WeacType JOBJECT_TYPE = new WeacType(null, "java.lang.Object", true);
     public static final WeacType INTERVAL_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Interval", true);
     public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
@@ -21,4 +22,15 @@ public class JVMWeacTypes {
     public static final WeacType DOUBLE_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Double", true);
     public static final WeacType BYTE_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Byte", true);
     public static final WeacType BOOLEAN_TYPE = new WeacType(PRIMITIVE_TYPE, "weac.lang.Boolean", true);
+
+    private WeacType[] defaultTypes = new WeacType[] {
+            JOBJECT_TYPE, INTEGER_TYPE, INTERVAL_TYPE, STRING_TYPE, VOID_TYPE, OBJECT_TYPE,
+            ARRAY_TYPE, POINTER_TYPE, NULL_TYPE, PRIMITIVE_TYPE, CHAR_TYPE, SHORT_TYPE, LONG_TYPE, INTEGER_TYPE,
+            FLOAT_TYPE, DOUBLE_TYPE, BYTE_TYPE, BOOLEAN_TYPE
+    };
+
+    @Override
+    public WeacType[] defaultTypes() {
+        return defaultTypes;
+    }
 }

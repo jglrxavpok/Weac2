@@ -1,7 +1,7 @@
 package weac.compiler.resolve.structure;
 
 import org.jglr.flows.io.IndentableWriter;
-import weac.compiler.compile.PseudoInterpreter;
+import weac.compiler.targets.jvm.compile.PseudoInterpreter;
 import weac.compiler.parse.EnumClassTypes;
 import weac.compiler.resolve.ClassHierarchy;
 import weac.compiler.resolve.insn.ResolvedInsn;
