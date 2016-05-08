@@ -77,6 +77,18 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                     i += packageName.length();
                     break;
 
+                case "#target":
+                    i += command.length();
+                    i += readUntilNot(chars, i, ' ', '\n').length();
+                    parsedSource.target = readUntil(chars, i, '\n').replace("\r", "");
+                    break;
+
+                case "#version":
+                    i += command.length();
+                    i += readUntilNot(chars, i, ' ', '\n').length();
+                    parsedSource.version = readUntil(chars, i, '\n').replace("\r", "");
+                    break;
+
                 case "import":
                     i += command.length();
                     i += readUntilNot(chars, i, ' ', '\n').length();
@@ -106,7 +118,7 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                             isFinal = true;
                         } else if(modif.getType() == ModifierType.ANNOTATION) {
                             ParsedAnnotation annot = ((AnnotationModifier) modif).getAnnotation();
-                            annotations.add(((AnnotationModifier) modif).getAnnotation());
+                            annotations.add(annot);
                         } else if(modif.getType() == ModifierType.COMPILERSPECIAL) {
                             isCompilerSpecial = true;
                         }
@@ -126,6 +138,11 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
             if(chars[i] == '\n')
                 lineIndex++;
         }
+
+        if(parsedSource.target == null)
+            parsedSource.target = "jvm";
+        if(parsedSource.version == null)
+            parsedSource.version = Constants.CURRENT_VERSION;
     }
 
     /**

@@ -10,6 +10,7 @@ import weac.compiler.precompile.structure.*;
 import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
 import weac.compiler.resolve.values.*;
+import weac.compiler.targets.jvm.JVMConstants;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.*;
 
@@ -379,7 +380,7 @@ public class Resolver extends CompileUtils {
             }
         }
         if(superclass == null) {
-            superclass = findClass(Constants.BASE_CLASS, context);
+            superclass = findClass(JVMConstants.BASE_CLASS, context);
         }
         parents.setSuperclass(superclass);
         return parents;

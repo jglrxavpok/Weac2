@@ -9,6 +9,7 @@ import weac.compiler.resolve.insn.*;
 import weac.compiler.resolve.structure.*;
 import weac.compiler.resolve.values.VariableValue;
 import weac.compiler.targets.TargetCompiler;
+import weac.compiler.targets.jvm.JVMConstants;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.Constants;
@@ -125,7 +126,7 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
             });
             av.visitEnd();
 
-            if(annotation.getName().fullName.equals(Constants.JAVA_PRIMITIVE_ANNOTATION)) {
+            if(annotation.getName().fullName.equals(JVMConstants.JAVA_PRIMITIVE_ANNOTATION)) {
                 Object value = getValue(annotation.getArgs().get(0));
                 if(value instanceof String) {
                     switch ((String) value) {
@@ -202,7 +203,7 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
     }
 
     private void writeMethods(ClassWriter writer, Type type, ResolvedClass clazz, Type primitiveType) {
-        if(clazz.classType == EnumClassTypes.OBJECT && clazz.parents.hasInterface(Constants.APPLICATION_CLASS)) {
+        if(clazz.classType == EnumClassTypes.OBJECT && clazz.parents.hasInterface(JVMConstants.APPLICATION_CLASS)) {
             writeMainMethod(writer, type, clazz);
         }
         int nConstructors = 0;

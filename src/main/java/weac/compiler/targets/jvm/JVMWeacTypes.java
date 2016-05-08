@@ -1,7 +1,6 @@
 package weac.compiler.targets.jvm;
 
 import weac.compiler.targets.WeacTargetTypes;
-import weac.compiler.utils.Constants;
 import weac.compiler.utils.WeacType;
 
 public class JVMWeacTypes implements WeacTargetTypes {
@@ -9,7 +8,7 @@ public class JVMWeacTypes implements WeacTargetTypes {
     public static final WeacType INTERVAL_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Interval", true);
     public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
     public static final WeacType VOID_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Void", false);
-    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, Constants.BASE_CLASS, true);
+    public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, JVMConstants.BASE_CLASS, true);
     public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
     public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Pointer<Type>", true);
     public static final WeacType NULL_TYPE = new WeacType(JOBJECT_TYPE, OBJECT_TYPE.getIdentifier());

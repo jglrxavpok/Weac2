@@ -133,6 +133,13 @@ public class PreProcessor extends CompilePhase<SourceCode, SourceCode> {
             case "end": conditions.pop();
             break;
 
+            case "target":
+            case "version":
+                if(conditions.peek()) {
+                    return true;
+                }
+                break;
+
             default:
                 return false;
         }
