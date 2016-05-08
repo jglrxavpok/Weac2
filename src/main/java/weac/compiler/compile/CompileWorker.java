@@ -10,6 +10,7 @@ import weac.compiler.resolve.structure.ResolvedClass;
 import weac.compiler.resolve.structure.ResolvedSource;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.util.CheckClassAdapter;
+import weac.compiler.targets.jvm.compile.JVMCompiler;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;

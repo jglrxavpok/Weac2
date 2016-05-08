@@ -1,6 +1,6 @@
 package weac.compiler.targets.jvm;
 
-import weac.compiler.compile.JVMCompiler;
+import weac.compiler.targets.jvm.compile.JVMCompiler;
 import weac.compiler.targets.TargetCompiler;
 import weac.compiler.targets.WeacTarget;
 
