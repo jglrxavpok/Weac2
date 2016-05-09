@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 public class Resolver extends CompileUtils {
 
-    private final List<InstructionPattern<ResolvedInsn>> patterns;
     private final NumberResolver numberResolver;
     private final StringResolver stringResolver;
     private final PrimitiveCastSolver primitiveCasts;
@@ -29,7 +28,6 @@ public class Resolver extends CompileUtils {
     private AutoTypeResolver autoTypeResolver;
 
     public Resolver() {
-        patterns = new LinkedList<>();
         numberResolver = new NumberResolver();
         stringResolver = new StringResolver();
         primitiveCasts = new PrimitiveCastSolver();
@@ -91,8 +89,6 @@ public class Resolver extends CompileUtils {
             annotSource.classes.addAll(context.getSource().classes); // corner cases where the annotation uses the type it is describing
 
             annotSource.imports = new LinkedList<>();
-            if(clazz == null)
-                throw new RuntimeException(":cc "+a.getName());
             annotSource.packageName = clazz.packageName;
 
             ResolvedAnnotation resolved = new ResolvedAnnotation(resolve(clazz, context));
@@ -973,7 +969,6 @@ public class Resolver extends CompileUtils {
                             break;
                     }
                 }
-                // TODO
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NEW_LOCAL) {
                 NewLocalVar localVar = ((NewLocalVar) precompiledInsn);
                 WeacType type = resolveType(new Identifier(localVar.getType(), true), context);
@@ -1008,7 +1003,6 @@ public class Resolver extends CompileUtils {
         }
 
         insns.add(0, new LocalVariableTableInsn(varMap));
-        // TODO
         return insns;
     }
 
@@ -1236,7 +1230,6 @@ public class Resolver extends CompileUtils {
                 return JVMWeacTypes.SHORT_TYPE;
 
         }
-        System.out.printf("num: "+number);
         return JVMWeacTypes.VOID_TYPE;
     }
 
@@ -1244,9 +1237,6 @@ public class Resolver extends CompileUtils {
         if(cst.shouldLookForInstance()) {
             int args = cst.getArgCount();
             int index = stack.size()-args-1;
-            if(index < 0) {
-                System.err.println(">>>> "+cst+", "+Arrays.toString(stack.toArray()));
-            }
             return stack.get(index);
         } else {
             return new ThisValue(currentType);
