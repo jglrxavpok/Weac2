@@ -34,7 +34,7 @@ public class CompileWorker implements Runnable {
 
     @Override
     public void run() {
-        Resolver resolver = new Resolver();
+        Resolver resolver = new Resolver(source.target);
         JVMCompiler JVMCompiler = new JVMCompiler();
         Optimizer optimizer = new Optimizer();
         ResolvedSource resolvedSource = resolver.process(readImports(source, sideSources));

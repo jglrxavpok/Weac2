@@ -6,6 +6,7 @@ import weac.compiler.patterns.InstructionPattern;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.patterns.*;
 import weac.compiler.precompile.structure.*;
+import weac.compiler.targets.WeacTargets;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.EnumOperators;
 import org.jglr.flows.collection.VariableTopStack;
@@ -49,6 +50,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
 
         source.packageName = parsed.packageName;
         source.fileName = parsed.fileName;
+        source.target = WeacTargets.valueOf(parsed.target.toUpperCase()).value();
 
         parsed.classes.forEach(c -> {
             PrecompiledClass clazz = precompile(c);

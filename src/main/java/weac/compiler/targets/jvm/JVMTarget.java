@@ -1,8 +1,11 @@
 package weac.compiler.targets.jvm;
 
+import weac.compiler.resolve.Resolver;
+import weac.compiler.resolve.TypeResolver;
 import weac.compiler.targets.jvm.compile.JVMCompiler;
 import weac.compiler.targets.TargetCompiler;
 import weac.compiler.targets.WeacTarget;
+import weac.compiler.targets.jvm.resolve.JVMTypeResolver;
 
 public class JVMTarget implements WeacTarget {
 
@@ -19,5 +22,10 @@ public class JVMTarget implements WeacTarget {
     @Override
     public TargetCompiler newCompiler() {
         return new JVMCompiler();
+    }
+
+    @Override
+    public TypeResolver newTypeResolver(Resolver resolver) {
+        return new JVMTypeResolver(resolver);
     }
 }
