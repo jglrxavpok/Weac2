@@ -206,6 +206,11 @@ public class PrecompiledClass implements Member {
         }
     }
 
+    public String getFullName() {
+        String coreID = name.getCoreType().getIdentifier().getId();
+        return (packageName == null || packageName.isEmpty()) ? coreID : packageName+"."+coreID;
+    }
+
     @Override
     public String getName() {
         return name.getCoreType().toString();

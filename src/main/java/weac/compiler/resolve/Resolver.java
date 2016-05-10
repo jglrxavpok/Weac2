@@ -1,9 +1,6 @@
 package weac.compiler.resolve;
 
-import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.CompileUtils;
-import weac.compiler.parse.EnumClassTypes;
-import weac.compiler.patterns.InstructionPattern;
 import weac.compiler.precompile.Label;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.structure.*;
@@ -16,7 +13,6 @@ import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.*;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Resolver extends CompileUtils {
@@ -55,7 +51,7 @@ public class Resolver extends CompileUtils {
         resolvedClass.annotations.addAll(resolveAnnotations(aClass.annotations, currentType, context));
         resolvedClass.classType = aClass.classType;
         resolvedClass.parents = getHierarchy(aClass, aClass.interfacesImplemented, context);
-        resolvedClass.fullName = getFullName(aClass);
+        resolvedClass.fullName = aClass.getFullName();
         resolvedClass.enumConstants = resolveEnums(aClass.enumConstants, currentType, context);
         resolvedClass.isAbstract = aClass.isAbstract;
         resolvedClass.isMixin = aClass.isMixin;
@@ -234,10 +230,6 @@ public class Resolver extends CompileUtils {
         return contentClass;
     }
 
-    private String getFullName(PrecompiledClass aClass) {
-        return (aClass.packageName == null || aClass.packageName.isEmpty()) ? aClass.name.getCoreType().getIdentifier().getId() : aClass.packageName+"."+aClass.name.getCoreType().getIdentifier().getId();
-    }
-
     public ClassHierarchy getHierarchy(PrecompiledClass aClass, List<String> interfacesImplemented, ResolvingContext context) {
         ClassHierarchy parents = new ClassHierarchy();
 
@@ -354,17 +346,6 @@ public class Resolver extends CompileUtils {
 
     protected Label newLabel() {
         return new Label(labelID--);
-    }
-
-    protected WeacType findResultType(WeacType left, WeacType right, ResolvingContext context) {
-        if(left.equals(right)) {
-            return left;
-        } else if(isCastable(left, right, context)) {
-            return right;
-        } else if(isCastable(right, left, context)) {
-            return left;
-        }
-        return JVMWeacTypes.JOBJECT_TYPE;
     }
 
     protected void registerVariables(PrecompiledClass cl, Map<WeacType, VariableMap> variableMaps, ResolvingContext context) {
@@ -501,7 +482,7 @@ public class Resolver extends CompileUtils {
         return 10;
     }
 
-    protected boolean isCastable(WeacType from, WeacType to, ResolvingContext context) {
+    public boolean isCastable(WeacType from, WeacType to, ResolvingContext context) {
         if(from.isArray() || to.isArray()) {
             return from.equals(to); // TODO: Implicit array casts?
         }
@@ -537,5 +518,9 @@ public class Resolver extends CompileUtils {
 
     public StringResolver getStringResolver() {
         return stringResolver;
+    }
+
+    public TypeResolver getTypeResolver() {
+        return typeResolver;
     }
 }

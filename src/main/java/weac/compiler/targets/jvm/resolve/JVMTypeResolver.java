@@ -57,6 +57,17 @@ public class JVMTypeResolver extends TypeResolver {
         return new WeacType(superclass, typeClass.fullName+(type.getId().substring(core.length())), true);
     }
 
+    public WeacType findResultType(WeacType left, WeacType right, ResolvingContext context) {
+        if(left.equals(right)) {
+            return left;
+        } else if(resolver.isCastable(left, right, context)) {
+            return right;
+        } else if(resolver.isCastable(right, left, context)) {
+            return left;
+        }
+        return JVMWeacTypes.JOBJECT_TYPE;
+    }
+
     @Override
     public boolean isCastable(PrecompiledClass from, PrecompiledClass to, ResolvingContext context) {
         if(from.fullName.equals("java.lang.Object") && !to.fullName.equals("java.lang.Object"))

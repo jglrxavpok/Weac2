@@ -350,7 +350,7 @@ public class ExpressionResolver extends CompileUtils {
                             Value first = valueStack.pop();
                             staticness.pop();
 
-                            WeacType resultType = resolver.findResultType(first.getType(), second.getType(), context);
+                            WeacType resultType = resolver.getTypeResolver().findResultType(first.getType(), second.getType(), context);
 
                             if (!first.getType().equals(resultType)) {
                                 int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), second.getType());
@@ -388,7 +388,7 @@ public class ExpressionResolver extends CompileUtils {
                         case GREATER_OR_EQUAL: {
                             Value right = valueStack.pop();
                             Value left = valueStack.pop();
-                            WeacType resultType = resolver.findResultType(left.getType(), right.getType(), context);
+                            WeacType resultType = resolver.getTypeResolver().findResultType(left.getType(), right.getType(), context);
 
                             insns.add(new SubtractInsn(resultType));
 
@@ -424,7 +424,7 @@ public class ExpressionResolver extends CompileUtils {
                         case MULTIPLY: {
                             Value right = valueStack.pop();
                             Value left = valueStack.pop();
-                            WeacType resultType = resolver.findResultType(left.getType(), right.getType(), context);
+                            WeacType resultType = resolver.getTypeResolver().findResultType(left.getType(), right.getType(), context);
 
                             if(!left.getType().equals(resultType)) {
                                 int tmpVarIndex = varMap.registerLocal("$temp"+varMap.getCurrentLocalIndex(), right.getType());

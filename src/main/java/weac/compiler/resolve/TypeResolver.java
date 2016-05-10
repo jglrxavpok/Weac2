@@ -11,4 +11,6 @@ public abstract class TypeResolver {
     public abstract boolean isCastable(PrecompiledClass from, PrecompiledClass to, ResolvingContext context);
 
     public abstract PrecompiledClass findClass(String inter, ResolvingContext context);
+
+    public abstract WeacType findResultType(WeacType left, WeacType right, ResolvingContext context);
 }
