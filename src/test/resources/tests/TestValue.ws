@@ -7,4 +7,8 @@ TestValue {
         return this;
     }
 
+    TestValue operator&(TestValue other) {
+        return other;
+    }
+
 }

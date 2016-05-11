@@ -58,6 +58,9 @@ public interface ResolveOpcodes {
             SUBTRACT = 0x32,
             DIVIDE = 0x33,
             MODULUS = 0x34,
+            NEGATE = 0x35,
+            INCREMENT = 0x36,
+            DECREMENT = 0x37,
 
             // comparison
             IS_ZERO = 0x40,

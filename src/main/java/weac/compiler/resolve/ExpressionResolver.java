@@ -261,9 +261,6 @@ public class ExpressionResolver extends CompileUtils {
                         break;
                     }
                     Value val = valueStack.pop();
-                    if(selfType.getIdentifier().getId().endsWith("Console")) {
-                        System.out.println("POP:"+val);
-                    }
                     insns.add(new PopInsn(val.getType()));
                 }
                 LabelInsn cst = ((LabelInsn) precompiledInsn);
@@ -272,8 +269,8 @@ public class ExpressionResolver extends CompileUtils {
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.BINARY_OPERATOR) {
                 OperatorInsn insn = ((OperatorInsn) precompiledInsn);
                 EnumOperators op = insn.getOperator();
-                if(op.isVariableAssign()) {
-                    switch(op) {
+                if (op.isVariableAssign()) {
+                    switch (op) {
                         case SET_TO: {
                             Value toAssign = valueStack.pop();
                             staticness.pop();
@@ -285,12 +282,12 @@ public class ExpressionResolver extends CompileUtils {
                                 String name = potentialVariable.getName();
                                 WeacType varType = toAssign.getType();
                                 if (potentialVariable instanceof VariableValue) { // local variables take priority
-                                    for(int i0 = insns.size()-1;i0>=0;i0--) {
+                                    for (int i0 = insns.size() - 1; i0 >= 0; i0--) {
                                         ResolvedInsn in = insns.get(i0);
-                                        if(in instanceof LoadVariableInsn) {
+                                        if (in instanceof LoadVariableInsn) {
                                             LoadVariableInsn variableInsn = (LoadVariableInsn) in;
                                             int index = variableInsn.getVarIndex();
-                                            if(varMap.getLocalName(index).equals(potentialVariable.getName())) {
+                                            if (varMap.getLocalName(index).equals(potentialVariable.getName())) {
                                                 insns.remove(i0);
                                                 break;
                                             }
@@ -298,17 +295,17 @@ public class ExpressionResolver extends CompileUtils {
                                     }
                                     WeacType type = varMap.getLocalType(name);
 
-                                    if(!type.equals(varType)) {
+                                    if (!type.equals(varType)) {
                                         insns.add(new CastInsn(varType, type));
                                     }
                                     insns.add(new StoreVarInsn(varMap.getLocalIndex(name), varType));
                                 } else if (potentialVariable instanceof FieldValue) {
                                     FieldValue fieldValue = (FieldValue) potentialVariable;
-                                    for(int i0 = insns.size()-1;i0>=0;i0--) {
+                                    for (int i0 = insns.size() - 1; i0 >= 0; i0--) {
                                         ResolvedInsn in = insns.get(i0);
-                                        if(in instanceof LoadFieldInsn) {
+                                        if (in instanceof LoadFieldInsn) {
                                             LoadFieldInsn fieldInsn = (LoadFieldInsn) in;
-                                            if(fieldInsn.getOwner().equals(fieldValue.getOwner()) && fieldInsn.getFieldName().equals(fieldValue.getName())) {
+                                            if (fieldInsn.getOwner().equals(fieldValue.getOwner()) && fieldInsn.getFieldName().equals(fieldValue.getName())) {
                                                 insns.remove(i0);
                                                 break;
                                             }
@@ -323,7 +320,7 @@ public class ExpressionResolver extends CompileUtils {
 
                                     WeacType type = varMap.getFieldType(name);
 
-                                    if(!type.equals(varType)) {
+                                    if (!type.equals(varType)) {
                                         insns.add(new CastInsn(varType, type));
                                     }
 
@@ -332,7 +329,7 @@ public class ExpressionResolver extends CompileUtils {
                                     currentVarType = fieldType;
                                     staticness.setCurrent(false).push();
                                 } else {
-                                    newError("local or field " + name + " does not exist ("+currentVarType+")", -1); // todo line
+                                    newError("local or field " + name + " does not exist (" + currentVarType + ")", -1); // todo line
                                 }
                             }
                         }
@@ -343,181 +340,196 @@ public class ExpressionResolver extends CompileUtils {
                             break;
                     }
                 } else {
-                    switch (op) {
-                        case EQUAL: {
-                            Value second = valueStack.pop();
-                            staticness.pop();
-                            Value first = valueStack.pop();
-                            staticness.pop();
+                    if (valueStack.peek().getType().isPrimitive()) {
+                        switch (op) {
+                            case EQUAL: {
+                                Value second = valueStack.pop();
+                                staticness.pop();
+                                Value first = valueStack.pop();
+                                staticness.pop();
 
-                            WeacType resultType = resolver.getTypeResolver().findResultType(first.getType(), second.getType(), context);
+                                WeacType resultType = resolver.getTypeResolver().findResultType(first.getType(), second.getType(), context);
 
-                            if (!first.getType().equals(resultType)) {
-                                int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), second.getType());
-                                insns.add(new StoreVarInsn(tmpVarIndex, second.getType()));
+                                if (!first.getType().equals(resultType)) {
+                                    int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), second.getType());
+                                    insns.add(new StoreVarInsn(tmpVarIndex, second.getType()));
 
-                                insns.add(new CastInsn(first.getType(), resultType));
-                                insns.add(new LoadVariableInsn(tmpVarIndex, second.getType()));
+                                    insns.add(new CastInsn(first.getType(), resultType));
+                                    insns.add(new LoadVariableInsn(tmpVarIndex, second.getType()));
+                                }
+
+                                if (!second.getType().equals(resultType)) {
+                                    insns.add(new CastInsn(second.getType(), resultType));
+                                }
+
+                                if (second.getType().isPrimitive() && first.getType().isPrimitive()) {
+                                    insns.add(new SubtractInsn(resultType));
+                                    if (!resolver.isCastable(resultType, JVMWeacTypes.INTEGER_TYPE, context)) {
+                                        insns.add(new CompareInsn(resultType));
+                                    }
+                                    insns.add(new CheckZero());
+                                } else if (first.getType().isPrimitive() && !second.getType().isPrimitive()
+                                        || !first.getType().isPrimitive() && second.getType().isPrimitive()) {
+                                    // TODO
+                                    newError("Dunno what to do, == operation between " + first + " and " + second + " in " + context.getSource().classes.get(0).fullName, -1);
+                                } else {
+                                    insns.add(new ObjectEqualInsn());
+                                }
+                                valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
+                                staticness.setCurrent(false).push();
                             }
+                            break;
 
-                            if (!second.getType().equals(resultType)) {
-                                insns.add(new CastInsn(second.getType(), resultType));
-                            }
+                            case LESS_THAN:
+                            case GREATER_THAN:
+                            case LESS_OR_EQUAL:
+                            case GREATER_OR_EQUAL: {
+                                Value right = valueStack.pop();
+                                Value left = valueStack.pop();
+                                WeacType resultType = resolver.getTypeResolver().findResultType(left.getType(), right.getType(), context);
 
-                            if (second.getType().isPrimitive() && first.getType().isPrimitive()) {
                                 insns.add(new SubtractInsn(resultType));
-                                if (!resolver.isCastable(resultType, JVMWeacTypes.INTEGER_TYPE, context)) {
+
+                                if (!left.getType().equals(resultType)) {
+                                    int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), right.getType());
+                                    insns.add(new StoreVarInsn(tmpVarIndex, right.getType()));
+
+                                    insns.add(new CastInsn(left.getType(), resultType));
+                                    insns.add(new LoadVariableInsn(tmpVarIndex, right.getType()));
+                                }
+
+                                if (!right.getType().equals(resultType)) {
+                                    insns.add(new CastInsn(right.getType(), resultType));
+                                }
+
+                                valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
+                                staticness.pop();
+                                staticness.pop();
+                                staticness.setCurrent(false).push();
+
+                                if (!resultType.equals(JVMWeacTypes.INTEGER_TYPE)) {
                                     insns.add(new CompareInsn(resultType));
                                 }
-                                insns.add(new CheckZero());
-                            } else if (first.getType().isPrimitive() && !second.getType().isPrimitive()
-                                    || !first.getType().isPrimitive() && second.getType().isPrimitive()) {
-                                // TODO
-                                newError("Dunno what to do, == operation between "+first+" and "+second+" in "+context.getSource().classes.get(0).fullName, -1);
-                            } else {
-                                insns.add(new ObjectEqualInsn());
+
+                                insns.add(createOperatorInsn(resultType, op));
                             }
-                            valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
-                            staticness.setCurrent(false).push();
-                        }
-                        break;
-
-                        case LESS_THAN:
-                        case GREATER_THAN:
-                        case LESS_OR_EQUAL:
-                        case GREATER_OR_EQUAL: {
-                            Value right = valueStack.pop();
-                            Value left = valueStack.pop();
-                            WeacType resultType = resolver.getTypeResolver().findResultType(left.getType(), right.getType(), context);
-
-                            insns.add(new SubtractInsn(resultType));
-
-                            if (!left.getType().equals(resultType)) {
-                                int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), right.getType());
-                                insns.add(new StoreVarInsn(tmpVarIndex, right.getType()));
-
-                                insns.add(new CastInsn(left.getType(), resultType));
-                                insns.add(new LoadVariableInsn(tmpVarIndex, right.getType()));
-                            }
-
-                            if (!right.getType().equals(resultType)) {
-                                insns.add(new CastInsn(right.getType(), resultType));
-                            }
-
-                            valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
-                            staticness.pop();
-                            staticness.pop();
-                            staticness.setCurrent(false).push();
-
-                            if(!resultType.equals(JVMWeacTypes.INTEGER_TYPE)) {
-                                insns.add(new CompareInsn(resultType));
-                            }
-
-                            insns.add(createOperatorInsn(resultType, op));
-                        }
-                        break;
-
-                        case MINUS:
-                        case MOD:
-                        case PLUS:
-                        case DIVIDE:
-                        case MULTIPLY: {
-                            Value right = valueStack.pop();
-                            Value left = valueStack.pop();
-                            WeacType resultType = resolver.getTypeResolver().findResultType(left.getType(), right.getType(), context);
-
-                            if(!left.getType().equals(resultType)) {
-                                int tmpVarIndex = varMap.registerLocal("$temp"+varMap.getCurrentLocalIndex(), right.getType());
-                                insns.add(new StoreVarInsn(tmpVarIndex, right.getType()));
-
-                                insns.add(new CastInsn(left.getType(), resultType));
-                                insns.add(new LoadVariableInsn(tmpVarIndex, right.getType()));
-                            }
-
-                            if(!right.getType().equals(resultType)) {
-                                insns.add(new CastInsn(right.getType(), resultType));
-                            }
-
-                            valueStack.push(new ConstantValue(resultType));
-                            staticness.pop();
-                            staticness.pop();
-                            staticness.setCurrent(false).push();
-
-                            insns.add(createOperatorInsn(resultType, op));
-                        }
-                        break;
-
-                        case DOUBLE_OR:
-                        case DOUBLE_AND: {
-                            // TODO: Probably will be up to the precompiler to actually support those and convert them to & and |
-                            throw new UnsupportedOperationException("&& and || are not supported yet, please use & or | for the moment");
-                        }
-
-                        case AND: {
-                            Value right = valueStack.pop();
-                            Value left = valueStack.pop();
-                            if(!left.getType().equals(JVMWeacTypes.BOOLEAN_TYPE) || !right.getType().equals(JVMWeacTypes.BOOLEAN_TYPE)) {
-                                newError("Cannot perform AND operation "+left.getType()+" & "+right.getType(), -1); // todo line
-                            }
-                            Label labelFalse1 = resolver.newLabel();
-                            Label labelFalse0 = resolver.newLabel();
-                            Label labelTrue = resolver.newLabel();
-                            Label endLabel = resolver.newLabel();
-                            insns.add(new IfNotJumpResInsn(labelFalse1));
-                            insns.add(new IfNotJumpResInsn(labelFalse0));
-                            insns.add(new GotoResInsn(labelTrue));
-
-                            insns.add(new ResolvedLabelInsn(labelFalse1));
-                            insns.add(new PopInsn(JVMWeacTypes.BOOLEAN_TYPE));
-                            insns.add(new ResolvedLabelInsn(labelFalse0));
-                            insns.add(new LoadBooleanInsn(false));
-                            insns.add(new GotoResInsn(endLabel));
-                            insns.add(new ResolvedLabelInsn(labelTrue));
-                            insns.add(new LoadBooleanInsn(true));
-
-                            insns.add(new ResolvedLabelInsn(endLabel));
-
-                            valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
-                            staticness.pop();
-                            staticness.pop();
-                            staticness.setCurrent(false).push();
-                        }
-                        break;
-
-                        case INTERVAL_SEPARATOR: {
-                            Value upperBound = valueStack.pop();
-                            Value lowerBound = valueStack.pop();
-                            if(!lowerBound.getType().equals(JVMWeacTypes.DOUBLE_TYPE)) {
-                                int tmpVarIndex = varMap.registerLocal("$temp"+varMap.getCurrentLocalIndex(), upperBound.getType());
-                                insns.add(new StoreVarInsn(tmpVarIndex, upperBound.getType()));
-
-                                insns.add(new CastInsn(lowerBound.getType(), JVMWeacTypes.DOUBLE_TYPE));
-                                insns.add(new LoadVariableInsn(tmpVarIndex, upperBound.getType()));
-                            }
-
-                            if(!upperBound.getType().equals(JVMWeacTypes.DOUBLE_TYPE)) {
-                                insns.add(new CastInsn(upperBound.getType(), JVMWeacTypes.DOUBLE_TYPE));
-                            }
-
-                            int startIndex = findPreviousArrayStart(i, precompiled);
-                            insns.add(startIndex, new NewInsn(JVMWeacTypes.INTERVAL_TYPE));
-                            insns.add(startIndex+1, new ResolvedInsn(ResolveOpcodes.DUP));
-
-                            insns.add(new FunctionStartResInsn("<init>", 2, JVMWeacTypes.INTERVAL_TYPE));
-                            insns.add(new FunctionCallInsn("<init>", JVMWeacTypes.INTERVAL_TYPE, 2, new WeacType[]{JVMWeacTypes.DOUBLE_TYPE, JVMWeacTypes.DOUBLE_TYPE}, JVMWeacTypes.VOID_TYPE, false));
-
-                            valueStack.push(new ConstantValue(JVMWeacTypes.INTERVAL_TYPE));
-                            staticness.pop();
-                            staticness.pop();
-                            staticness.setCurrent(false).push();
-                        }
-                        break;
-
-                        default:
-                            System.err.println("UNRESOLVED OP: " + op.name());
                             break;
+
+                            case MINUS:
+                            case MOD:
+                            case PLUS:
+                            case DIVIDE:
+                            case MULTIPLY: {
+                                Value right = valueStack.pop();
+                                Value left = valueStack.pop();
+                                WeacType resultType = resolver.getTypeResolver().findResultType(left.getType(), right.getType(), context);
+
+                                if (!left.getType().equals(resultType)) {
+                                    int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), right.getType());
+                                    insns.add(new StoreVarInsn(tmpVarIndex, right.getType()));
+
+                                    insns.add(new CastInsn(left.getType(), resultType));
+                                    insns.add(new LoadVariableInsn(tmpVarIndex, right.getType()));
+                                }
+
+                                if (!right.getType().equals(resultType)) {
+                                    insns.add(new CastInsn(right.getType(), resultType));
+                                }
+
+                                valueStack.push(new ConstantValue(resultType));
+                                staticness.pop();
+                                staticness.pop();
+                                staticness.setCurrent(false).push();
+
+                                insns.add(createOperatorInsn(resultType, op));
+                            }
+                            break;
+
+                            case DOUBLE_OR:
+                            case DOUBLE_AND: {
+                                // TODO: Probably will be up to the precompiler to actually support those and convert them to & and |
+                                throw new UnsupportedOperationException("&& and || are not supported yet, please use & or | for the moment");
+                            }
+
+                            case AND: {
+                                Value right = valueStack.pop();
+                                Value left = valueStack.pop();
+                                if (!left.getType().equals(JVMWeacTypes.BOOLEAN_TYPE) || !right.getType().equals(JVMWeacTypes.BOOLEAN_TYPE)) {
+                                    newError("Cannot perform AND operation " + left.getType() + " & " + right.getType(), -1); // todo line
+                                }
+                                Label labelFalse1 = resolver.newLabel();
+                                Label labelFalse0 = resolver.newLabel();
+                                Label labelTrue = resolver.newLabel();
+                                Label endLabel = resolver.newLabel();
+                                insns.add(new IfNotJumpResInsn(labelFalse1));
+                                insns.add(new IfNotJumpResInsn(labelFalse0));
+                                insns.add(new GotoResInsn(labelTrue));
+
+                                insns.add(new ResolvedLabelInsn(labelFalse1));
+                                insns.add(new PopInsn(JVMWeacTypes.BOOLEAN_TYPE));
+                                insns.add(new ResolvedLabelInsn(labelFalse0));
+                                insns.add(new LoadBooleanInsn(false));
+                                insns.add(new GotoResInsn(endLabel));
+                                insns.add(new ResolvedLabelInsn(labelTrue));
+                                insns.add(new LoadBooleanInsn(true));
+
+                                insns.add(new ResolvedLabelInsn(endLabel));
+
+                                valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
+                                staticness.pop();
+                                staticness.pop();
+                                staticness.setCurrent(false).push();
+                            }
+                            break;
+
+                            case INTERVAL_SEPARATOR: {
+                                Value upperBound = valueStack.pop();
+                                Value lowerBound = valueStack.pop();
+                                if (!lowerBound.getType().equals(JVMWeacTypes.DOUBLE_TYPE)) {
+                                    int tmpVarIndex = varMap.registerLocal("$temp" + varMap.getCurrentLocalIndex(), upperBound.getType());
+                                    insns.add(new StoreVarInsn(tmpVarIndex, upperBound.getType()));
+
+                                    insns.add(new CastInsn(lowerBound.getType(), JVMWeacTypes.DOUBLE_TYPE));
+                                    insns.add(new LoadVariableInsn(tmpVarIndex, upperBound.getType()));
+                                }
+
+                                if (!upperBound.getType().equals(JVMWeacTypes.DOUBLE_TYPE)) {
+                                    insns.add(new CastInsn(upperBound.getType(), JVMWeacTypes.DOUBLE_TYPE));
+                                }
+
+                                int startIndex = findPreviousArrayStart(i, precompiled);
+                                insns.add(startIndex, new NewInsn(JVMWeacTypes.INTERVAL_TYPE));
+                                insns.add(startIndex + 1, new ResolvedInsn(ResolveOpcodes.DUP));
+
+                                insns.add(new FunctionStartResInsn("<init>", 2, JVMWeacTypes.INTERVAL_TYPE));
+                                insns.add(new FunctionCallInsn("<init>", JVMWeacTypes.INTERVAL_TYPE, 2, new WeacType[]{JVMWeacTypes.DOUBLE_TYPE, JVMWeacTypes.DOUBLE_TYPE}, JVMWeacTypes.VOID_TYPE, false));
+
+                                valueStack.push(new ConstantValue(JVMWeacTypes.INTERVAL_TYPE));
+                                staticness.pop();
+                                staticness.pop();
+                                staticness.setCurrent(false).push();
+                            }
+                            break;
+
+                            default:
+                                System.err.println("UNRESOLVED OP: " + op.name());
+                                break;
+                        }
+                    } else {
+                        Value value = valueStack.pop();
+                        Value other = valueStack.peek();
+                        String methodName = "operator" + op.raw();
+                        PrecompiledMethod method = resolver.findMethod(value.getType(), methodName, 1, valueStack, context, varMap);
+                        if (method != null) {
+                            insns.add(new FunctionCallInsn("op_" + op.name().toUpperCase(), value.getType(), 1, new WeacType[] {  other.getType() }, value.getType(), false));
+                        } else {
+                            newError("Could not find operator overload for operator: " + op.raw() + " for type " + value.getType(), -1); // todo: line
+                        }
+                        valueStack.pop(); // pop 'other' value
+                        valueStack.push(new ConstantValue(value.getType()));
                     }
                 }
+
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NEW_LOCAL) {
                 NewLocalVar localVar = ((NewLocalVar) precompiledInsn);
                 WeacType type = resolver.resolveType(new Identifier(localVar.getType(), true), context);
@@ -546,6 +558,44 @@ public class ExpressionResolver extends CompileUtils {
                 valueStack.push(new ConstantValue(destination));
             } else if(precompiledInsn instanceof PopInstanceStack) {
                 currentVarType = selfType;
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.UNARY_OPERATOR) {
+                OperatorInsn operatorInsn = (OperatorInsn) precompiledInsn;
+                EnumOperators operator = operatorInsn.getOperator();
+                Value value = valueStack.pop();
+                if(value.getType().isPrimitive()) {
+                    switch (operator) {
+                        case UNARY_PLUS:
+                            // ignore
+                            break;
+
+                        case UNARY_MINUS:
+                            insns.add(new NegateInstruction(value.getType()));
+                            valueStack.push(new ConstantValue(value.getType()));
+                            break;
+
+                        case INCREMENT:
+                            insns.add(new IncrementeInstruction(value.getType(), 1));
+                            valueStack.push(new ConstantValue(value.getType()));
+                            break;
+
+                        case DECREMENT:
+                            insns.add(new IncrementeInstruction(value.getType(), -1));
+                            valueStack.push(new ConstantValue(value.getType()));
+                            break;
+
+                        default:
+                            break;
+                    }
+                } else {
+                    String methodName = "unary"+operator.raw();
+                    PrecompiledMethod method = resolver.findMethod(value.getType(), methodName, 0, valueStack, context, varMap);
+                    if(method != null) {
+                        insns.add(new FunctionCallInsn("op_"+operator.name().toUpperCase(), value.getType(), 0, new WeacType[0], value.getType(), false));
+                    } else {
+                        newError("Could not find operator overload for unary operator: "+operator.raw()+" for type "+value.getType(), -1); // todo: line
+                    }
+                    valueStack.push(new ConstantValue(value.getType()));
+                }
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }

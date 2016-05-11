@@ -373,6 +373,8 @@ public class Resolver extends CompileUtils {
     }
 
     private PrecompiledMethod findMethodFromHierarchy(WeacType topType, String name, int argCount, WeacType[] argTypes, ResolvingContext context, VariableMap varMap) {
+        if(name.contains("INCRE"))
+            System.out.println(">> "+topType);
         PrecompiledClass topClass = findClass(topType.getIdentifier().getId(), context);
         List<PrecompiledMethod> result = topClass.methods.stream()
                 .filter(m -> m.name.getId().equals(name) || (m.isConstructor && topType.getIdentifier().getId().endsWith(name)))

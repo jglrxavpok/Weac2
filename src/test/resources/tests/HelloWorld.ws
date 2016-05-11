@@ -32,6 +32,7 @@ object HelloWorld > Application + TestMixin {
 
         TestValue v = new TestValue;
         v++;
+        TestValue v1 = v & v;
         //Console.writeLine(myField(0));
     }
 
