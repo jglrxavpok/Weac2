@@ -68,4 +68,12 @@ public class VariableMap {
     public boolean localExists(int i) {
         return localNames.containsKey(i);
     }
+
+    public Map<String, WeacType> getRegistredFields() {
+        return fieldTypes;
+    }
+
+    public Map<Integer, String> getLocalNames() {
+        return localNames;
+    }
 }

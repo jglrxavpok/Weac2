@@ -10,11 +10,11 @@ public class FunctionCallInsn extends ResolvedInsn {
     private final WeacType returnType;
     private final boolean isStatic;
 
-    public FunctionCallInsn(String name, WeacType owner, int nArgs, WeacType[] argTypes, WeacType returnType, boolean isStatic) {
+    public FunctionCallInsn(String name, WeacType owner, WeacType[] argTypes, WeacType returnType, boolean isStatic) {
         super(FUNCTION_CALL);
         this.name = name;
         this.owner = owner;
-        this.nArgs = nArgs;
+        this.nArgs = argTypes.length;
         this.argTypes = argTypes;
         this.returnType = returnType;
         this.isStatic = isStatic;

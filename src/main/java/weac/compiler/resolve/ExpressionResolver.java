@@ -53,7 +53,7 @@ public class ExpressionResolver extends CompileUtils {
         variableMaps.put(selfType, varMap);
 
         WeacType currentVarType = selfType;
-        for(int i = 0;i<precompiled.size();i++) {
+        precompiledInstructions: for(int i = 0;i<precompiled.size();i++) {
             PrecompiledInsn precompiledInsn = precompiled.get(i);
             if(precompiledInsn.getOpcode() == PrecompileOpcodes.LOAD_NUMBER_CONSTANT) {
                 LoadNumberConstant cst = ((LoadNumberConstant) precompiledInsn);
@@ -175,6 +175,55 @@ public class ExpressionResolver extends CompileUtils {
                 FunctionCall cst = ((FunctionCall) precompiledInsn);
                 Value owner;
                 String name;
+                VariableMap currentVars = variableMaps.get(currentVarType);
+                for (Map.Entry<Integer, String> entry : varMap.getLocalNames().entrySet()) {
+                    String varName = entry.getValue();
+                    if(varName.equals("this"))
+                        continue; // type cannot call itself with this shorthand: risk of confusion with constructor call
+                    if(cst.getName().equals(varName)) {
+                        WeacType type = varMap.getLocalType(varName);
+                        int index = findCorrespondingFuncStart(insns, varName, cst.getArgCount(), insns.size()-1);
+                        insns.add(index+1, new LoadVariableInsn(entry.getKey(), type));
+
+                        WeacType[] argTypes = new WeacType[cst.getArgCount()];
+
+                        PrecompiledMethod realMethod = resolver.findMethod(type, "call|apply", cst.getArgCount(), valueStack, context, varMap);
+                        if(realMethod != null) {
+                            for(int i0 = 0;i0<argTypes.length;i0++) {
+                                argTypes[i0] = resolver.resolveType(realMethod.argumentTypes.get(i0), context);
+                            }
+                            WeacType returnType = resolver.resolveType(realMethod.returnType, context);
+                            insns.add(new FunctionCallInsn(realMethod.name.getId(), type, argTypes, returnType, false));
+                        } else {
+                            newError("Type "+type+" is not a callable type (does not have a method named 'call' or 'apply')", -1); // todo: line
+                        }
+                        continue precompiledInstructions;
+                    }
+                }
+                if(currentVars != null) {
+                    for (Map.Entry<String, WeacType> entry : currentVars.getRegistredFields().entrySet()) {
+                        String fieldName = entry.getKey();
+                        if(cst.getName().equals(fieldName)) {
+                            WeacType type = varMap.getFieldType(fieldName);
+                            int index = findCorrespondingFuncStart(insns, fieldName, cst.getArgCount(), insns.size()-1);
+                            insns.add(index+1, new LoadFieldInsn(fieldName, currentVarType, type, staticness.pop()));
+
+                            WeacType[] argTypes = new WeacType[cst.getArgCount()];
+
+                            PrecompiledMethod realMethod = resolver.findMethod(type, "call|apply", cst.getArgCount(), valueStack, context, varMap);
+                            if(realMethod != null) {
+                                for(int i0 = 0;i0<argTypes.length;i0++) {
+                                    argTypes[i0] = resolver.resolveType(realMethod.argumentTypes.get(i0), context);
+                                }
+                                WeacType returnType = resolver.resolveType(realMethod.returnType, context);
+                                insns.add(new FunctionCallInsn(realMethod.name.getId(), type, argTypes, returnType, false));
+                            } else {
+                                newError("Type "+type+" is not a callable type (does not have a method named 'call' or 'apply')", -1); // todo: line
+                            }
+                            continue precompiledInstructions;
+                        }
+                    }
+                }
                 if(cst.getArgCount() != 0)
                     staticness.pop(); // remove value on top of stack
                 boolean isStatic = staticness.pop();
@@ -202,7 +251,7 @@ public class ExpressionResolver extends CompileUtils {
                 }
 
                 WeacType returnType = resolver.resolveType(realMethod.returnType, context);
-                insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), cst.getArgCount(), argTypes, realMethod.isConstructor ? JVMWeacTypes.VOID_TYPE : returnType, isStatic));
+                insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), argTypes, realMethod.isConstructor ? JVMWeacTypes.VOID_TYPE : returnType, isStatic));
 
                 staticness.setCurrent(false).push();
                 int toPop = cst.getArgCount();
@@ -340,7 +389,7 @@ public class ExpressionResolver extends CompileUtils {
                             break;
                     }
                 } else {
-                    if (valueStack.peek().getType().isPrimitive()) {
+                    if (valueStack.peek().getType().isPrimitive() || op == EnumOperators.EQUAL || op == EnumOperators.NOTEQUAL) {
                         switch (op) {
                             case EQUAL: {
                                 Value second = valueStack.pop();
@@ -502,7 +551,7 @@ public class ExpressionResolver extends CompileUtils {
                                 insns.add(startIndex + 1, new ResolvedInsn(ResolveOpcodes.DUP));
 
                                 insns.add(new FunctionStartResInsn("<init>", 2, JVMWeacTypes.INTERVAL_TYPE));
-                                insns.add(new FunctionCallInsn("<init>", JVMWeacTypes.INTERVAL_TYPE, 2, new WeacType[]{JVMWeacTypes.DOUBLE_TYPE, JVMWeacTypes.DOUBLE_TYPE}, JVMWeacTypes.VOID_TYPE, false));
+                                insns.add(new FunctionCallInsn("<init>", JVMWeacTypes.INTERVAL_TYPE, new WeacType[]{JVMWeacTypes.DOUBLE_TYPE, JVMWeacTypes.DOUBLE_TYPE}, JVMWeacTypes.VOID_TYPE, false));
 
                                 valueStack.push(new ConstantValue(JVMWeacTypes.INTERVAL_TYPE));
                                 staticness.pop();
@@ -521,7 +570,7 @@ public class ExpressionResolver extends CompileUtils {
                         String methodName = "operator" + op.raw();
                         PrecompiledMethod method = resolver.findMethod(value.getType(), methodName, 1, valueStack, context, varMap);
                         if (method != null) {
-                            insns.add(new FunctionCallInsn("op_" + op.name().toUpperCase(), value.getType(), 1, new WeacType[] {  other.getType() }, value.getType(), false));
+                            insns.add(new FunctionCallInsn("op_" + op.name().toUpperCase(), value.getType(), new WeacType[] {  other.getType() }, value.getType(), false));
                         } else {
                             newError("Could not find operator overload for operator: " + op.raw() + " for type " + value.getType(), -1); // todo: line
                         }
@@ -590,7 +639,7 @@ public class ExpressionResolver extends CompileUtils {
                     String methodName = "unary"+operator.raw();
                     PrecompiledMethod method = resolver.findMethod(value.getType(), methodName, 0, valueStack, context, varMap);
                     if(method != null) {
-                        insns.add(new FunctionCallInsn("op_"+operator.name().toUpperCase(), value.getType(), 0, new WeacType[0], value.getType(), false));
+                        insns.add(new FunctionCallInsn("op_"+operator.name().toUpperCase(), value.getType(), new WeacType[0], value.getType(), false));
                     } else {
                         newError("Could not find operator overload for unary operator: "+operator.raw()+" for type "+value.getType(), -1); // todo: line
                     }
@@ -603,6 +652,20 @@ public class ExpressionResolver extends CompileUtils {
 
         insns.add(0, new LocalVariableTableInsn(varMap));
         return insns;
+    }
+
+    // FIXME: Copy/pasted from Optimizer.java, find a way not to have this code twice
+    private int findCorrespondingFuncStart(List<ResolvedInsn> instructions, String name, int argCount, int index) {
+        for(;index >= 0;index--) {
+            ResolvedInsn in = instructions.get(index);
+            if(in instanceof FunctionStartResInsn) {
+                FunctionStartResInsn startInsn = ((FunctionStartResInsn) in);
+                if(name.equals(startInsn.getFunctionName()) && argCount == startInsn.getArgCount()) {
+                    return index;
+                }
+            }
+        }
+        return -1;
     }
 
     private WeacType extractType(ResolvedInsn number) {

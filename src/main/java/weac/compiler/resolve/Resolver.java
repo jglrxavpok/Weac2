@@ -13,6 +13,7 @@ import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.*;
 
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Resolver extends CompileUtils {
@@ -372,84 +373,80 @@ public class Resolver extends CompileUtils {
         return findMethodFromHierarchy(topType, name, argCount, potentialArgTypes, context, varMap);
     }
 
-    private PrecompiledMethod findMethodFromHierarchy(WeacType topType, String name, int argCount, WeacType[] argTypes, ResolvingContext context, VariableMap varMap) {
-        if(name.contains("INCRE"))
-            System.out.println(">> "+topType);
-        PrecompiledClass topClass = findClass(topType.getIdentifier().getId(), context);
-        List<PrecompiledMethod> result = topClass.methods.stream()
-                .filter(m -> m.name.getId().equals(name) || (m.isConstructor && topType.getIdentifier().getId().endsWith(name)))
-                .filter(m -> m.argumentNames.size() == argCount)
-                .filter(m -> {
-                    for(int i = 0;i<argTypes.length;i++) {
-                        WeacType argType = argTypes[i];
-                        WeacType paramType = resolveType(m.argumentTypes.get(i), context);
-                        if(!isCastable(argType, paramType, context)) {
-                            return false;
+    private PrecompiledMethod findMethodFromHierarchy(WeacType topType, String potentialNames, int argCount, WeacType[] argTypes, ResolvingContext context, VariableMap varMap) {
+        String[] names = potentialNames.split(Pattern.quote("|"));
+        for (String name : names) {
+            PrecompiledClass topClass = findClass(topType.getIdentifier().getId(), context);
+            List<PrecompiledMethod> result = topClass.methods.stream()
+                    .filter(m -> m.name.getId().equals(name) || (m.isConstructor && topType.getIdentifier().getId().endsWith(name)))
+                    .filter(m -> m.argumentNames.size() == argCount)
+                    .filter(m -> {
+                        for (int i = 0; i < argTypes.length; i++) {
+                            WeacType argType = argTypes[i];
+                            WeacType paramType = resolveType(m.argumentTypes.get(i), context);
+                            if (!isCastable(argType, paramType, context)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    })
+                    .sorted((a, b) -> {
+                        int aMethodScore = computeMethodScore(a, argTypes, context);
+                        int bMethodScore = computeMethodScore(b, argTypes, context);
+                        a.score = aMethodScore;
+                        b.score = bMethodScore;
+                        return Integer.compare(aMethodScore, bMethodScore); // the lower the better
+                    })
+                    .collect(Collectors.toList());
+            if (result.size() > 0) {
+                if (result.size() > 1) {
+                    PrecompiledMethod first = result.get(0);
+                    PrecompiledMethod second = result.get(1);
+                    if (first.score == second.score) {
+                        newError("Ambiguous method call (" + name + "): " + Arrays.toString(first.argumentTypes.toArray()) + " or " + Arrays.toString(second.argumentTypes.toArray()) + " for arguments " + Arrays.toString(argTypes) + "?", -1); // todo line
+                    }
+                }
+                return result.get(0);
+            }
+
+            if (topClass.fullName.equals(Object.class.getCanonicalName())) {
+                continue; // We've reached the top, stop here for this name
+            }
+
+            boolean isPresent = context.getSource().classes.stream().filter(c -> c.fullName.equals(topClass.fullName)).count() != 0L;
+            ResolvingContext newContext;
+            if (!isPresent) {
+                PrecompiledSource newSource = new PrecompiledSource();
+                newSource.classes = new LinkedList<>();
+                newSource.classes.add(topClass);
+                newSource.imports = topClass.imports;
+                newSource.packageName = topClass.packageName;
+                newContext = new ResolvingContext(newSource, context.getSideClasses());
+            } else {
+                newContext = context;
+            }
+
+
+            ClassHierarchy hierarchy = getHierarchy(topClass, topClass.interfacesImplemented, newContext);
+
+            PrecompiledClass superclass = hierarchy.getSuperclass();
+            if (superclass != null && !superclass.fullName.equals(topClass.fullName)) {
+                WeacType superType = resolveType(new Identifier(superclass.fullName, true), context);
+                PrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, context, varMap);
+                if (supermethod == null) {
+                    List<PrecompiledClass> interfaces = hierarchy.getInterfaces();
+                    for (PrecompiledClass in : interfaces) {
+                        WeacType interType = resolveType(new Identifier(in.fullName, true), context);
+                        PrecompiledMethod m = findMethodFromHierarchy(interType, name, argCount, argTypes, context, varMap);
+                        if (m != null) {
+                            return m;
                         }
                     }
-                    return true;
-                })
-                .sorted((a, b) -> {
-                    int aMethodScore = computeMethodScore(a, argTypes, context);
-                    int bMethodScore = computeMethodScore(b, argTypes, context);
-                    a.score = aMethodScore;
-                    b.score = bMethodScore;
-                    return Integer.compare(aMethodScore, bMethodScore); // the lower the better
-                })
-                .collect(Collectors.toList());
-        if(result.size() > 0) {
-            if(result.size() > 1) {
-                PrecompiledMethod first = result.get(0);
-                PrecompiledMethod second = result.get(1);
-                if(first.score == second.score) {
-                    newError("Ambiguous method call ("+name+"): "+Arrays.toString(first.argumentTypes.toArray())+" or "+Arrays.toString(second.argumentTypes.toArray())+" for arguments "+Arrays.toString(argTypes)+"?", -1); // todo line
+                } else {
+                    return supermethod;
                 }
             }
-            return result.get(0);
         }
-
-        if(topClass.fullName.equals(Object.class.getCanonicalName())) {
-            return null; // We've reached the top, stop here
-        }
-
-        boolean isPresent = context.getSource().classes.stream().filter(c -> c.fullName.equals(topClass.fullName)).count() != 0L;
-        ResolvingContext newContext;
-        if(!isPresent) {
-            PrecompiledSource newSource = new PrecompiledSource();
-            newSource.classes = new LinkedList<>();
-            newSource.classes.add(topClass);
-            newSource.imports = topClass.imports;
-            newSource.packageName = topClass.packageName;
-            newContext = new ResolvingContext(newSource, context.getSideClasses());
-        } else {
-            newContext = context;
-        }
-
-
-        ClassHierarchy hierarchy = getHierarchy(topClass, topClass.interfacesImplemented, newContext);
-
-        PrecompiledClass superclass = hierarchy.getSuperclass();
-        if(superclass != null && !superclass.fullName.equals(topClass.fullName)) {
-            WeacType superType = resolveType(new Identifier(superclass.fullName, true), context);
-            PrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, context, varMap);
-            if(supermethod == null) {
-                List<PrecompiledClass> interfaces = hierarchy.getInterfaces();
-                for(PrecompiledClass in : interfaces) {
-                    WeacType interType = resolveType(new Identifier(in.fullName, true), context);
-                    PrecompiledMethod m = findMethodFromHierarchy(interType, name, argCount, argTypes, context, varMap);
-                    if(m != null) {
-                        return m;
-                    }
-                }
-
-                if(superType.equals(JVMWeacTypes.OBJECT_TYPE) || superType.equals(JVMWeacTypes.JOBJECT_TYPE)) {
-                    return null;
-                }
-            } else {
-                return supermethod;
-            }
-        }
-
         return null;
     }
 

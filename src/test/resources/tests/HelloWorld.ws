@@ -1,6 +1,7 @@
 package tests
 
 import tests.TestValue
+import java.util.function.Function
 
 object HelloWorld > Application + TestMixin {
 
@@ -33,11 +34,16 @@ object HelloWorld > Application + TestMixin {
         TestValue v = new TestValue;
         v++;
         TestValue v1 = v & v;
+        v1(0);
         //Console.writeLine(myField(0));
     }
 
     String test(String a) {
         return a;
+    }
+
+    Void testFunctionCall(Function f) {
+        f("MyString!");
     }
 
 }

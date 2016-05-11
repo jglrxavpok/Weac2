@@ -11,4 +11,8 @@ TestValue {
         return other;
     }
 
+    Int call(Int a) {
+       return a;
+    }
+
 }
