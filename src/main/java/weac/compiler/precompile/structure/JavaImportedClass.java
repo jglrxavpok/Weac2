@@ -23,7 +23,8 @@ public class JavaImportedClass extends PrecompiledClass {
         } else {
             classType = EnumClassTypes.CLASS;
         }
-        packageName = clazz.getPackage().getName();
+        Package classPackage = clazz.getPackage();
+        packageName = classPackage == null ? "" : classPackage.getName();
         fullName = clazz.getCanonicalName();
         Method[] jmethods = clazz.getDeclaredMethods();
         for(Method m : jmethods) {

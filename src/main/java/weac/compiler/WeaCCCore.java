@@ -17,18 +17,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
-public class WeacMonolith {
+public class WeaCCCore {
 
     private final File output;
     private final File standardClassesLocation;
     private List<PrecompiledClass> standardLib;
     private String stopAt;
 
-    public WeacMonolith(File standardClassesLocation, String stopAt) {
+    public WeaCCCore(File standardClassesLocation, String stopAt) {
         this(standardClassesLocation, null, stopAt);
     }
 
-    public WeacMonolith(File standardClassesLocation, File outputFolder, String stopAt) {
+    public WeaCCCore(File standardClassesLocation, File outputFolder, String stopAt) {
         this.stopAt = stopAt;
         this.standardClassesLocation = standardClassesLocation;
         if(outputFolder == null) {
@@ -124,7 +124,7 @@ public class WeacMonolith {
                 sideSources.add(new JavaImportedClass(javaClass));
                 System.out.println("imported java class: "+imp.importedType);
             } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                ; // ignore
             }
         }
         standardLib.forEach(s -> {

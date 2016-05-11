@@ -1,5 +1,7 @@
 package tests
 
+import tests.TestValue
+
 object HelloWorld > Application + TestMixin {
 
     String[] myField;
@@ -27,6 +29,9 @@ object HelloWorld > Application + TestMixin {
         #ifdef TEST
             TEST
         #end
+
+        TestValue v = new TestValue;
+        v++;
         //Console.writeLine(myField(0));
     }
 

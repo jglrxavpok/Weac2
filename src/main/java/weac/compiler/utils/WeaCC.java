@@ -1,7 +1,7 @@
 package weac.compiler.utils;
 
 import joptsimple.*;
-import weac.compiler.WeacMonolith;
+import weac.compiler.WeaCCCore;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -42,7 +42,7 @@ public class WeaCC {
                     throw new FileNotFoundException("Standard lib location \""+standardLib.getAbsolutePath()+"\" is not a valid folder name. The folder must also exist");
                 }
                 if(options.has("compileStandardLib")) {
-                    WeacMonolith monolith = new WeacMonolith(null, output, (String) options.valueOf("stopAt"));
+                    WeaCCCore monolith = new WeaCCCore(null, output, (String) options.valueOf("stopAt"));
                     List<File> toCompile = new ArrayList<>();
                     File[] children = standardLib.listFiles();
                     if(children != null) {
@@ -53,7 +53,7 @@ public class WeaCC {
                         throw new FileNotFoundException("Standard lib location \""+standardLib.getAbsolutePath()+"\" is empty");
                     }
                 } else {
-                    WeacMonolith monolith = new WeacMonolith(standardLib, output, (String) options.valueOf("stopAt"));
+                    WeaCCCore monolith = new WeaCCCore(standardLib, output, (String) options.valueOf("stopAt"));
                     List<File> toCompile = new ArrayList<>();
                     options.nonOptionArguments()
                             .forEach(o -> toCompile.add((File)o));
