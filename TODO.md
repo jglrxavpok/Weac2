@@ -8,6 +8,11 @@ WeaC TODO List
 
 - [ ] Resolution should fail if a variable is not initialized and requests auto type inferring.
 
+- [ ] Auto type inference
+    - [x] Fields
+    - [x] Local variables
+    - [ ] Function return type 
+
 - [ ] More verification steps in order to check the code is valid before trying to compile/resolve/precompile it
 
 - [ ] Improve unit tests

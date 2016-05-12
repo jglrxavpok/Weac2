@@ -5,7 +5,7 @@ import weac.compiler.targets.jvm.JVMWeacTypes;
 
 public class WeacType {
 
-    public static final WeacType AUTO = new WeacType(JVMWeacTypes.OBJECT_TYPE, "auto", true);
+    public static final WeacType AUTO = new WeacType(JVMWeacTypes.OBJECT_TYPE, "var", true);
 
     private final WeacType superType;
     private final Identifier identifier;
