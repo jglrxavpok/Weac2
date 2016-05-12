@@ -34,7 +34,7 @@ WeaC TODO List
 
 - [ ] Operator overloading
     - [ ] Allow new operators to be created
-    - [ ] Find a way to support something like: notOverloadedOperatorType <operator> overloadedOperatorType where 'overloadedOperatorType' decides of the result
+    - [ ] Find a way to support something like: notOverloadedOperatorType {operator} overloadedOperatorType where 'overloadedOperatorType' decides of the result
     - [x] Base operators overloading
 
 - [ ] Type System supporting union and intersect types (this information may be lost in the compilation step) (Not sure yet)
