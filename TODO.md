@@ -37,6 +37,6 @@ WeaC TODO List
     - [ ] Find a way to support something like: notOverloadedOperatorType <operator> overloadedOperatorType where 'overloadedOperatorType' decides of the result
     - [x] Base operators overloading
 
-- [ ] (Not sure yet): Type System supporting union and intersect types (this information may be lost in the compilation step)
+- [ ] Type System supporting union and intersect types (this information may be lost in the compilation step) (Not sure yet)
 
 - [ ] Finish specifications
