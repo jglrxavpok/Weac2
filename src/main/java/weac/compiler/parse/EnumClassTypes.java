@@ -20,9 +20,9 @@ public enum EnumClassTypes {
     ENUM,
 
     /**
-     * A struct-like class. A struct in WeaC cannot have methods but can have default values for its content.
+     * A data class. A data class in WeaC cannot define methods but can have default values for its fields. Accessors (get/set), equality check and toString() methods are provided by the compiler
      */
-    STRUCT,
+    DATA,
 
     /**
      * A singleton.

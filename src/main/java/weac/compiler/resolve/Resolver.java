@@ -275,7 +275,7 @@ public class Resolver extends CompileUtils {
                     newError("Cannot extend an object", -1);
                     break;
 
-                case STRUCT:
+                case DATA:
                     newError("Cannot extend a struct", -1);
                     break;
 

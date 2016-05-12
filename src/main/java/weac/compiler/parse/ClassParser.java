@@ -54,7 +54,7 @@ public class ClassParser extends CompileUtils {
         String firstPart = readUntil(chars, start, ' ');
         switch (firstPart) {
             case "class":
-            case "struct":
+            case "data":
             case "enum":
             case "interface":
             case "object":

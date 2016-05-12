@@ -34,7 +34,7 @@ public class ParsingVerifier extends CompilePhase<ParsedSource, ParsedSource> {
                     .forEach(method -> newError(method.name+": constructors in object must not have arguments", -1));
         }
 
-        if(parsedClass.classType == EnumClassTypes.STRUCT) {
+        if(parsedClass.classType == EnumClassTypes.DATA) {
             parsedClass.methods.stream()
                     .filter(method -> !method.isConstructor)
                     .forEach(method -> newError(method.name+": methods are not allowed in structs", -1));

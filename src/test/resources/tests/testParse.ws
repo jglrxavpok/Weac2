@@ -46,7 +46,7 @@ public enum OtherEnum {
     }
 }
 
-struct MyStruct {
+data MyData {
     Byte data;
     String[] otherStuff;
 }

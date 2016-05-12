@@ -65,3 +65,8 @@ enum TestEnum {
         this.name = _name;
     }
 }
+
+data MyData {
+    Byte data;
+    String[] otherStuff;
+}

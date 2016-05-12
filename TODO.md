@@ -1,6 +1,7 @@
 WeaC TODO List
 ===
-- [ ] Rename 'Parsing' step to a better fitting name
+- [x] Rename 'Parsing' step to a better fitting name: Chopping
+    - [ ] Apply new name
 
 - [ ] Create improved actual parser
     - [ ] Must support going forward and backwards
@@ -38,10 +39,12 @@ WeaC TODO List
 - [ ] Data classes ?
 
 - [ ] Operator overloading
+    - [x] Base operators overloading
     - [ ] Allow new operators to be created
     - [ ] Find a way to support something like: notOverloadedOperatorType {operator} overloadedOperatorType where 'overloadedOperatorType' decides of the result
-    - [x] Base operators overloading
 
 - [ ] Type System supporting union and intersect types (this information may be lost in the compilation step) (Not sure yet)
+
+- [ ] Default argument values
 
 - [ ] Finish specifications

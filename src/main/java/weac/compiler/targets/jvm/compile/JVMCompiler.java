@@ -829,7 +829,7 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
                 break;
 
             case OBJECT:
-            case STRUCT:
+            case DATA:
                 type = ACC_FINAL;
                 // TODO: Use something else?
                 break;
