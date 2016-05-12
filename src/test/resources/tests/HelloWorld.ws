@@ -16,8 +16,8 @@ object HelloWorld > Application + TestMixin {
     private Float fieldWithDefaultValue7 = 78.545f;
     private Double fieldWithDefaultValue8 = 0.0D;
     private Double fieldWithDefaultValue9 = 10000000L;
-    private Boolean fieldWithDefaultValue10 = false;
-    private Boolean fieldWithDefaultValue11 = true;
+    private auto fieldWithDefaultValue10 = false;
+    private auto fieldWithDefaultValue11 = true;
     private auto simpleField = "Test \n";
 
 
@@ -31,9 +31,9 @@ object HelloWorld > Application + TestMixin {
             TEST
         #end
 
-        TestValue v = new TestValue;
+        auto v = new TestValue;
         v++;
-        TestValue v1 = v & v;
+        auto v1 = v & v;
         v1(0);
         //Console.writeLine(myField(0));
     }

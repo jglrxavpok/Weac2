@@ -76,4 +76,10 @@ public class VariableMap {
     public Map<Integer, String> getLocalNames() {
         return localNames;
     }
+
+    public void setLocalType(String name, WeacType type) {
+        if(!localTypes.containsKey(name))
+            throw new IllegalArgumentException("Local variable "+name+" does not exist");
+        localTypes.put(name, type);
+    }
 }

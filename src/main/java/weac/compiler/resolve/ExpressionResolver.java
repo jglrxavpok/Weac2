@@ -343,6 +343,10 @@ public class ExpressionResolver extends CompileUtils {
                                         }
                                     }
                                     WeacType type = varMap.getLocalType(name);
+                                    if(type.equals(WeacType.AUTO)) {
+                                        type = varType;
+                                        varMap.setLocalType(name, type);
+                                    }
 
                                     if (!type.equals(varType)) {
                                         insns.add(new CastInsn(varType, type));

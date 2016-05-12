@@ -186,6 +186,8 @@ public class Resolver extends CompileUtils {
     }
 
     protected WeacType resolveType(Identifier type, ResolvingContext context) {
+        if(type.equals(WeacType.AUTO.getIdentifier()))
+            return WeacType.AUTO;
         return typeResolver.resolveType(type, context);
     }
 
