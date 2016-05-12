@@ -12,7 +12,7 @@ ____
 
 Preface
 --------
-WeaC (Abbreviation of Weak C) is an object-oriented (only code wise, Java primitives types are just wrapped inside WeaC classes) language attempting to mix C, Java and Scala concepts with a as little and simple as possible syntax. The language is still an experiment in order to learn how to make a compiler. It runs on the Java Virtual Machine and is designed to be used along side Java classes.
+WeaC (Abbreviation of Weak C) is an object-oriented (only code wise, Java primitives types are just wrapped inside WeaC classes) language attempting to mix C, Java and Scala concepts with a as little and simple as possible syntax. The language is still an experiment in order to learn how to make a compiler. It is targeted to run mainly on the Java Virtual Machine and is designed to be used along side Java classes.
 ____
 
 Syntax
@@ -53,6 +53,7 @@ Number are by default written in base 10. Multiple base are supported by WeaC, h
 
 * **Operators and special characters**:
 ___
+
 
 > Specifications written by 'jglrxavpok' and inspired by [Scala 2.11's](http://www.scala-lang.org/files/archive/spec/2.11/).
 
