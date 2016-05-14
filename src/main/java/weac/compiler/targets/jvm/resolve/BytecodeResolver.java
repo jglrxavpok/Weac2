@@ -1,15 +1,20 @@
 package weac.compiler.targets.jvm.resolve;
 
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import weac.compiler.CompileUtils;
 import weac.compiler.resolve.NativeCodeResolver;
 import weac.compiler.resolve.Resolver;
 import weac.compiler.resolve.ResolvingContext;
 import weac.compiler.resolve.VariableMap;
 import weac.compiler.resolve.insn.ResolvedInsn;
+import weac.compiler.resolve.values.ConstantValue;
+import weac.compiler.resolve.values.FieldValue;
 import weac.compiler.resolve.values.NullValue;
 import weac.compiler.resolve.values.Value;
+import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.targets.jvm.resolve.insn.BytecodeSequencesInsn;
+import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;
 
 import java.lang.reflect.Field;
@@ -31,7 +36,6 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
             if(f.getType() == Integer.TYPE) {
                 try {
                     opcodeNames.put(f.getName().toLowerCase(), f.getInt(null));
-                    System.out.println("!!! "+f.getName());
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
                 }
@@ -120,10 +124,63 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
                         continue;
                     }
                 }
-                sequences.add(opcodeSequences[opcode]);
+                BytecodeSequence sequence = opcodeSequences[opcode];
+                if(sequence != null) {
+                    sequences.add(sequence);
+                }
 
-                // Pushes and pops types from the value stack depending on the opcode
-                switch (opcode) {
+                switch(opcode) {
+                    case GETSTATIC:
+                    case GETFIELD:
+                    case PUTSTATIC:
+                    case PUTFIELD: {
+                        String owner = operands[0];
+                        checkValidInternalName(owner);
+                        String name = operands[1];
+                        checkValidUnqualifiedName(name);
+                        String desc = operands[2];
+                        checkValidDesc(desc);
+                        sequences.add((mv, varIndex) -> mv.visitFieldInsn(opcode, owner, name, desc));
+
+                        if (opcode == GETFIELD || opcode == PUTFIELD)
+                            valueStack.pop();
+
+                        if (opcode == GETFIELD || opcode == GETSTATIC) {
+                            valueStack.push(new FieldValue(name, getTypeFromInternal(owner), getType(desc)));
+                        } else {
+                            valueStack.pop();
+                        }
+                    }
+                        break;
+
+                    case INVOKEDYNAMIC:
+                    case INVOKEINTERFACE:
+                    case INVOKESPECIAL:
+                    case INVOKEVIRTUAL: {
+                        String owner = operands[0];
+                        checkValidInternalName(owner);
+                        String name = operands[1];
+                        checkValidUnqualifiedName(name);
+                        String desc = operands[2];
+                        checkValidMethodDesc(desc);
+                        boolean fromInterface = opcode == INVOKEINTERFACE;
+                        sequences.add((mv, varIndex) -> mv.visitMethodInsn(opcode, owner, name, desc, fromInterface));
+
+                        String[] argumentDescriptions = splitDescList(desc.substring(1, desc.indexOf(')')));
+
+                        if(opcode == INVOKEVIRTUAL || opcode == INVOKESPECIAL) // TODO: invokedynamic ?
+                            valueStack.pop();
+                        for(int i = 0;i<argumentDescriptions.length;i++)
+                            valueStack.pop();
+                        String returnTypeDesc = desc.substring(desc.indexOf(')')+1);
+                        WeacType returnType = getType(returnTypeDesc);
+                        if(!returnType.equals(JVMWeacTypes.VOID_TYPE)) {
+                            valueStack.push(new ConstantValue(returnType));
+                        }
+
+                    }
+                        break;
+
                     case ARETURN:
                     case IRETURN:
                     case LRETURN:
@@ -143,6 +200,152 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
             }
         }
         insns.add(new BytecodeSequencesInsn(sequences));
+    }
+
+    private WeacType getTypeFromInternal(String internalName) {
+        return getOwner().getTypeResolver().resolveType(new Identifier(internalName.replace("/", "."), true), getContext());
+    }
+
+    private String[] splitDescList(String list) {
+        List<String> descList = new ArrayList<>();
+        for (int i = 0; i < list.length(); i++) {
+            i += extractOneDescription(list, i, descList);
+        }
+        return descList.toArray(new String[descList.size()]);
+    }
+
+    private int extractOneDescription(String list, int i, List<String> descList) {
+        final int start = i;
+        char c = list.charAt(i);
+        switch (c) {
+            case 'I':
+            case 'F':
+            case 'Z':
+            case 'J':
+            case 'D':
+            case 'S':
+            case 'B':
+            case 'C':
+            case 'V':
+                descList.add(String.valueOf(c));
+                break;
+
+            case '[':
+                List<String> result = new ArrayList<>();
+                i += extractOneDescription(list, i+1, descList)+1;
+                descList.add("["+result.get(0));
+                break;
+
+            case 'L':
+                for (int j = i; j < list.length(); j++) {
+                    char c1 = list.charAt(j);
+                    if(c1 == ';') {
+                        descList.add(list.substring(i, j+1));
+                        return j-start;
+                    }
+                }
+                throw new IllegalArgumentException("Could not find end of object descriptor in "+list);
+
+            default:
+                throw new IllegalArgumentException("Invalid descriptor character ('"+c+"') in descriptor list: "+list);
+        }
+        return i-start;
+    }
+
+    private WeacType getType(String desc) {
+        switch (desc) {
+            case "V":
+                return JVMWeacTypes.VOID_TYPE;
+            case "J":
+                return JVMWeacTypes.LONG_TYPE;
+            case "B":
+                return JVMWeacTypes.BYTE_TYPE;
+            case "C":
+                return JVMWeacTypes.CHAR_TYPE;
+            case "I":
+                return JVMWeacTypes.INTEGER_TYPE;
+            case "F":
+                return JVMWeacTypes.FLOAT_TYPE;
+            case "D":
+                return JVMWeacTypes.DOUBLE_TYPE;
+            case "[":
+                return new WeacType(JVMWeacTypes.OBJECT_TYPE, getType(desc.substring(1)).getIdentifier());
+            case "S":
+                return JVMWeacTypes.SHORT_TYPE;
+            case "Z":
+                return JVMWeacTypes.BOOLEAN_TYPE;
+
+            case "L":
+                String internalName = desc.substring(1, desc.indexOf(';')).replace("/", ".");
+                return getOwner().getTypeResolver().resolveType(new Identifier(internalName, true), getContext());
+        }
+        return null;
+    }
+
+    private void checkValidMethodDesc(String desc) {
+        if(!desc.startsWith("("))
+            throw new IllegalArgumentException("Valid method descriptions start with '(': "+desc);
+        if(!desc.contains(")"))
+            throw new IllegalArgumentException("Valid method descriptions must have ')' in them: "+desc);
+        String argumentDescriptors = desc.substring(1, desc.indexOf(')'));
+        checkValidDescList(argumentDescriptors);
+        String returnTypeDescriptor = desc.substring(desc.indexOf(')')+1);
+        checkValidDesc(returnTypeDescriptor);
+    }
+
+    private void checkValidDescList(String list) {
+        String[] descriptors = splitDescList(list);
+        for (String d : descriptors) {
+            checkValidDesc(d);
+        }
+    }
+
+    private void checkValidDesc(String desc) {
+        if(desc.isEmpty())
+            throw new IllegalArgumentException("Description cannot be empty");
+        switch(desc) {
+            case "I":
+            case "F":
+            case "Z":
+            case "J":
+            case "D":
+            case "S":
+            case "B":
+            case "C":
+            case "V":
+                break;
+
+            case "[":
+                checkValidDesc(desc.substring(1)); // check if element type is valid
+                break;
+
+            default:
+                if(!desc.startsWith("L"))
+                    throw new IllegalArgumentException("Invalid description start, must be one of I, F, Z, J, D, S, B, C, L: "+desc);
+                if(!desc.contains(";"))
+                    throw new IllegalArgumentException("Invalid description, object types must contain ';' : "+desc);
+                String fullName = desc.substring(1, desc.indexOf(';'));
+                checkValidInternalName(fullName);
+                break;
+        }
+    }
+
+    private void checkValidInternalName(String name) {
+        if(name.isEmpty()) {
+            throw new IllegalArgumentException("Cannot use an empty name as a valid internal name");
+        }
+        if(Character.isDigit(name.charAt(0))) {
+            throw new IllegalArgumentException("A valid internal name cannot start with a digit ("+name+")");
+        }
+        String[] identifierParts = name.split("/");
+        for(String id : identifierParts) {
+            checkValidUnqualifiedName(id);
+        }
+    }
+
+    private void checkValidUnqualifiedName(String name) {
+        if(name.contains(".") || name.contains(";") || name.contains("[") || name.contains("/"))
+            throw new IllegalArgumentException("Unqualified name \""+name+"\" cannot contain any of these characters: . ; [ /");
     }
 
     private String[] readOperands(String s) {

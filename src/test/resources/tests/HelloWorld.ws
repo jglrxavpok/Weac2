@@ -38,8 +38,8 @@ object HelloWorld > Application + TestMixin {
 
         native {
             getstatic java/lang/System out Ljava/io/PrintStream;
-            ldc "Test"
-            invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+            getstatic java/lang/System out Ljava/io/PrintStream;
+            invokevirtual java/io/PrintStream println (Ljava/lang/Object;)V
         }
         Console.writeLine(simpleField);
     }
