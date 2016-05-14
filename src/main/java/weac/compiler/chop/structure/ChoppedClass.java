@@ -1,7 +1,7 @@
-package weac.compiler.parse.structure;
+package weac.compiler.chop.structure;
 
 import weac.compiler.code.Member;
-import weac.compiler.parse.EnumClassTypes;
+import weac.compiler.chop.EnumClassTypes;
 import weac.compiler.utils.ModifierType;
 import weac.compiler.utils.WeacType;
 
@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Represents a class that has be extracted from the source code.
  */
-public class ParsedClass implements Member {
+public class ChoppedClass implements Member {
 
     /**
      * The line at which the class definition starts in the source file
@@ -33,12 +33,12 @@ public class ParsedClass implements Member {
     /**
      * The fields present in this class
      */
-    public List<ParsedField> fields;
+    public List<ChoppedField> fields;
 
     /**
      * The methods defined in this class
      */
-    public List<ParsedMethod> methods;
+    public List<ChoppedMethod> methods;
 
     /**
      * The parent class, can be null. The name is not yet resolved (that's to say we don't know yet if it is a valid class)
@@ -67,7 +67,7 @@ public class ParsedClass implements Member {
      */
     public ModifierType access = ModifierType.PUBLIC;
 
-    public List<ParsedAnnotation> annotations;
+    public List<ChoppedAnnotation> annotations;
 
     public boolean isCompilerSpecial;
     public boolean isFinal;
@@ -102,8 +102,8 @@ public class ParsedClass implements Member {
             System.out.println(";");
             System.out.println();
         }
-        fields.forEach(ParsedField::echo);
-        methods.forEach(ParsedMethod::echo);
+        fields.forEach(ChoppedField::echo);
+        methods.forEach(ChoppedMethod::echo);
         System.out.println("}");
     }
 

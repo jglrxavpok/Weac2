@@ -1,4 +1,4 @@
-package weac.compiler.parse.structure;
+package weac.compiler.chop.structure;
 
 import weac.compiler.code.Member;
 import weac.compiler.utils.Identifier;
@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Represents a field that has be extracted from the source code.
  */
-public class ParsedField implements Member {
+public class ChoppedField implements Member {
 
     /**
      * The line in the file which holds this field
@@ -38,7 +38,7 @@ public class ParsedField implements Member {
      */
     public ModifierType access = ModifierType.PUBLIC;
 
-    public List<ParsedAnnotation> annotations;
+    public List<ChoppedAnnotation> annotations;
     public boolean isCompilerSpecial;
 
     /**

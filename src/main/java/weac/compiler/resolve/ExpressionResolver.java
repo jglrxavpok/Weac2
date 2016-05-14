@@ -2,7 +2,7 @@ package weac.compiler.resolve;
 
 import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.CompileUtils;
-import weac.compiler.parse.EnumClassTypes;
+import weac.compiler.chop.EnumClassTypes;
 import weac.compiler.precompile.Label;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.structure.JavaImportedClass;

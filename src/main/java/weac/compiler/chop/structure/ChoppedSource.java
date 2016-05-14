@@ -1,16 +1,16 @@
-package weac.compiler.parse.structure;
+package weac.compiler.chop.structure;
 
 import weac.compiler.utils.Import;
 
 import java.util.List;
 
-public class ParsedSource {
+public class ChoppedSource {
 
     public String sourceCode;
 
     public String packageName;
     public List<Import> imports;
-    public List<ParsedClass> classes;
+    public List<ChoppedClass> classes;
     public String fileName;
     public String version;
     public String target;
@@ -29,7 +29,7 @@ public class ParsedSource {
                 System.out.println("import "+i.importedType);
             }
         });
-        classes.forEach(ParsedClass::echo);
+        classes.forEach(ChoppedClass::echo);
         System.out.println("[===END===]");
     }
 }

@@ -1,4 +1,4 @@
-package weac.compiler.parse;
+package weac.compiler.chop;
 
 /**
  * The different class types possible in WeaC

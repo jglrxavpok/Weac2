@@ -1,7 +1,7 @@
 package weac.compiler.targets.jvm.compile;
 
 import weac.compiler.CompileUtils;
-import weac.compiler.parse.EnumClassTypes;
+import weac.compiler.chop.EnumClassTypes;
 import weac.compiler.precompile.Label;
 import weac.compiler.precompile.structure.PrecompiledClass;
 import weac.compiler.resolve.ConstructorInfos;
@@ -596,7 +596,6 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
                     }
                 }
             }
-            // TODO: avoid duplicate entries
         } else if(insn instanceof CastInsn) {
             CastInsn cInsn = ((CastInsn) insn);
             WeacType from = cInsn.getFrom();

@@ -1,17 +1,17 @@
 package weac.compiler.utils;
 
-import weac.compiler.parse.structure.ParsedAnnotation;
+import weac.compiler.chop.structure.ChoppedAnnotation;
 
 public class AnnotationModifier extends Modifier {
 
-    private final ParsedAnnotation annotation;
+    private final ChoppedAnnotation annotation;
 
-    public AnnotationModifier(ModifierType type, ParsedAnnotation annotation) {
+    public AnnotationModifier(ModifierType type, ChoppedAnnotation annotation) {
         super(type);
         this.annotation = annotation;
     }
 
-    public ParsedAnnotation getAnnotation() {
+    public ChoppedAnnotation getAnnotation() {
         return annotation;
     }
 }

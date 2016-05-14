@@ -1,4 +1,4 @@
-package weac.compiler.parse.structure;
+package weac.compiler.chop.structure;
 
 import weac.compiler.code.Member;
 import weac.compiler.utils.Identifier;
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Represents a method extracted from the source file
  */
-public class ParsedMethod implements Member {
+public class ChoppedMethod implements Member {
 
     /**
      * The line at which the method starts
@@ -59,12 +59,12 @@ public class ParsedMethod implements Member {
      */
     public ModifierType access = ModifierType.PUBLIC;
 
-    public List<ParsedAnnotation> annotations;
+    public List<ChoppedAnnotation> annotations;
 
     public int off;
     public boolean isCompilerSpecial;
 
-    public ParsedMethod() {
+    public ChoppedMethod() {
         argumentNames = new ArrayList<>();
         argumentTypes = new ArrayList<>();
     }

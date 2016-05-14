@@ -1,10 +1,10 @@
-package weac.compiler.parse;
+package weac.compiler.chop;
 
 import weac.compiler.CompileUtils;
-import weac.compiler.parse.structure.ParsedAnnotation;
-import weac.compiler.parse.structure.ParsedClass;
-import weac.compiler.parse.structure.ParsedField;
-import weac.compiler.parse.structure.ParsedMethod;
+import weac.compiler.chop.structure.ChoppedAnnotation;
+import weac.compiler.chop.structure.ChoppedClass;
+import weac.compiler.chop.structure.ChoppedField;
+import weac.compiler.chop.structure.ChoppedMethod;
 import weac.compiler.utils.AnnotationModifier;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.Modifier;
@@ -14,34 +14,34 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-public class ClassBodyParser extends CompileUtils {
+public class ClassBodyChopper extends CompileUtils {
 
     /**
      * Parses the body of the class. Locates methods and fields
-     * @param parsedClass
+     * @param choppedClass
      *                  The current class
      * @param body
      *                  The body code
      * @param startingLine
      *                  The line at which the class starts in the source file
      */
-    public void parseBody(ParsedClass parsedClass, String body, int startingLine) {
+    public void parseBody(ChoppedClass choppedClass, String body, int startingLine) {
         body = trimStartingSpace(body);
         int i = 0;
         char[] chars = body.toCharArray();
         i += readUntilNot(chars, i, ' ', '\n').length();
 
-        if(parsedClass.classType == EnumClassTypes.ENUM) {
+        if(choppedClass.classType == EnumClassTypes.ENUM) {
             if(i >= chars.length) {
                 return;
             }
-            if(parsedClass.classType == EnumClassTypes.ENUM) {
+            if(choppedClass.classType == EnumClassTypes.ENUM) {
                 String constants = readUntilInsnEnd(chars, i);
 
                 i += constants.length()+1;
                 i += readUntilNot(chars, i, ' ', '\n').length();
 
-                fillEnumConstants(constants, parsedClass.enumConstants);
+                fillEnumConstants(constants, choppedClass.enumConstants);
 
                 if(i >= chars.length) // We might have reached end of file
                 {
@@ -67,7 +67,7 @@ public class ClassBodyParser extends CompileUtils {
             boolean isMixin = false;
             boolean isCompilerSpecial = false;
 
-            List<ParsedAnnotation> annotations = new ArrayList<>();
+            List<ChoppedAnnotation> annotations = new ArrayList<>();
             for(Modifier modif : modifiers) {
                 if(modif.getType().isAccessModifier()) {
                     if(currentAccess != null) {
@@ -88,11 +88,11 @@ public class ClassBodyParser extends CompileUtils {
             modifiers.clear();
             if(currentAccess == null)
                 currentAccess = ModifierType.PUBLIC;
-            if(parsedClass.classType == EnumClassTypes.INTERFACE)
+            if(choppedClass.classType == EnumClassTypes.INTERFACE)
                 isAbstract = true; // interfaces methods are always abstract
-            else if(parsedClass.isMixin)
+            else if(choppedClass.isMixin)
                 isAbstract = true; // mixin (are analog to interfaces for the JVM) methods are always abstract
-            else if(parsedClass.classType == EnumClassTypes.ANNOTATION)
+            else if(choppedClass.classType == EnumClassTypes.ANNOTATION)
                 isAbstract = true; // annotation methods are always abstract
             Identifier firstPart = Identifier.read(chars, i);
             if(firstPart.isValid()) {
@@ -100,20 +100,20 @@ public class ClassBodyParser extends CompileUtils {
                 i += readUntilNot(chars, i, ' ', '\n').length();
                 if(chars[i] == '(') { // Constructor
 
-                    ParsedMethod function = readFunction(chars, i, parsedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
+                    ChoppedMethod function = readFunction(chars, i, choppedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
                     function.isCompilerSpecial = isCompilerSpecial;
                     function.annotations = annotations;
                     function.startingLine = lineIndex+startingLine;
                     function.isConstructor = true;
                     function.name = new Identifier("<init>");
-                    parsedClass.methods.add(function);
+                    choppedClass.methods.add(function);
                     i += function.off;
 
                 } else {
                     Identifier secondPart = Identifier.read(chars, i);
                     i+=secondPart.getId().length();
                     if(!secondPart.isValid()) {
-                        newError("Invalid identifier: "+secondPart.getId()+" in "+parsedClass.packageName+"."+parsedClass.name, startingLine);
+                        newError("Invalid identifier: "+secondPart.getId()+" in "+ choppedClass.packageName+"."+ choppedClass.name, startingLine);
                     } else {
                         int potentialFunction = indexOf(chars, i, '(');
                         int potentialField = indexOf(chars, i, ';');
@@ -135,7 +135,7 @@ public class ClassBodyParser extends CompileUtils {
 
                         String start = read(chars, i, nameEnd);
                         if(isField) {
-                            ParsedField field = new ParsedField();
+                            ChoppedField field = new ChoppedField();
                             field.isCompilerSpecial = isCompilerSpecial;
                             field.annotations = annotations;
                             field.name = secondPart;
@@ -145,20 +145,20 @@ public class ClassBodyParser extends CompileUtils {
                             if(start.contains("=")) {
                                 field.defaultValue = trimStartingSpace(start.split("=")[1]);
                             }
-                            parsedClass.fields.add(field);
+                            choppedClass.fields.add(field);
                             i = nameEnd+1;
                         } else {
-                            ParsedMethod function = readFunction(chars, i, parsedClass, firstPart, secondPart, currentAccess, isAbstract);
+                            ChoppedMethod function = readFunction(chars, i, choppedClass, firstPart, secondPart, currentAccess, isAbstract);
                             function.isCompilerSpecial = isCompilerSpecial;
                             function.annotations = annotations;
                             function.startingLine = lineIndex+startingLine;
-                            parsedClass.methods.add(function);
+                            choppedClass.methods.add(function);
                             i += function.off;
                         }
                     }
                 }
             } else {
-                newError("Invalid identifier: " + firstPart.getId()+" in "+parsedClass.packageName+"."+parsedClass.name+" from "+new String(chars, i, chars.length-i), startingLine+lineIndex);
+                newError("Invalid identifier: " + firstPart.getId()+" in "+ choppedClass.packageName+"."+ choppedClass.name+" from "+new String(chars, i, chars.length-i), startingLine+lineIndex);
             }
         }
     }
@@ -182,7 +182,7 @@ public class ClassBodyParser extends CompileUtils {
      *              The source characters
      * @param i
      *              The offset at which to start the reading
-     * @param parsedClass
+     * @param choppedClass
      *              The owner of this method
      * @param type
      *              The return returnType
@@ -195,9 +195,9 @@ public class ClassBodyParser extends CompileUtils {
      * @return
      *              The extracted method
      */
-    private ParsedMethod readFunction(char[] chars, int i, ParsedClass parsedClass, Identifier type, Identifier name, ModifierType access, boolean isAbstract) {
+    private ChoppedMethod readFunction(char[] chars, int i, ChoppedClass choppedClass, Identifier type, Identifier name, ModifierType access, boolean isAbstract) {
         final int start = i;
-        ParsedMethod method = new ParsedMethod();
+        ChoppedMethod method = new ChoppedMethod();
         method.returnType = type;
         method.name = name;
         method.isAbstract = isAbstract;
@@ -217,7 +217,7 @@ public class ClassBodyParser extends CompileUtils {
         }
 
         i+=allArgs.length();
-        if(isAbstract || parsedClass.classType == EnumClassTypes.INTERFACE || parsedClass.classType == EnumClassTypes.ANNOTATION) {
+        if(isAbstract || choppedClass.classType == EnumClassTypes.INTERFACE || choppedClass.classType == EnumClassTypes.ANNOTATION) {
             i+=1;
             method.methodSource = "";
             method.isAbstract = true;

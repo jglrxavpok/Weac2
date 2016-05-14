@@ -1,6 +1,6 @@
 import weac.compiler.PreProcessor;
-import weac.compiler.parse.Parser;
-import weac.compiler.parse.structure.ParsedSource;
+import weac.compiler.chop.Chopper;
+import weac.compiler.chop.structure.ChoppedSource;
 import org.junit.Test;
 import weac.compiler.utils.SourceCode;
 
@@ -13,8 +13,8 @@ public class TestParsing extends Tests {
     @Test
     public void testParser() throws IOException {
         PreProcessor preProcessor = new PreProcessor();
-        Parser parser = new Parser();
-        ParsedSource source = parser.process(preProcessor.process(new SourceCode(read("tests/testParse.ws"))));
+        Chopper chopper = new Chopper();
+        ChoppedSource source = chopper.process(preProcessor.process(new SourceCode(read("tests/testParse.ws"))));
         System.out.println(source.sourceCode);
         assertFalse(source.sourceCode.contains("Commented text"));
         assertFalse(source.sourceCode.contains("Commented text2"));

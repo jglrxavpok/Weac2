@@ -1,42 +1,42 @@
-package weac.compiler.parse;
+package weac.compiler.chop;
 
 import weac.compiler.CompilePhase;
-import weac.compiler.parse.structure.ParsedAnnotation;
-import weac.compiler.parse.structure.ParsedClass;
+import weac.compiler.chop.structure.ChoppedSource;
+import weac.compiler.chop.structure.ChoppedAnnotation;
+import weac.compiler.chop.structure.ChoppedClass;
 import weac.compiler.utils.*;
-import weac.compiler.parse.structure.ParsedSource;
 
 import java.util.*;
 
 /**
- * Parses a WeaC source file
+ * Chops a WeaC source file
  */
-public class Parser extends CompilePhase<SourceCode, ParsedSource> {
+public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
 
     /**
-     * The class parsing helper
+     * The class chopping helper
      */
-    private final ClassParser classParser;
+    private final ClassChopper classChopper;
 
-    public Parser() {
-        classParser = new ClassParser();
+    public Chopper() {
+        classChopper = new ClassChopper();
     }
 
     /**
-     * Parses the given source
+     * Chops the given source
      * @param source
      *              The source code
      * @return
      *              The parsed source, contains all the extracted data from the source file
      */
-    public ParsedSource process(SourceCode source) {
-        ParsedSource parsedSource = new ParsedSource();
-        parsedSource.imports = new ArrayList<>();
-        parsedSource.classes = new ArrayList<>();
-        parsedSource.sourceCode = removeComments(source.getContent());
-        parsedSource.fileName = source.getFileName();
-        analyseHeader(parsedSource, parsedSource.sourceCode);
-        return parsedSource;
+    public ChoppedSource process(SourceCode source) {
+        ChoppedSource choppedSource = new ChoppedSource();
+        choppedSource.imports = new ArrayList<>();
+        choppedSource.classes = new ArrayList<>();
+        choppedSource.sourceCode = removeComments(source.getContent());
+        choppedSource.fileName = source.getFileName();
+        analyseHeader(choppedSource, choppedSource.sourceCode);
+        return choppedSource;
     }
 
     @Override
@@ -45,18 +45,18 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
     }
 
     @Override
-    public Class<ParsedSource> getOutputClass() {
-        return ParsedSource.class;
+    public Class<ChoppedSource> getOutputClass() {
+        return ChoppedSource.class;
     }
 
     /**
-     * Parses the source file in order to find the package declaration, the imports and the classes
-     * @param parsedSource
+     * Chops the source file in order to find the package declaration, the imports and the classes
+     * @param choppedSource
      *                  The current source
      * @param source
      *                  The source code
      */
-    private void analyseHeader(ParsedSource parsedSource, String source) {
+    private void analyseHeader(ChoppedSource choppedSource, String source) {
         source = source.replace("\r", "");
         char[] chars = source.toCharArray();
         int lineIndex = 0;
@@ -69,10 +69,10 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                     i += command.length();
                     i += readUntilNot(chars, i, ' ', '\n').length();
                     String packageName = readUntil(chars, i, ' ', '\n');
-                    if(parsedSource.packageName != null) {
+                    if(choppedSource.packageName != null) {
                         newError("Cannot set package name twice", lineIndex);
                     } else {
-                        parsedSource.packageName = packageName;
+                        choppedSource.packageName = packageName;
                     }
                     i += packageName.length();
                     break;
@@ -80,19 +80,19 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                 case "#target":
                     i += command.length();
                     i += readUntilNot(chars, i, ' ', '\n').length();
-                    parsedSource.target = readUntil(chars, i, '\n').replace("\r", "");
+                    choppedSource.target = readUntil(chars, i, '\n').replace("\r", "");
                     break;
 
                 case "#version":
                     i += command.length();
                     i += readUntilNot(chars, i, ' ', '\n').length();
-                    parsedSource.version = readUntil(chars, i, '\n').replace("\r", "");
+                    choppedSource.version = readUntil(chars, i, '\n').replace("\r", "");
                     break;
 
                 case "import":
                     i += command.length();
                     i += readUntilNot(chars, i, ' ', '\n').length();
-                    i += readImport(parsedSource, chars, i, lineIndex);
+                    i += readImport(choppedSource, chars, i, lineIndex);
                     break;
 
                 default:
@@ -102,7 +102,7 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                     boolean isMixin = false;
                     boolean isCompilerSpecial = false;
                     boolean isFinal = false;
-                    List<ParsedAnnotation> annotations = new ArrayList<>();
+                    List<ChoppedAnnotation> annotations = new ArrayList<>();
                     for(Modifier modif : modifiers) {
                         if(modif.getType().isAccessModifier()) {
                             if(currentAccess != null) {
@@ -117,7 +117,7 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                         } else if(modif.getType() == ModifierType.FINAL) {
                             isFinal = true;
                         } else if(modif.getType() == ModifierType.ANNOTATION) {
-                            ParsedAnnotation annot = ((AnnotationModifier) modif).getAnnotation();
+                            ChoppedAnnotation annot = ((AnnotationModifier) modif).getAnnotation();
                             annotations.add(annot);
                         } else if(modif.getType() == ModifierType.COMPILERSPECIAL) {
                             isCompilerSpecial = true;
@@ -127,7 +127,7 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                     if(currentAccess == null)
                         currentAccess = ModifierType.PUBLIC;
                     String extractedClass = extractClass(chars, i);
-                    ParsedClass clazz = readClass(parsedSource, extractedClass, lineIndex, isAbstract, isMixin);
+                    ChoppedClass clazz = readClass(choppedSource, extractedClass, lineIndex, isAbstract, isMixin);
                     clazz.access = currentAccess;
                     clazz.annotations = annotations;
                     clazz.isCompilerSpecial = isCompilerSpecial;
@@ -139,10 +139,10 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                 lineIndex++;
         }
 
-        if(parsedSource.target == null)
-            parsedSource.target = "jvm";
-        if(parsedSource.version == null)
-            parsedSource.version = Constants.CURRENT_VERSION;
+        if(choppedSource.target == null)
+            choppedSource.target = "jvm";
+        if(choppedSource.version == null)
+            choppedSource.version = Constants.CURRENT_VERSION;
     }
 
     /**
@@ -174,8 +174,8 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
     }
 
     /**
-     * Extracts an import from the source and stores it into <code>parsedSource</code>.
-     * @param parsedSource
+     * Extracts an import from the source and stores it into <code>choppedSource</code>.
+     * @param choppedSource
      *                  The current source
      * @param chars
      *                  The source characters
@@ -186,7 +186,7 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
      * @return
      *                  The number of characters read
      */
-    private int readImport(ParsedSource parsedSource, char[] chars, int offset, int lineIndex) {
+    private int readImport(ChoppedSource choppedSource, char[] chars, int offset, int lineIndex) {
         final int start = offset;
         String importStatement = readUntil(chars, offset, '\n');
         String[] parts = importStatement.split(" ");
@@ -200,13 +200,13 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
                 newError("Import statement not understood, should follow: 'import <name>' or 'import <name> as <usageName>''", lineIndex);
             }
         }
-        parsedSource.imports.add(parsedImport);
+        choppedSource.imports.add(parsedImport);
         return offset-start;
     }
 
     /**
-     * Parses a class and stores it to <code>parsedSource</code>.
-     * @param parsedSource
+     * Parses a class and stores it to <code>choppedSource</code>.
+     * @param choppedSource
      *                  The current source
      * @param classSource
      *                  The source code of the class
@@ -219,13 +219,13 @@ public class Parser extends CompilePhase<SourceCode, ParsedSource> {
      * @return
      *                  The parsed class
      */
-    private ParsedClass readClass(ParsedSource parsedSource, String classSource, int startingLine, boolean isAbstract, boolean isMixin) {
-        ParsedClass parsedClass = classParser.parseClass(classSource, startingLine);
-        parsedClass.packageName = parsedSource.packageName;
-        parsedClass.isAbstract = isAbstract;
-        parsedClass.isMixin = isMixin;
-        parsedSource.classes.add(parsedClass);
-        return parsedClass;
+    private ChoppedClass readClass(ChoppedSource choppedSource, String classSource, int startingLine, boolean isAbstract, boolean isMixin) {
+        ChoppedClass choppedClass = classChopper.parseClass(classSource, startingLine);
+        choppedClass.packageName = choppedSource.packageName;
+        choppedClass.isAbstract = isAbstract;
+        choppedClass.isMixin = isMixin;
+        choppedSource.classes.add(choppedClass);
+        return choppedClass;
     }
 
     /**

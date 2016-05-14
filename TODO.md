@@ -1,7 +1,11 @@
 WeaC TODO List
 ===
-- [x] Rename 'Parsing' step to a better fitting name: Chopping
-    - [ ] Apply new name
+   
+- [ ] Loops
+    - [ ] For loop
+    - [ ] While loop
+
+- [ ] Use correct line in error messages
 
 - [ ] Create improved actual parser
     - [ ] Must support going forward and backwards
@@ -48,3 +52,8 @@ WeaC TODO List
 - [ ] Default argument values
 
 - [ ] Finish specifications
+
+Done
+===
+- [x] Rename 'Parsing' step to a better fitting name: Chopping
+    - [x] Apply new name

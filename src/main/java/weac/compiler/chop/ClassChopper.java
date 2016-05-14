@@ -1,7 +1,7 @@
-package weac.compiler.parse;
+package weac.compiler.chop;
 
 import weac.compiler.CompileUtils;
-import weac.compiler.parse.structure.ParsedClass;
+import weac.compiler.chop.structure.ChoppedClass;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.WeacType;
 
@@ -10,12 +10,12 @@ import java.util.ArrayList;
 /**
  * Parses a class source to find its components: hierarchy, fields, and methods.
  */
-public class ClassParser extends CompileUtils {
+public class ClassChopper extends CompileUtils {
 
-    private final ClassBodyParser bodyParser;
+    private final ClassBodyChopper bodyParser;
 
-    public ClassParser() {
-        bodyParser = new ClassBodyParser();
+    public ClassChopper() {
+        bodyParser = new ClassBodyChopper();
     }
 
     /**-
@@ -27,28 +27,28 @@ public class ClassParser extends CompileUtils {
      * @return
      *              The class extracted from the source file
      */
-    public ParsedClass parseClass(String source, int startingLine) {
-        ParsedClass parsedClass = new ParsedClass();
-        parsedClass.startingLine = startingLine;
-        parsedClass.enumConstants = new ArrayList<>();
-        parsedClass.fields = new ArrayList<>();
-        parsedClass.methods = new ArrayList<>();
-        parsedClass.interfacesImplemented = new ArrayList<>();
+    public ChoppedClass parseClass(String source, int startingLine) {
+        ChoppedClass choppedClass = new ChoppedClass();
+        choppedClass.startingLine = startingLine;
+        choppedClass.enumConstants = new ArrayList<>();
+        choppedClass.fields = new ArrayList<>();
+        choppedClass.methods = new ArrayList<>();
+        choppedClass.interfacesImplemented = new ArrayList<>();
         String header = source.substring(0, source.indexOf('{'));
-        parseHeader(parsedClass, header);
+        parseHeader(choppedClass, header);
         String body = source.substring(source.indexOf('{')+1, source.length()-1);
-        bodyParser.parseBody(parsedClass, body, startingLine);
-        return parsedClass;
+        bodyParser.parseBody(choppedClass, body, startingLine);
+        return choppedClass;
     }
 
     /**
      * Parses the header of the class. Currently only find the class returnType and the hierarchy
-     * @param parsedClass
+     * @param choppedClass
      *                  The current class
      * @param header
      *                  The header code
      */
-    private void parseHeader(ParsedClass parsedClass, String header) {
+    private void parseHeader(ChoppedClass choppedClass, String header) {
         char[] chars = header.toCharArray();
         int start = readUntilNot(chars, 0, ' ', '\t', '\n').length();
         String firstPart = readUntil(chars, start, ' ');
@@ -59,30 +59,30 @@ public class ClassParser extends CompileUtils {
             case "interface":
             case "object":
             case "annotation":
-                parsedClass.classType = EnumClassTypes.valueOf(firstPart.toUpperCase());
-                readHierarchy(parsedClass, trimStartingSpace(header.replaceFirst(firstPart, "")));
+                choppedClass.classType = EnumClassTypes.valueOf(firstPart.toUpperCase());
+                readHierarchy(choppedClass, trimStartingSpace(header.replaceFirst(firstPart, "")));
                 break;
 
             default:
                 // assume it's a class
-                parsedClass.classType = EnumClassTypes.CLASS;
-                readHierarchy(parsedClass, trimStartingSpace(header));
+                choppedClass.classType = EnumClassTypes.CLASS;
+                readHierarchy(choppedClass, trimStartingSpace(header));
                 break;
         }
     }
 
     /**
      * Parses the hierarchy of the class
-     * @param parsedClass
+     * @param choppedClass
      *              The current class
      * @param s
      *              The hierarchy code
      */
-    private void readHierarchy(ParsedClass parsedClass, String s) {
+    private void readHierarchy(ChoppedClass choppedClass, String s) {
         char[] chars = s.toCharArray();
         int start = readUntilNot(chars, 0, ' ', '\n').length();
         String name = readUntil(chars, start, ' ', '\n');
-        parsedClass.name = new WeacType(JVMWeacTypes.OBJECT_TYPE, name, false);
+        choppedClass.name = new WeacType(JVMWeacTypes.OBJECT_TYPE, name, false);
         if(name.isEmpty())
             System.out.println("!!!"+s.substring(start));
         StringBuilder buffer = new StringBuilder();
@@ -90,25 +90,25 @@ public class ClassParser extends CompileUtils {
             char c = chars[i];
             if(c == '>') {
                 i++;
-                if(parsedClass.motherClass != null) {
-                    newError("A class can only have one mother class", parsedClass.startingLine);
+                if(choppedClass.motherClass != null) {
+                    newError("A class can only have one mother class", choppedClass.startingLine);
                 } else {
-                    parsedClass.motherClass = extractClassName(buffer, s, i);
+                    choppedClass.motherClass = extractClassName(buffer, s, i);
                     buffer.delete(0, buffer.length());
                 }
             } else if(c == '+') {
                 i++;
                 String extracted = extractClassName(buffer, s, i);
-                parsedClass.interfacesImplemented.add(extracted);
+                choppedClass.interfacesImplemented.add(extracted);
                 buffer.delete(0, buffer.length());
             }
         }
 
         if(buffer.length() != 0) {
-            if(parsedClass.motherClass == null) {
-                parsedClass.motherClass = buffer.toString();
+            if(choppedClass.motherClass == null) {
+                choppedClass.motherClass = buffer.toString();
             } else {
-                parsedClass.interfacesImplemented.add(buffer.toString());
+                choppedClass.interfacesImplemented.add(buffer.toString());
             }
         }
     }

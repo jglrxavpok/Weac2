@@ -1,7 +1,7 @@
 package weac.compiler.precompile;
 
 import weac.compiler.CompilePhase;
-import weac.compiler.parse.structure.*;
+import weac.compiler.chop.structure.*;
 import weac.compiler.patterns.InstructionPattern;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.patterns.*;
@@ -16,7 +16,7 @@ import weac.compiler.utils.WeacType;
 
 import java.util.*;
 
-public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
+public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> {
 
     public static final char[] extraDigits = (
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"+
@@ -41,7 +41,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
     }
 
     @Override
-    public PrecompiledSource process(ParsedSource parsed) {
+    public PrecompiledSource process(ChoppedSource parsed) {
         PrecompiledSource source = new PrecompiledSource();
 
         source.classes = new ArrayList<>();
@@ -61,7 +61,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         return source;
     }
 
-    private PrecompiledClass precompile(ParsedClass c) {
+    private PrecompiledClass precompile(ChoppedClass c) {
         PrecompiledClass clazz = new PrecompiledClass();
         if(c.name.isGeneric()) {
             WeacType[] params = c.name.getGenericParameters();
@@ -91,9 +91,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         return clazz;
     }
 
-    private List<PrecompiledAnnotation> precompileAnnotations(List<ParsedAnnotation> annotations) {
+    private List<PrecompiledAnnotation> precompileAnnotations(List<ChoppedAnnotation> annotations) {
         List<PrecompiledAnnotation> precompiledAnnotations = new LinkedList<>();
-        for(ParsedAnnotation a : annotations) {
+        for(ChoppedAnnotation a : annotations) {
             PrecompiledAnnotation precompiled = new PrecompiledAnnotation(a.getName());
             a.getArgs().stream()
                     .map(this::precompileExpression)
@@ -104,7 +104,7 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         return precompiledAnnotations;
     }
 
-    private List<PrecompiledMethod> precompileMethods(List<ParsedMethod> methods, PrecompiledClass clazz) {
+    private List<PrecompiledMethod> precompileMethods(List<ChoppedMethod> methods, PrecompiledClass clazz) {
         List<PrecompiledMethod> precompiledMethods = new LinkedList<>();
         methods.stream()
                 .map(m -> compileSingleMethod(m, clazz))
@@ -112,22 +112,22 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         return precompiledMethods;
     }
 
-    private PrecompiledMethod compileSingleMethod(ParsedMethod parsedMethod, PrecompiledClass clazz) {
+    private PrecompiledMethod compileSingleMethod(ChoppedMethod choppedMethod, PrecompiledClass clazz) {
         PrecompiledMethod method = new PrecompiledMethod();
-        method.access = parsedMethod.access;
-        method.argumentNames.addAll(parsedMethod.argumentNames);
-        for(Identifier t : parsedMethod.argumentTypes) {
+        method.access = choppedMethod.access;
+        method.argumentNames.addAll(choppedMethod.argumentNames);
+        for(Identifier t : choppedMethod.argumentTypes) {
             method.argumentTypes.add(resolveGeneric(t, clazz));
         }
-        method.isAbstract = parsedMethod.isAbstract;
-        method.isConstructor = parsedMethod.isConstructor;
-        method.name = parsedMethod.name;
-        method.returnType = resolveGeneric(parsedMethod.returnType, clazz);
+        method.isAbstract = choppedMethod.isAbstract;
+        method.isConstructor = choppedMethod.isConstructor;
+        method.name = choppedMethod.name;
+        method.returnType = resolveGeneric(choppedMethod.returnType, clazz);
 
-        method.isCompilerSpecial = parsedMethod.isCompilerSpecial;
-        method.annotations.addAll(precompileAnnotations(parsedMethod.annotations));
+        method.isCompilerSpecial = choppedMethod.isCompilerSpecial;
+        method.annotations.addAll(precompileAnnotations(choppedMethod.annotations));
 
-        method.instructions.addAll(flatten(compileCodeBlock(parsedMethod.methodSource)));
+        method.instructions.addAll(flatten(compileCodeBlock(choppedMethod.methodSource)));
 
         return method;
     }
@@ -166,9 +166,9 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
         return currentBlock;
     }
 
-    private List<PrecompiledField> precompileFields(List<ParsedField> fields, PrecompiledClass clazz) {
+    private List<PrecompiledField> precompileFields(List<ChoppedField> fields, PrecompiledClass clazz) {
         List<PrecompiledField> finalFields = new LinkedList<>();
-        for(ParsedField f : fields) {
+        for(ChoppedField f : fields) {
             PrecompiledField precompiledField = new PrecompiledField();
             precompiledField.access = f.access;
             precompiledField.name = f.name;
@@ -901,8 +901,8 @@ public class PreCompiler extends CompilePhase<ParsedSource, PrecompiledSource> {
     }
 
     @Override
-    public Class<ParsedSource> getInputClass() {
-        return ParsedSource.class;
+    public Class<ChoppedSource> getInputClass() {
+        return ChoppedSource.class;
     }
 
     @Override

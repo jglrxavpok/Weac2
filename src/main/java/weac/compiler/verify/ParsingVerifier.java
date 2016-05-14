@@ -1,48 +1,48 @@
 package weac.compiler.verify;
 
 import weac.compiler.CompilePhase;
-import weac.compiler.parse.EnumClassTypes;
-import weac.compiler.parse.structure.ParsedClass;
-import weac.compiler.parse.structure.ParsedField;
-import weac.compiler.parse.structure.ParsedMethod;
-import weac.compiler.parse.structure.ParsedSource;
+import weac.compiler.chop.EnumClassTypes;
+import weac.compiler.chop.structure.ChoppedSource;
+import weac.compiler.chop.structure.ChoppedClass;
+import weac.compiler.chop.structure.ChoppedField;
+import weac.compiler.chop.structure.ChoppedMethod;
 import weac.compiler.utils.Identifier;
 
-public class ParsingVerifier extends CompilePhase<ParsedSource, ParsedSource> {
+public class ParsingVerifier extends CompilePhase<ChoppedSource, ChoppedSource> {
     @Override
-    public ParsedSource process(ParsedSource source) {
+    public ChoppedSource process(ChoppedSource source) {
         // TODO: More verifications
         source.classes.forEach(this::verify);
         return source;
     }
 
-    private void verify(ParsedClass parsedClass) {
-        verifyValidName(parsedClass.name.getCoreType().getIdentifier().getId(), parsedClass.startingLine);
+    private void verify(ChoppedClass choppedClass) {
+        verifyValidName(choppedClass.name.getCoreType().getIdentifier().getId(), choppedClass.startingLine);
 
-        for (ParsedField field : parsedClass.fields) {
+        for (ChoppedField field : choppedClass.fields) {
             verifyValidName(field.name.getId(), field.startingLine);
         }
 
-        for (ParsedMethod method : parsedClass.methods) {
+        for (ChoppedMethod method : choppedClass.methods) {
             verifyValidName(method.name.getId(), method.startingLine);
         }
 
-        if(parsedClass.classType == EnumClassTypes.OBJECT) {
-            parsedClass.methods.stream()
+        if(choppedClass.classType == EnumClassTypes.OBJECT) {
+            choppedClass.methods.stream()
                     .filter(method -> method.isConstructor)
                     .filter(method -> !method.argumentNames.isEmpty())
                     .forEach(method -> newError(method.name+": constructors in object must not have arguments", -1));
         }
 
-        if(parsedClass.classType == EnumClassTypes.DATA) {
-            parsedClass.methods.stream()
+        if(choppedClass.classType == EnumClassTypes.DATA) {
+            choppedClass.methods.stream()
                     .filter(method -> !method.isConstructor)
                     .forEach(method -> newError(method.name+": methods are not allowed in structs", -1));
         }
 
-        if(parsedClass.isMixin) {
-            if(!parsedClass.fields.isEmpty()) {
-                newError("Mixins can not define fields", parsedClass.startingLine); // TODO: maybe add a workaround
+        if(choppedClass.isMixin) {
+            if(!choppedClass.fields.isEmpty()) {
+                newError("Mixins can not define fields", choppedClass.startingLine); // TODO: maybe add a workaround
             }
         }
     }
@@ -54,12 +54,12 @@ public class ParsingVerifier extends CompilePhase<ParsedSource, ParsedSource> {
     }
 
     @Override
-    public Class<ParsedSource> getInputClass() {
-        return ParsedSource.class;
+    public Class<ChoppedSource> getInputClass() {
+        return ChoppedSource.class;
     }
 
     @Override
-    public Class<ParsedSource> getOutputClass() {
-        return ParsedSource.class;
+    public Class<ChoppedSource> getOutputClass() {
+        return ChoppedSource.class;
     }
 }

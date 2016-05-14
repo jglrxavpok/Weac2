@@ -1,6 +1,6 @@
 package weac.compiler.precompile.structure;
 
-import weac.compiler.parse.EnumClassTypes;
+import weac.compiler.chop.EnumClassTypes;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;

@@ -1,6 +1,6 @@
 package weac.compiler;
 
-import weac.compiler.parse.structure.ParsedAnnotation;
+import weac.compiler.chop.structure.ChoppedAnnotation;
 import weac.compiler.utils.*;
 
 import java.util.*;
@@ -121,7 +121,7 @@ public abstract class CompileUtils {
             if(!isValidToken) {
                 if(token.startsWith("@")) {
                     String name = Identifier.read(chars, offset+1).getId();
-                    ParsedAnnotation annotation = new ParsedAnnotation(name);
+                    ChoppedAnnotation annotation = new ChoppedAnnotation(name);
                     out.add(new AnnotationModifier(ModifierType.ANNOTATION, annotation));
                     int nameEnd = offset + name.length();
                     if(nameEnd < chars.length) {

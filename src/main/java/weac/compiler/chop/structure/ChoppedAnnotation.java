@@ -1,4 +1,4 @@
-package weac.compiler.parse.structure;
+package weac.compiler.chop.structure;
 
 import weac.compiler.code.Member;
 import weac.compiler.utils.ModifierType;
@@ -8,12 +8,12 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-public class ParsedAnnotation implements Member {
+public class ChoppedAnnotation implements Member {
 
     private final String name;
     public List<String> args;
 
-    public ParsedAnnotation(String name) {
+    public ChoppedAnnotation(String name) {
         this.name = name;
         args = new LinkedList<>();
     }
