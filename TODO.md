@@ -5,6 +5,13 @@ WeaC TODO List
     - [ ] For loop
     - [ ] While loop
 
+- [ ] Support for native code
+    - [ ] JVM
+    - [ ] Spir-V
+    - [ ] Use of .dll-like files ?
+    
+- [ ] 'switch'
+    
 - [ ] Use correct line in error messages
 
 - [ ] Create improved actual parser

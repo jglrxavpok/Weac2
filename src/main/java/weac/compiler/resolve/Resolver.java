@@ -25,9 +25,11 @@ public class Resolver extends CompileUtils {
     private AutoTypeResolver autoTypeResolver;
     private ExpressionResolver expressionResolver;
     private TypeResolver typeResolver;
+    private WeacTarget target;
 
-    public Resolver(WeacTarget resolver) {
-        this.typeResolver = resolver.newTypeResolver(this);
+    public Resolver(WeacTarget target) {
+        this.target = target;
+        this.typeResolver = target.newTypeResolver(this);
         expressionResolver = new ExpressionResolver(this);
         numberResolver = new NumberResolver();
         stringResolver = new StringResolver();
@@ -63,7 +65,7 @@ public class Resolver extends CompileUtils {
         MixedContentClass toMixIn = resolveMixins(resolvedClass, resolvedClass.parents.getMixins());
         resolvedClass.fields = resolveFields(resolvedClass, currentType, aClass, context, toMixIn);
 
-        resolvedClass.methods = resolveMethods(currentType, aClass, context, toMixIn);
+        resolvedClass.methods = resolveMethods(currentType, aClass, resolvedClass, context, toMixIn);
 
         return resolvedClass;
     }
@@ -123,22 +125,22 @@ public class Resolver extends CompileUtils {
             }
         }
 
-        if(resolvedField.type.equals(WeacType.AUTO) && field.defaultValue.isEmpty()) {
-            newError("Cannot infer type from unitialized field", -1); // todo line
+        if(resolvedField.type.equals(WeacType.AUTO)) {
+            newError("Cannot infer type from uninitialized field "+field.name, -1); // todo line
         }
         resolvedField.defaultValue.addAll(insns);
         return resolvedField;
     }
 
-    private List<ResolvedMethod> resolveMethods(WeacType currentType, PrecompiledClass aClass, ResolvingContext context, MixedContentClass toMixIn) {
+    private List<ResolvedMethod> resolveMethods(WeacType currentType, PrecompiledClass aClass, ResolvedClass currentClass, ResolvingContext context, MixedContentClass toMixIn) {
         List<ResolvedMethod> methods = new LinkedList<>();
-        toMixIn.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, context, aClass), methods));
+        toMixIn.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, context, currentClass), methods));
 
-        aClass.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, context, aClass), methods));
+        aClass.methods.forEach(m -> addOrOverride(resolveSingleMethod(m, currentType, context, currentClass), methods));
         return methods;
     }
 
-    private ResolvedMethod resolveSingleMethod(PrecompiledMethod precompiledMethod, WeacType currentType, ResolvingContext context, PrecompiledClass precompiledClass) {
+    private ResolvedMethod resolveSingleMethod(PrecompiledMethod precompiledMethod, WeacType currentType, ResolvingContext context, ResolvedClass currentClass) {
         ResolvedMethod method = new ResolvedMethod();
         method.access = precompiledMethod.access;
         method.annotations.addAll(resolveAnnotations(precompiledMethod.annotations, currentType, context));
@@ -165,7 +167,7 @@ public class Resolver extends CompileUtils {
                 .forEach(method.argumentTypes::add);
 
         VariableMap localVariables = new VariableMap();
-        registerFields(localVariables, precompiledClass, context);
+        registerFields(localVariables, currentClass);
         localVariables.registerLocal("this", currentType);
         for(int i = 0;i<method.argumentNames.size();i++) {
             Identifier name = method.argumentNames.get(i);
@@ -175,6 +177,14 @@ public class Resolver extends CompileUtils {
         Stack<Value> valStack = new Stack<>();
         resolveSingleExpression(precompiledMethod.instructions, currentType, context, localVariables, valStack).forEach(method.instructions::add);
         return method;
+    }
+
+    private void registerFields(VariableMap variables, ResolvedClass resolvedClass) {
+        for(ResolvedField f : resolvedClass.fields) {
+            WeacType type = f.type;
+            String name = f.name.getId();
+            variables.registerField(name, type);
+        }
     }
 
     private void registerFields(VariableMap variables, PrecompiledClass precompiledClass, ResolvingContext context) {
@@ -523,5 +533,9 @@ public class Resolver extends CompileUtils {
 
     public TypeResolver getTypeResolver() {
         return typeResolver;
+    }
+
+    public WeacTarget getTarget() {
+        return target;
     }
 }

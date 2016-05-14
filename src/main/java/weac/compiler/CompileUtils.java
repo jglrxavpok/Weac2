@@ -330,13 +330,16 @@ public abstract class CompileUtils {
             boolean append = true;
             switch (c) {
                 case '{':
-                    unclosedBrackets++;
+                    if(!inQuote)
+                        unclosedBrackets++;
                     break;
 
                 case '}':
-                    unclosedBrackets--;
-                    if(unclosedBrackets == 0) {
-                        break bracketLoop;
+                    if(!inQuote) {
+                        unclosedBrackets--;
+                        if (unclosedBrackets == 0) {
+                            break bracketLoop;
+                        }
                     }
                     break;
 

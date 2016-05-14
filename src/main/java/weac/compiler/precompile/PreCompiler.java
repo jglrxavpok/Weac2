@@ -620,6 +620,11 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
                     insns.add(new PrecompiledInsn(PrecompileOpcodes.ARRAY_START));
                     break;
 
+                case NATIVE_CODE:
+                    NativeCodeToken nativeCodeToken = (NativeCodeToken) token;
+                    insns.add(new PrecompiledNativeCode(nativeCodeToken.getCode()));
+                    break;
+
                 default:
                     System.err.println("Precompilation: unknown "+token);
                     break;
@@ -887,6 +892,8 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
             } else if(token.getType() == TokenType.POP_INSTANCE) {
                 out.add(token);
                 instanceStack.setCurrent(false);
+            } else if(token.getType() == TokenType.NATIVE_CODE) {
+                out.add(token);
             }
         }
         while(!stack.isEmpty()) {

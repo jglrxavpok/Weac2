@@ -7,6 +7,7 @@ import weac.compiler.utils.Identifier;
 public class Tokenizer extends CompileUtils {
 
     public Token nextToken(char[] chars, int offset) {
+        final int start = offset;
         if (offset >= chars.length) {
             return null;
         } else {
@@ -85,6 +86,12 @@ public class Tokenizer extends CompileUtils {
                 }
 
                 String literal = readLiteral(chars, offset);
+                if(literal.equals("native")) {
+                    offset += literal.length()+1;
+                    offset += readUntil(chars, offset, '{').length();
+                    String nativeCode = readCodeblock(chars, offset+1);
+                    return new NativeCodeToken(nativeCode, TokenType.NATIVE_CODE, offset+nativeCode.length() - start +2);
+                }
                 if(literal.isEmpty()) {
                     String operator = readOperator(chars, offset);
                     if(operator != null && !operator.isEmpty())

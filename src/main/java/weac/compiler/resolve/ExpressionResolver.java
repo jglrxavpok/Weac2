@@ -4,6 +4,7 @@ import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.CompileUtils;
 import weac.compiler.chop.EnumClassTypes;
 import weac.compiler.precompile.Label;
+import weac.compiler.precompile.NativeCodeToken;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.structure.JavaImportedClass;
 import weac.compiler.precompile.structure.PrecompiledClass;
@@ -41,6 +42,7 @@ public class ExpressionResolver extends CompileUtils {
     }
 
     public List<ResolvedInsn> resolve(List<PrecompiledInsn> precompiled, WeacType selfType, ResolvingContext context, VariableMap varMap, Stack<Value> valueStack) {
+        NativeCodeResolver nativeCodeResolver = resolver.getTarget().newNativeCodeResolver(resolver, selfType, context);
         List<ResolvedInsn> insns = new LinkedList<>();
         VariableTopStack<Boolean> staticness = new VariableTopStack<>();
         staticness.setCurrent(false).push();
@@ -649,6 +651,9 @@ public class ExpressionResolver extends CompileUtils {
                     }
                     valueStack.push(new ConstantValue(value.getType()));
                 }
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NATIVE_CODE) {
+                PrecompiledNativeCode nativeCode = (PrecompiledNativeCode) precompiledInsn;
+                nativeCodeResolver.resolve(nativeCode.getCode(), currentVarType, varMap, variableMaps, valueStack);
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }

@@ -35,7 +35,13 @@ object HelloWorld > Application + TestMixin {
         v++;
         var v1 = v & v;
         v1(0);
-        //Console.writeLine(myField(0));
+
+        native jvm {
+            getfield java/lang/System out Ljava/io/PrintStream;
+            ldc "Test"
+            invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
+        }
+        Console.writeLine(simpleField);
     }
 
     String test(String a) {

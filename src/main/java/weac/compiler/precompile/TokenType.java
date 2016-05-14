@@ -48,7 +48,8 @@ public enum TokenType {
     CAST,
 
     POP_INSTANCE,
-    ARRAY_START;
+    ARRAY_START,
+    NATIVE_CODE;
 
     private final boolean isValue;
 
