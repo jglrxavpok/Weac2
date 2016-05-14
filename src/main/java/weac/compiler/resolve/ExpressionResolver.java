@@ -653,7 +653,7 @@ public class ExpressionResolver extends CompileUtils {
                 }
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NATIVE_CODE) {
                 PrecompiledNativeCode nativeCode = (PrecompiledNativeCode) precompiledInsn;
-                nativeCodeResolver.resolve(nativeCode.getCode(), currentVarType, varMap, variableMaps, valueStack);
+                nativeCodeResolver.resolve(nativeCode.getCode(), currentVarType, varMap, variableMaps, valueStack, insns);
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }

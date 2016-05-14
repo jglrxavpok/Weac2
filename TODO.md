@@ -58,6 +58,8 @@ WeaC TODO List
 
 - [ ] Default argument values
 
+- [ ] Allow to access class (like "Object.class" in Java)
+
 - [ ] Finish specifications
 
 Done

@@ -72,8 +72,11 @@ public interface ResolveOpcodes {
 
             CAST = 0x50,
 
+            NATIVE_CODE = 0x60,
+            NATIVE_CALL = 0x61,
 
-            // Helper opcodes, not translated directly to bytecode by the JVM compiler
+
+            // Helper opcodes, not translated directly to bytecode by the compiler
             FUNCTION_START = 0x100,
             LOCAL_VARIABLE_TABLE = 0x101,
             MAXS = 0x102,

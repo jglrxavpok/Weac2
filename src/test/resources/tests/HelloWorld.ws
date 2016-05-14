@@ -36,8 +36,8 @@ object HelloWorld > Application + TestMixin {
         var v1 = v & v;
         v1(0);
 
-        native jvm {
-            getfield java/lang/System out Ljava/io/PrintStream;
+        native {
+            getstatic java/lang/System out Ljava/io/PrintStream;
             ldc "Test"
             invokevirtual java/io/PrintStream println (Ljava/lang/String;)V
         }
@@ -50,6 +50,13 @@ object HelloWorld > Application + TestMixin {
 
     Void testFunctionCall(Function f) {
         f("MyString!");
+    }
+
+    Object nativeTest() {
+       native {
+           aconst_null
+           areturn
+       }
     }
 
 }

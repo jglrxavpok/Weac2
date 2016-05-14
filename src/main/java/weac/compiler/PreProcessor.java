@@ -49,6 +49,9 @@ public class PreProcessor extends CompilePhase<SourceCode, SourceCode> {
                 if(!processCommand(command)) {
                     newError("Unknown precompile command "+command, lineIndex);
                 }
+                if(conditions.peek() && (command.startsWith("target") || command.startsWith("version"))) {
+                    builder.append(command).append('\n');
+                }
             } else if(conditions.peek()) {
                 builder.append(replaceDefined(l, compilerDefinitions));
                 builder.append("\n");

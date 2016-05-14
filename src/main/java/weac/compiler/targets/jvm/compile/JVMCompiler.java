@@ -11,6 +11,7 @@ import weac.compiler.resolve.values.VariableValue;
 import weac.compiler.targets.TargetCompiler;
 import weac.compiler.targets.jvm.JVMConstants;
 import weac.compiler.targets.jvm.JVMWeacTypes;
+import weac.compiler.targets.jvm.resolve.insn.BytecodeSequencesInsn;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.Constants;
 import weac.compiler.utils.ModifierType;
@@ -620,6 +621,9 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
             org.objectweb.asm.Label lbl = labelMap.get(((IfNullJumpInsn) insn).getDestination());
             writer.visitLabel(new org.objectweb.asm.Label());
             writer.visitJumpInsn(IFNULL, lbl);
+        } else if(insn instanceof NativeCodeInstruction) {
+            BytecodeSequencesInsn bytecodeSequences = (BytecodeSequencesInsn)insn;
+            bytecodeSequences.getSequences().forEach(s -> s.write(writer, varIndexOffset));
         } else if(insn instanceof FunctionStartResInsn) {
             // discard
         } else {
