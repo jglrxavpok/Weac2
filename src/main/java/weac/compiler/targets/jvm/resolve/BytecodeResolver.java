@@ -7,12 +7,15 @@ import weac.compiler.resolve.NativeCodeResolver;
 import weac.compiler.resolve.Resolver;
 import weac.compiler.resolve.ResolvingContext;
 import weac.compiler.resolve.VariableMap;
+import weac.compiler.resolve.insn.ResolveOpcodes;
 import weac.compiler.resolve.insn.ResolvedInsn;
 import weac.compiler.resolve.values.ConstantValue;
 import weac.compiler.resolve.values.FieldValue;
 import weac.compiler.resolve.values.NullValue;
 import weac.compiler.resolve.values.Value;
 import weac.compiler.targets.jvm.JVMWeacTypes;
+import weac.compiler.targets.jvm.compile.JVMCompiler;
+import weac.compiler.targets.jvm.compile.PseudoInterpreter;
 import weac.compiler.targets.jvm.resolve.insn.BytecodeSequencesInsn;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;
@@ -30,6 +33,7 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
      */
     private static final int[] opcodeOperandCount = new int[256];
     private static final BytecodeSequence[] opcodeSequences = new BytecodeSequence[256];
+    private static final PseudoInterpreter interpreter = new PseudoInterpreter();
     static {
         Field[] fields = Opcodes.class.getFields();
         for(Field f : fields) {
@@ -193,6 +197,32 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
                         valueStack.push(new NullValue());
                         break;
 
+                    case POP2:
+                        valueStack.pop();
+                    case POP:
+                        valueStack.pop();
+                        break;
+
+                    case LDC:
+                        String loaded = operands[0];
+                        if(loaded.endsWith(".class")) {
+                            valueStack.push(new ConstantValue(JVMWeacTypes.CLASS_TYPE));
+                            WeacType classType = getOwner().getTypeResolver().resolveType(new Identifier((loaded.substring(0, loaded.length()-6).replace(".", "/")), true), getContext());
+                            sequences.add((mv, varOffset) -> mv.visitLdcInsn(JVMCompiler.toJVMType(classType)));
+                        } else if(loaded.startsWith("\"") && loaded.endsWith("\"")) {
+                            sequences.add((mv, o) -> mv.visitLdcInsn(loaded.substring(1, loaded.length()-1)));
+                            valueStack.add(new ConstantValue(JVMWeacTypes.STRING_TYPE));
+                        } else {
+                            // load number
+                            ResolvedInsn numberInsn = getOwner().getNumberResolver().resolve(loaded);
+                            List<ResolvedInsn> list = Collections.singletonList(numberInsn);
+                            Object value = interpreter.interpret(list);
+                            sequences.add((mv, o) -> mv.visitLdcInsn(value));
+
+                            valueStack.push(new ConstantValue(extractType(numberInsn)));
+                        }
+                        break;
+
                     default:
                         System.err.println("Value stack not yet implemented for "+opcodeName);
                         break;
@@ -201,6 +231,31 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
         }
         insns.add(new BytecodeSequencesInsn(sequences));
     }
+
+    private WeacType extractType(ResolvedInsn number) {
+        switch (number.getOpcode()) {
+            case ResolveOpcodes.LOAD_BYTE_CONSTANT:
+                return JVMWeacTypes.BYTE_TYPE;
+
+            case ResolveOpcodes.LOAD_DOUBLE_CONSTANT:
+                return JVMWeacTypes.DOUBLE_TYPE;
+
+            case ResolveOpcodes.LOAD_FLOAT_CONSTANT:
+                return JVMWeacTypes.FLOAT_TYPE;
+
+            case ResolveOpcodes.LOAD_INTEGER_CONSTANT:
+                return JVMWeacTypes.INTEGER_TYPE;
+
+            case ResolveOpcodes.LOAD_LONG_CONSTANT:
+                return JVMWeacTypes.LONG_TYPE;
+
+            case ResolveOpcodes.LOAD_SHORT_CONSTANT:
+                return JVMWeacTypes.SHORT_TYPE;
+
+        }
+        return JVMWeacTypes.VOID_TYPE;
+    }
+
 
     private WeacType getTypeFromInternal(String internalName) {
         return getOwner().getTypeResolver().resolveType(new Identifier(internalName.replace("/", "."), true), getContext());
@@ -350,11 +405,28 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
 
     private String[] readOperands(String s) {
         List<String> list = new ArrayList<>();
-        String[] parts = s.split(" ");
-        for(String p : parts) {
-            if(!p.isEmpty())
-                list.add(p);
+        boolean inQuote = false;
+        boolean isEscaped = false;
+        StringBuilder builder = new StringBuilder();
+        for(char c : s.toCharArray()) {
+            if(c == '\\') {
+                isEscaped = !isEscaped;
+                if(!isEscaped)
+                    builder.append(c);
+            } else if(c == ' ' && !inQuote) {
+                if(builder.length() > 0)
+                    list.add(builder.toString());
+                builder.delete(0, builder.length());
+            } else if(c == '"' && !isEscaped) {
+                inQuote = !inQuote;
+                builder.append(c);
+            } else {
+                isEscaped = false;
+                builder.append(c);
+            }
         }
+        if(builder.length() > 0)
+            list.add(builder.toString());
         return list.toArray(new String[list.size()]);
     }
 }

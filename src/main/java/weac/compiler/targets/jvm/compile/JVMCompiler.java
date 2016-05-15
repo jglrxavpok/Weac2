@@ -175,7 +175,7 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
         return primitiveType;
     }
 
-    private Type getPrimitiveType(WeacType type) {
+    public static Type getPrimitiveType(WeacType type) {
         if(type.equals(JVMWeacTypes.BOOLEAN_TYPE)) {
             return Type.BOOLEAN_TYPE;
         } else if(type.equals(JVMWeacTypes.BYTE_TYPE)) {
@@ -228,7 +228,7 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
                 argTypes.add(1, Type.INT_TYPE);
             }
             method.argumentTypes.stream()
-                    .map(this::toJVMType)
+                    .map(JVMCompiler::toJVMType)
                     .forEach(argTypes::add);
             Type[] args = argTypes.toArray(new Type[argTypes.size()]);
             if(method.isConstructor) {
@@ -748,15 +748,15 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
         return interfaceArray;
     }
 
-    private Type toJVMType(WeacType type) {
+    public static Type toJVMType(WeacType type) {
         return toJVMType(type, false);
     }
 
-    private Type toJVMType(WeacType type, boolean isFunctionOwner) {
+    public static Type toJVMType(WeacType type, boolean isFunctionOwner) {
         return toJVMType(type, isFunctionOwner, true);
     }
 
-    private Type toJVMType(WeacType type, boolean isFunctionOwner, boolean convertPrimitives) {
+    public static Type toJVMType(WeacType type, boolean isFunctionOwner, boolean convertPrimitives) {
         if(!isFunctionOwner) {
             Type primitiveType = getPrimitiveType(type);
             if(primitiveType != null)
@@ -769,7 +769,7 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
         return toDescriptor(type, true);
     }
 
-    private String toDescriptor(WeacType type, boolean convertPrimitives) {
+    public static String toDescriptor(WeacType type, boolean convertPrimitives) {
         Type primitiveType = getPrimitiveType(type);
         if(primitiveType != null && convertPrimitives)
             return primitiveType.getDescriptor();
