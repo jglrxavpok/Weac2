@@ -12,6 +12,7 @@ public class ChoppedAnnotation implements Member {
 
     private final String name;
     public List<String> args;
+    public int startingLine;
 
     public ChoppedAnnotation(String name) {
         this.name = name;

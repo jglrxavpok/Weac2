@@ -309,7 +309,7 @@ public class TestPrecompile extends Tests {
 
     private void precompile(PreCompiler preCompiler, String s, PrecompiledInsn... expected) {
         System.out.println("[=== START OF PRECOMPILE OF \""+s+"\" ===]");
-        List<PrecompiledInsn> insns = preCompiler.precompileExpression(s, true);
+        List<PrecompiledInsn> insns = preCompiler.precompileExpression(s, true, 0);
         try {
             assertArrayEquals("Precompiled instructions and expected instructions do not match", expected, insns.toArray());
         } catch (AssertionError e) {

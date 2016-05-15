@@ -31,7 +31,7 @@ public class Tokenizer extends CompileUtils {
                 }
                 switch (first) {
                     case '\n':
-                        return new SpaceToken(); // TODO: Handle linenumbers properly
+                        return new NewLineToken(); // TODO: Handle linenumbers properly
 
                     case ':':
                         return new Token(String.valueOf(first), TokenType.INTERVAL_STEP, 1);
@@ -83,6 +83,18 @@ public class Tokenizer extends CompileUtils {
                     case ';':
                         return new Token(String.valueOf(first), TokenType.INSTRUCTION_END, 1);
 
+                    case '/':
+                        if(chars[offset+1] == '/') {
+                            while(!(offset >= chars.length || chars[offset] == '\n')) {
+                                offset++;
+                            }
+                            return new CommentToken(new String(chars, start, offset), false);
+                        } else if(chars[offset+1] == '*') {
+                            while(!(offset+1 >= chars.length || (chars[offset] == '*' && chars[offset+1] == '/'))) {
+                                offset++;
+                            }
+                            return new CommentToken(new String(chars, start, offset+2), false);
+                        }
                 }
 
                 String literal = readLiteral(chars, offset);

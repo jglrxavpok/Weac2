@@ -314,7 +314,6 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
                     nConstructors++;
                 }
                 mv.visitLabel(start);
-                mv.visitLineNumber(100, start);
                 try {
                     compileSingleExpression(type, mv, method.instructions, start, end, varIndexOffset, registredLocals);
                 } catch (Throwable e) {
@@ -347,7 +346,6 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
 
             int localIndex = 1; // 'this'
             mv.visitLabel(start);
-            mv.visitLineNumber(10, start);
             if(!clazz.isMixin && clazz.classType != EnumClassTypes.INTERFACE && clazz.classType != EnumClassTypes.ANNOTATION) {
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitMethodInsn(INVOKESPECIAL, toInternal(clazz.parents.getSuperclass()), "<init>", "()V", false);
@@ -410,6 +408,7 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
     }
 
     private void compileInstruction(ResolvedInsn insn, LabelMap labelMap, MethodVisitor writer, org.objectweb.asm.Label start, org.objectweb.asm.Label end, int varIndexOffset, List<String> registredLocals) {
+        org.objectweb.asm.Label currentLabel = start;
         if(insn instanceof LoadByteInsn) {
             byte n = ((LoadByteInsn) insn).getNumber();
             writer.visitLdcInsn(n);
@@ -439,8 +438,11 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
             writer.visitInsn(b ? ICONST_1 : ICONST_0);
         } else if(insn instanceof ResolvedLabelInsn) {
             Label b = ((ResolvedLabelInsn) insn).getLabel();
-            if(b.getIndex() != -1) // TODO: better fix?
-                writer.visitLabel(labelMap.get(b));
+            if(b.getIndex() != -1) { // TODO: better fix?
+                org.objectweb.asm.Label lbl = labelMap.get(b);
+                writer.visitLabel(lbl);
+                currentLabel = lbl;
+            }
         } else if(insn.getOpcode() >= ResolveOpcodes.FIRST_RETURN_OPCODE && insn.getOpcode() <= ResolveOpcodes.LAST_RETURN_OPCODE) {
             int code = insn.getOpcode();
             int returnIndex = code - ResolveOpcodes.FIRST_RETURN_OPCODE;
@@ -624,6 +626,9 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
         } else if(insn instanceof NativeCodeInstruction) {
             BytecodeSequencesInsn bytecodeSequences = (BytecodeSequencesInsn)insn;
             bytecodeSequences.getSequences().forEach(s -> s.write(writer, varIndexOffset));
+        } else if(insn instanceof LineNumberInstruction) {
+            LineNumberInstruction lineNumberInstruction = (LineNumberInstruction)insn;
+            writer.visitLineNumber(lineNumberInstruction.getLineNumber(), currentLabel);
         } else if(insn instanceof FunctionStartResInsn) {
             // discard
         } else {

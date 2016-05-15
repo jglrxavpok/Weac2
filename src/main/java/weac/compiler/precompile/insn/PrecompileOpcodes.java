@@ -32,7 +32,8 @@ public interface PrecompileOpcodes {
             THROW = 0x18,
             POP_INSTANCE_STACK = 0x19,
             ARRAY_START = 0x20,
-            NATIVE_CODE = 0x21
+            NATIVE_CODE = 0x21,
+            LINE_NUMBER = 0x22
     ;
 
     HashMap<Integer, String> names = new HashMap<>();

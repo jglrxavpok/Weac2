@@ -42,7 +42,6 @@ public interface ResolveOpcodes {
             STORE_LOCAL_VARIABLE = 0x22,
             STORE_FIELD = 0x23,
             POP = 0x24,
-
             OBJ_EQUAL = 0x25,
             DUP = 0x26,
             NEW = 0x27,
@@ -74,6 +73,8 @@ public interface ResolveOpcodes {
 
             NATIVE_CODE = 0x60,
             NATIVE_CALL = 0x61,
+
+            LINE_NUMBER = 0x80, // misc
 
 
             // Helper opcodes, not translated directly to bytecode by the compiler

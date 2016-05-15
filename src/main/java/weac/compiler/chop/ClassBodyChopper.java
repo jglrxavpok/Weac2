@@ -29,7 +29,9 @@ public class ClassBodyChopper extends CompileUtils {
         body = trimStartingSpace(body);
         int i = 0;
         char[] chars = body.toCharArray();
-        i += readUntilNot(chars, i, ' ', '\n').length();
+        String emptyBeginning = readUntilNot(chars, i, ' ', '\n');
+        startingLine += count(emptyBeginning, '\n');
+        i += emptyBeginning.length();
 
         if(choppedClass.classType == EnumClassTypes.ENUM) {
             if(i >= chars.length) {
@@ -54,10 +56,9 @@ public class ClassBodyChopper extends CompileUtils {
         List<Modifier> modifiers = new LinkedList<>();
         for(;i<chars.length;i++) {
             char c = chars[i];
-            if(c == '\n') {
-                lineIndex++;
-            }
-            i += readUntilNot(chars, i, ' ', '\n').length();
+            String read = readUntilNot(chars, i, ' ', '\n');
+            lineIndex += count(read, '\n');
+            i += read.length();
             if(i >= chars.length) {
                 break;
             }
@@ -160,7 +161,18 @@ public class ClassBodyChopper extends CompileUtils {
             } else {
                 newError("Invalid identifier: " + firstPart.getId()+" in "+ choppedClass.packageName+"."+ choppedClass.name+" from "+new String(chars, i, chars.length-i), startingLine+lineIndex);
             }
+
+            if(chars[i] == '\n')
+                lineIndex++;
         }
+    }
+
+    private int count(String s, char c) {
+        int count = 0;
+        for (char ch : s.toCharArray())
+            if(ch == c)
+                count++;
+        return count;
     }
 
     private void fillEnumConstants(String constantList, List<String> out) {

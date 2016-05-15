@@ -83,8 +83,6 @@ public class ClassChopper extends CompileUtils {
         int start = readUntilNot(chars, 0, ' ', '\n').length();
         String name = readUntil(chars, start, ' ', '\n');
         choppedClass.name = new WeacType(JVMWeacTypes.OBJECT_TYPE, name, false);
-        if(name.isEmpty())
-            System.out.println("!!!"+s.substring(start));
         StringBuilder buffer = new StringBuilder();
         for(int i = name.length()+start;i<chars.length;i++) {
             char c = chars[i];

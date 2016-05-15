@@ -49,7 +49,9 @@ public enum TokenType {
 
     POP_INSTANCE,
     ARRAY_START,
-    NATIVE_CODE;
+    NATIVE_CODE,
+    NEW_LINE,
+    COMMENT;
 
     private final boolean isValue;
 

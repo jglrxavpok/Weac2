@@ -4,7 +4,6 @@ import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.CompileUtils;
 import weac.compiler.chop.EnumClassTypes;
 import weac.compiler.precompile.Label;
-import weac.compiler.precompile.NativeCodeToken;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.structure.JavaImportedClass;
 import weac.compiler.precompile.structure.PrecompiledClass;
@@ -307,13 +306,14 @@ public class ExpressionResolver extends CompileUtils {
                 valueStack.push(new NullValue());
                 staticness.setCurrent(false).push();
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LABEL) {
+                /*
                 while(!valueStack.isEmpty()) {
                     if(valueStack.peek().getType().equals(selfType)) {
                         break;
                     }
                     Value val = valueStack.pop();
                     insns.add(new PopInsn(val.getType()));
-                }
+                }*/
                 LabelInsn cst = ((LabelInsn) precompiledInsn);
                 insns.add(new ResolvedLabelInsn(cst.getLabel()));
                 currentVarType = selfType;
@@ -654,6 +654,9 @@ public class ExpressionResolver extends CompileUtils {
             } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.NATIVE_CODE) {
                 PrecompiledNativeCode nativeCode = (PrecompiledNativeCode) precompiledInsn;
                 nativeCodeResolver.resolve(nativeCode.getCode(), currentVarType, varMap, variableMaps, valueStack, insns);
+            } else if(precompiledInsn.getOpcode() == PrecompileOpcodes.LINE_NUMBER) {
+                PrecompiledLineNumber precompiledLineNumber = (PrecompiledLineNumber) precompiledInsn;
+                insns.add(new LineNumberInstruction(precompiledLineNumber.getLineNumber()));
             } else {
                 System.err.println("UNRESOLVED: "+precompiledInsn);
             }

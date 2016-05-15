@@ -33,7 +33,7 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
         ChoppedSource choppedSource = new ChoppedSource();
         choppedSource.imports = new ArrayList<>();
         choppedSource.classes = new ArrayList<>();
-        choppedSource.sourceCode = removeComments(source.getContent());
+        choppedSource.sourceCode = source.getContent();
         choppedSource.fileName = source.getFileName();
         analyseHeader(choppedSource, choppedSource.sourceCode);
         return choppedSource;
@@ -63,6 +63,22 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
         List<Modifier> modifiers = new LinkedList<>();
         for(int i = 0;i<chars.length;i++) {
             i += readUntilNot(chars, i, ' ', '\n').length();
+            if(chars[i] == '/') {
+                char next = chars[i+1];
+                if(next == '/') {
+                    i += readUntil(chars, i, '\n').length()+1;
+                    lineIndex++;
+                } else if(next == '*') {
+                    while(chars[i+1] != '/') {
+                        String read = readUntil(chars, i, '*');
+                        i += read.length();
+                        lineIndex += read.chars()
+                                .boxed()
+                                .filter(c -> c == '\n')
+                                .count();
+                    }
+                }
+            }
             String command = readUntil(chars, i, ' ', '\n');
             switch (command) {
                 case "package":
@@ -226,54 +242,6 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
         choppedClass.isMixin = isMixin;
         choppedSource.classes.add(choppedClass);
         return choppedClass;
-    }
-
-    /**
-     * Removes all the comments from the source
-     * @param source
-     *              The source code
-     * @return
-     *              The source code without the comments
-     */
-    private String removeComments(String source) {
-        char[] chars = source.toCharArray();
-        StringBuilder builder = new StringBuilder();
-        boolean inString = false;
-        boolean inQuote = false;
-        for(int i = 0;i<chars.length;i++) {
-            boolean shouldAppend = true;
-            char c = chars[i];
-            char next = (i < chars.length-1) ? chars[i+1] : '\0';
-            if(c == '/' && !inString) {
-                if(next == '/') {
-                    shouldAppend = false;
-                    while(chars[i] != '\n') {
-                        i++;
-                    }
-                } else if(next == '*') {
-                    shouldAppend = false;
-                    while(i < chars.length-1 && (chars[i] != '/' || chars[i-1] != '*')) {
-                        i++;
-                    }
-                }
-            }
-
-            if(c == '\'' && !inString) {
-                if(i != 0 && chars[i-1] != '\\') {
-                    inQuote = !inQuote;
-                }
-            }
-
-            if(c == '"' && !inQuote) {
-                if(i != 0 && chars[i-1] != '\\') {
-                    inString = !inString;
-                }
-            }
-
-            if(shouldAppend)
-                builder.append(c);
-        }
-        return builder.toString();
     }
 
 }

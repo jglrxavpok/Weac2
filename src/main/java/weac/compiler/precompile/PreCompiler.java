@@ -15,6 +15,7 @@ import weac.compiler.utils.Identifier;
 import weac.compiler.utils.WeacType;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> {
 
@@ -27,8 +28,10 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
     private final List<InstructionPattern<PrecompiledInsn>> patterns;
     private final List<TokenPattern> tokenPatterns;
     private final Tokenizer tokenizer;
+    private int labelIndex2;
 
     public PreCompiler() {
+        labelIndex2 = -230;
         patterns = new ArrayList<>();
         patterns.add(new IntervalPattern());
 
@@ -96,7 +99,7 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
         for(ChoppedAnnotation a : annotations) {
             PrecompiledAnnotation precompiled = new PrecompiledAnnotation(a.getName());
             a.getArgs().stream()
-                    .map(this::precompileExpression)
+                    .map(insns -> precompileExpression(insns, a.startingLine))
                     .forEach(precompiled.getArgs()::add);
 
             precompiledAnnotations.add(precompiled);
@@ -116,9 +119,9 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
         PrecompiledMethod method = new PrecompiledMethod();
         method.access = choppedMethod.access;
         method.argumentNames.addAll(choppedMethod.argumentNames);
-        for(Identifier t : choppedMethod.argumentTypes) {
-            method.argumentTypes.add(resolveGeneric(t, clazz));
-        }
+        method.argumentTypes.addAll(choppedMethod.argumentTypes.stream()
+                .map(t -> resolveGeneric(t, clazz))
+                .collect(Collectors.toList()));
         method.isAbstract = choppedMethod.isAbstract;
         method.isConstructor = choppedMethod.isConstructor;
         method.name = choppedMethod.name;
@@ -127,7 +130,7 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
         method.isCompilerSpecial = choppedMethod.isCompilerSpecial;
         method.annotations.addAll(precompileAnnotations(choppedMethod.annotations));
 
-        method.instructions.addAll(flatten(compileCodeBlock(choppedMethod.methodSource)));
+        method.instructions.addAll(flatten(compileCodeBlock(choppedMethod.methodSource, choppedMethod.startingLine)));
 
         return method;
     }
@@ -139,7 +142,7 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
         return out;
     }
 
-    private CodeBlock compileCodeBlock(String source) {
+    private CodeBlock compileCodeBlock(String source, int startingLine) {
 
         char[] chars = source.toCharArray();
         StringBuilder buffer = new StringBuilder();
@@ -159,7 +162,7 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
             offset += readUntilNot(chars, offset, ' ', '\n').length();
             instruction = readUntilInsnEnd(chars, offset);
             offset += instruction.length() + 1;
-            instructions.add(precompileExpression(instruction));
+            instructions.add(precompileExpression(instruction, startingLine));
         } while(!instruction.isEmpty());
 
         instructions.add(Collections.singletonList(new LabelInsn(currentBlock.getEnd())));
@@ -174,7 +177,7 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
             precompiledField.name = f.name;
             precompiledField.type = resolveGeneric(f.type, clazz);
             precompiledField.isCompilerSpecial = f.isCompilerSpecial;
-            precompiledField.defaultValue.addAll(precompileExpression(f.defaultValue));
+            precompiledField.defaultValue.addAll(precompileExpression(f.defaultValue, f.startingLine));
             finalFields.add(precompiledField);
 
             precompiledField.annotations.addAll(precompileAnnotations(f.annotations));
@@ -207,7 +210,7 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
                         arg = arg.substring(0, arg.indexOf(")"));
                     offset += arg.length()+1;
                     offset += readUntilNot(chars, offset, ' ', '\n').length();
-                    precompiledConstant.parameters.add(precompileExpression(arg));
+                    precompiledConstant.parameters.add(precompileExpression(arg, 0)); // todo: enum constant line numbers
                     arg = readSingleArgument(name, offset, false);
                 }
                 constants.add(precompiledConstant);
@@ -220,22 +223,28 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
         return constants;
     }
 
-    public List<PrecompiledInsn> precompileExpression(String expression) {
-        return precompileExpression(expression, false);
+    public List<PrecompiledInsn> precompileExpression(String expression, int startLine) {
+        return precompileExpression(expression, false, startLine);
     }
 
-    public List<PrecompiledInsn> precompileExpression(String expression, boolean ditchLabels) {
+    public List<PrecompiledInsn> precompileExpression(String expression, boolean ditchLabels, int startLine) {
         if(expression == null) {
             return Collections.emptyList();
         }
         List<PrecompiledInsn> insns = new LinkedList<>();
+        insns.add(new PrecompiledLineNumber(startLine));
         char[] chars = expression.toCharArray();
         List<Token> tokens = new LinkedList<>();
+        int line = startLine;
         for(int i = 0;i<chars.length;) {
             Token token = tokenizer.nextToken(chars, i);
             if(token != null) {
                 i += token.length;
                 tokens.add(token);
+                if(token instanceof NewLineToken) {
+                    token.setContent(String.valueOf(line));
+                    line++;
+                }
             } else {
                 break; // reached end of file
             }
@@ -390,12 +399,10 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
 
     private List<PrecompiledInsn> toInstructions(List<Token> output, List<PrecompiledInsn> insns) {
         int labelIndex = 1;
+        Token previous = null;
         for(int i = 0;i<output.size();i++) {
             Token token = output.get(i);
-            Token previous = null;
             Token next = null;
-            if(i != 0)
-                previous = output.get(i-1);
             if(i != output.size()-1)
                 next = output.get(i+1);
             switch (token.getType()) {
@@ -569,7 +576,8 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
                     } else if(operator == EnumOperators.THROW) {
                         insns.add(new SimplePreInsn(PrecompileOpcodes.THROW));
                     } else if(operator == EnumOperators.NEW) {
-                        PrecompiledInsn prev = insns.remove(insns.size()-1);
+                        int prevIndex = getPreviousIndex(insns, insns.size());
+                        PrecompiledInsn prev = insns.remove(prevIndex);
                         String typeName;
                         int constructorArgCount = 0;
                         if(prev.getOpcode() == PrecompileOpcodes.LOAD_VARIABLE) {
@@ -625,18 +633,37 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
                     insns.add(new PrecompiledNativeCode(nativeCodeToken.getCode()));
                     break;
 
+                case NEW_LINE:
+                    insns.add(new LabelInsn(new Label(nextLabel())));
+                    insns.add(new PrecompiledLineNumber(Integer.parseInt(token.getContent())));
+                    break;
+
+                case COMMENT:
+                    // Comments are not compiled, just discard them
+                    break;
+
                 default:
                     System.err.println("Precompilation: unknown "+token);
                     break;
 
             }
+
+            if(!(token instanceof NewLineToken))
+                previous = token;
         }
 
         return postProcessInstructions(insns);
     }
 
-    private String nextLabel() {
-        return null; // TODO
+    private int getPreviousIndex(List<PrecompiledInsn> insns, int currentIndex) {
+        currentIndex--;
+        while(insns.get(currentIndex) instanceof PrecompiledLineNumber || insns.get(currentIndex) instanceof LabelInsn)
+            currentIndex--;
+        return currentIndex;
+    }
+
+    private int nextLabel() {
+        return labelIndex2--;
     }
 
     private int findCorrespondingFunctionStart(int index, FunctionCall call, List<PrecompiledInsn> insns) {
@@ -893,6 +920,10 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
                 out.add(token);
                 instanceStack.setCurrent(false);
             } else if(token.getType() == TokenType.NATIVE_CODE) {
+                out.add(token);
+            } else if(token.getType() == TokenType.COMMENT) {
+                out.add(token);
+            } else if(token.getType() == TokenType.NEW_LINE) {
                 out.add(token);
             }
         }
