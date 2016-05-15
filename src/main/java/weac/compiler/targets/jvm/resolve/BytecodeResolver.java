@@ -223,6 +223,50 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
                         }
                         break;
 
+                    case IADD:
+                    case ISUB:
+                    case IREM:
+                    case IAND:
+                    case IOR:
+                    case IDIV:
+                    case IMUL:
+                        valueStack.pop();
+                        valueStack.pop();
+                        valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                        break;
+
+                    case FADD:
+                    case FSUB:
+                    case FREM:
+                    case FDIV:
+                    case FMUL:
+                        valueStack.pop();
+                        valueStack.pop();
+                        valueStack.push(new ConstantValue(JVMWeacTypes.FLOAT_TYPE));
+                        break;
+
+                    case DADD:
+                    case DSUB:
+                    case DREM:
+                    case DDIV:
+                    case DMUL:
+                        valueStack.pop();
+                        valueStack.pop();
+                        valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                        break;
+
+                    case LADD:
+                    case LSUB:
+                    case LREM:
+                    case LAND:
+                    case LOR:
+                    case LDIV:
+                    case LMUL:
+                        valueStack.pop();
+                        valueStack.pop();
+                        valueStack.push(new ConstantValue(JVMWeacTypes.LONG_TYPE));
+                        break;
+
                     default:
                         System.err.println("Value stack not yet implemented for "+opcodeName);
                         break;
