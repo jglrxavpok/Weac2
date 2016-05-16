@@ -18,7 +18,7 @@ object HelloWorld > Application + TestMixin {
     private Double fieldWithDefaultValue9 = 10000000L;
     private var fieldWithDefaultValue10 = false;
     private var fieldWithDefaultValue11 = true;
-    private var simpleField = "Test \n";
+    private var simpleField = "TestField \n";
 
 
     Void start(String[] args) {
@@ -39,13 +39,14 @@ object HelloWorld > Application + TestMixin {
         native {
             label l0
             getstatic weac/lang/Console __instance__ Lweac/lang/Console;
-            ldc "Test"
+            ldc "Test native!"
             invokevirtual weac/lang/Console writeLine (Ljava/lang/String;)V
             aconst_null
             dup
             astore #v
             astore #v1
-            goto l0
+            aload #v
+            ifnonnull l0
         }
         Console.writeLine(simpleField);
     }

@@ -13,7 +13,8 @@ public class TestIntegration extends Tests {
         String[] names = {
                 "weac.lang.Object", "weac.lang.Void", "weac.lang.Primitive", "weac.lang.JavaPrimitive",
                 "weac.lang.Double", "weac.lang.Float", "weac.lang.Int", "weac.lang.Boolean", "weac.lang.Pointer",
-                "weac.lang.Math", "weac.lang.Console", "tests.TestEnum", "tests.TestMixin", "weac.lang.Application", "weac.lang.Interval", "tests.HelloWorld"
+                "weac.lang.Math", "weac.lang.Console", "tests.TestEnum", "tests.TestMixin", "weac.lang.Application",
+                "weac.lang.Interval", "tests.TestValue", "tests.HelloWorld"
         };
         for(String n : names)
         {
@@ -41,7 +42,7 @@ public class TestIntegration extends Tests {
             Method m = helloWorldClass.getDeclaredMethod("main", String[].class);
             m.setAccessible(true);
             System.out.println("Helloworld: "+m.toGenericString());
-            m.invoke(null, new Object[]{new String[] {"Test"}});
+            m.invoke(null, new Object[]{new String[] {"Test argument"}});
         }
 
 
