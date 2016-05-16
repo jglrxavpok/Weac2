@@ -1,5 +1,7 @@
 package weac.compiler.targets.jvm.resolve;
 
+import org.objectweb.asm.Attribute;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import weac.compiler.CompileUtils;
@@ -9,10 +11,7 @@ import weac.compiler.resolve.ResolvingContext;
 import weac.compiler.resolve.VariableMap;
 import weac.compiler.resolve.insn.ResolveOpcodes;
 import weac.compiler.resolve.insn.ResolvedInsn;
-import weac.compiler.resolve.values.ConstantValue;
-import weac.compiler.resolve.values.FieldValue;
-import weac.compiler.resolve.values.NullValue;
-import weac.compiler.resolve.values.Value;
+import weac.compiler.resolve.values.*;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.targets.jvm.compile.JVMCompiler;
 import weac.compiler.targets.jvm.compile.PseudoInterpreter;
@@ -76,6 +75,8 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
                 ICONST_4, ICONST_5, RETURN, ACONST_NULL);
     }
 
+    private final Map<String, Label> labelMap;
+
     private static void setSequence(BytecodeSequence sequence, int... opcodes) {
         for(int op : opcodes) {
             opcodeSequences[op] = sequence;
@@ -96,6 +97,7 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
 
     public BytecodeResolver(Resolver resolver, WeacType selfType, ResolvingContext context) {
         super(resolver, selfType, context);
+        labelMap = new HashMap<>();
     }
 
     @Override
@@ -111,169 +113,409 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
                 end = l.length();
             String opcodeName = l.substring(0, end);
             String[] operands = readOperands(l.substring(opcodeName.length()));
-            int opcode = opcodeNames.getOrDefault(opcodeName.toLowerCase(), -1);
-            if(opcode < 0) {
-                System.err.println("Invalid opcode: "+opcodeName); // todo line and error
+            int count = operands.length;
+            if(opcodeName.equals("label") && count == 1) {
+                System.out.println("new label: "+operands[0]);
+                Label label = getLabel(operands[0]);
+                sequences.add((mv, o) -> mv.visitLabel(label));
             } else {
-                int count = operands.length;
-                int expectedCount = opcodeOperandCount[opcode];
-                if(expectedCount < 0) {
-                    if(count < -expectedCount) {
-                        System.err.println("Operand count is not enough in "+l+", must be at least "+(-expectedCount)+" (was "+count+")"); // todo line and error
-                        continue;
-                    }
+                int opcode = opcodeNames.getOrDefault(opcodeName.toLowerCase(), -1);
+                if(opcode < 0) {
+                    System.err.println("Invalid opcode: "+opcodeName); // todo line and error
                 } else {
-                    if(count != expectedCount) {
-                        System.err.println("Operand count is not correct in "+l+", must be exactly "+expectedCount+" (was "+count+")"); // todo line and error
-                        continue;
-                    }
-                }
-                BytecodeSequence sequence = opcodeSequences[opcode];
-                if(sequence != null) {
-                    sequences.add(sequence);
-                }
-
-                switch(opcode) {
-                    case GETSTATIC:
-                    case GETFIELD:
-                    case PUTSTATIC:
-                    case PUTFIELD: {
-                        String owner = operands[0];
-                        checkValidInternalName(owner);
-                        String name = operands[1];
-                        checkValidUnqualifiedName(name);
-                        String desc = operands[2];
-                        checkValidDesc(desc);
-                        sequences.add((mv, varIndex) -> mv.visitFieldInsn(opcode, owner, name, desc));
-
-                        if (opcode == GETFIELD || opcode == PUTFIELD)
-                            valueStack.pop();
-
-                        if (opcode == GETFIELD || opcode == GETSTATIC) {
-                            valueStack.push(new FieldValue(name, getTypeFromInternal(owner), getType(desc)));
-                        } else {
-                            valueStack.pop();
+                    int expectedCount = opcodeOperandCount[opcode];
+                    if (expectedCount < 0) {
+                        if (count < -expectedCount) {
+                            System.err.println("Operand count is not enough in " + l + ", must be at least " + (-expectedCount) + " (was " + count + ")"); // todo line and error
+                            continue;
+                        }
+                    } else {
+                        if (count != expectedCount) {
+                            System.err.println("Operand count is not correct in " + l + ", must be exactly " + expectedCount + " (was " + count + ")"); // todo line and error
+                            continue;
                         }
                     }
-                        break;
-
-                    case INVOKEDYNAMIC:
-                    case INVOKEINTERFACE:
-                    case INVOKESPECIAL:
-                    case INVOKEVIRTUAL: {
-                        String owner = operands[0];
-                        checkValidInternalName(owner);
-                        String name = operands[1];
-                        checkValidUnqualifiedName(name);
-                        String desc = operands[2];
-                        checkValidMethodDesc(desc);
-                        boolean fromInterface = opcode == INVOKEINTERFACE;
-                        sequences.add((mv, varIndex) -> mv.visitMethodInsn(opcode, owner, name, desc, fromInterface));
-
-                        String[] argumentDescriptions = splitDescList(desc.substring(1, desc.indexOf(')')));
-
-                        if(opcode == INVOKEVIRTUAL || opcode == INVOKESPECIAL) // TODO: invokedynamic ?
-                            valueStack.pop();
-                        for(int i = 0;i<argumentDescriptions.length;i++)
-                            valueStack.pop();
-                        String returnTypeDesc = desc.substring(desc.indexOf(')')+1);
-                        WeacType returnType = getType(returnTypeDesc);
-                        if(!returnType.equals(JVMWeacTypes.VOID_TYPE)) {
-                            valueStack.push(new ConstantValue(returnType));
-                        }
-
+                    BytecodeSequence sequence = opcodeSequences[opcode];
+                    if (sequence != null) {
+                        sequences.add(sequence);
                     }
-                        break;
 
-                    case ARETURN:
-                    case IRETURN:
-                    case LRETURN:
-                    case FRETURN:
-                    case DRETURN:
-                        valueStack.pop();
-                        break;
+                    switch (opcode) {
+                        case GETSTATIC:
+                        case GETFIELD:
+                        case PUTSTATIC:
+                        case PUTFIELD: {
+                            String owner = operands[0];
+                            checkValidInternalName(owner);
+                            String name = operands[1];
+                            checkValidUnqualifiedName(name);
+                            String desc = operands[2];
+                            checkValidDesc(desc);
+                            sequences.add((mv, varIndex) -> mv.visitFieldInsn(opcode, owner, name, desc));
 
-                    case ACONST_NULL:
-                        valueStack.push(new NullValue());
-                        break;
+                            if (opcode == GETFIELD || opcode == PUTFIELD)
+                                valueStack.pop();
 
-                    case POP2:
-                        valueStack.pop();
-                    case POP:
-                        valueStack.pop();
-                        break;
-
-                    case LDC:
-                        String loaded = operands[0];
-                        if(loaded.endsWith(".class")) {
-                            valueStack.push(new ConstantValue(JVMWeacTypes.CLASS_TYPE));
-                            WeacType classType = getOwner().getTypeResolver().resolveType(new Identifier((loaded.substring(0, loaded.length()-6).replace(".", "/")), true), getContext());
-                            sequences.add((mv, varOffset) -> mv.visitLdcInsn(JVMCompiler.toJVMType(classType)));
-                        } else if(loaded.startsWith("\"") && loaded.endsWith("\"")) {
-                            sequences.add((mv, o) -> mv.visitLdcInsn(loaded.substring(1, loaded.length()-1)));
-                            valueStack.add(new ConstantValue(JVMWeacTypes.STRING_TYPE));
-                        } else {
-                            // load number
-                            ResolvedInsn numberInsn = getOwner().getNumberResolver().resolve(loaded);
-                            List<ResolvedInsn> list = Collections.singletonList(numberInsn);
-                            Object value = interpreter.interpret(list);
-                            sequences.add((mv, o) -> mv.visitLdcInsn(value));
-
-                            valueStack.push(new ConstantValue(extractType(numberInsn)));
+                            if (opcode == GETFIELD || opcode == GETSTATIC) {
+                                valueStack.push(new FieldValue(name, getTypeFromInternal(owner), getType(desc)));
+                            } else {
+                                valueStack.pop();
+                            }
                         }
                         break;
 
-                    case IADD:
-                    case ISUB:
-                    case IREM:
-                    case IAND:
-                    case IOR:
-                    case IDIV:
-                    case IMUL:
-                        valueStack.pop();
-                        valueStack.pop();
-                        valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                        case INVOKEDYNAMIC:
+                        case INVOKEINTERFACE:
+                        case INVOKESPECIAL:
+                        case INVOKEVIRTUAL: {
+                            String owner = operands[0];
+                            checkValidInternalName(owner);
+                            String name = operands[1];
+                            checkValidUnqualifiedName(name);
+                            String desc = operands[2];
+                            checkValidMethodDesc(desc);
+                            boolean fromInterface = opcode == INVOKEINTERFACE;
+                            sequences.add((mv, varIndex) -> mv.visitMethodInsn(opcode, owner, name, desc, fromInterface));
+
+                            String[] argumentDescriptions = splitDescList(desc.substring(1, desc.indexOf(')')));
+
+                            if (opcode == INVOKEVIRTUAL || opcode == INVOKESPECIAL) // TODO: invokedynamic ?
+                                valueStack.pop();
+                            for (int i = 0; i < argumentDescriptions.length; i++)
+                                valueStack.pop();
+                            String returnTypeDesc = desc.substring(desc.indexOf(')') + 1);
+                            WeacType returnType = getType(returnTypeDesc);
+                            if (!returnType.equals(JVMWeacTypes.VOID_TYPE)) {
+                                valueStack.push(new ConstantValue(returnType));
+                            }
+
+                        }
                         break;
 
-                    case FADD:
-                    case FSUB:
-                    case FREM:
-                    case FDIV:
-                    case FMUL:
-                        valueStack.pop();
-                        valueStack.pop();
-                        valueStack.push(new ConstantValue(JVMWeacTypes.FLOAT_TYPE));
+                        case ARETURN:
+                        case IRETURN:
+                        case LRETURN:
+                        case FRETURN:
+                        case DRETURN:
+                            valueStack.pop();
+                            break;
+
+                        case ACONST_NULL:
+                            valueStack.push(new NullValue());
+                            break;
+
+                        case POP2:
+                            valueStack.pop();
+                        case POP:
+                            valueStack.pop();
+                            break;
+
+                        case LDC:
+                            String loaded = operands[0];
+                            if (loaded.endsWith(".class")) {
+                                valueStack.push(new ConstantValue(JVMWeacTypes.CLASS_TYPE));
+                                WeacType classType = getOwner().getTypeResolver().resolveType(new Identifier((loaded.substring(0, loaded.length() - 6).replace(".", "/")), true), getContext());
+                                sequences.add((mv, varOffset) -> mv.visitLdcInsn(JVMCompiler.toJVMType(classType)));
+                            } else if (loaded.startsWith("\"") && loaded.endsWith("\"")) {
+                                sequences.add((mv, o) -> mv.visitLdcInsn(loaded.substring(1, loaded.length() - 1)));
+                                valueStack.add(new ConstantValue(JVMWeacTypes.STRING_TYPE));
+                            } else {
+                                // load number
+                                ResolvedInsn numberInsn = getOwner().getNumberResolver().resolve(loaded);
+                                List<ResolvedInsn> list = Collections.singletonList(numberInsn);
+                                Object value = interpreter.interpret(list);
+                                sequences.add((mv, o) -> mv.visitLdcInsn(value));
+
+                                valueStack.push(new ConstantValue(extractType(numberInsn)));
+                            }
+                            break;
+
+                        case IADD:
+                        case ISUB:
+                        case IREM:
+                        case IAND:
+                        case IOR:
+                        case IDIV:
+                        case IMUL:
+                            valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                            break;
+
+                        case FADD:
+                        case FSUB:
+                        case FREM:
+                        case FDIV:
+                        case FMUL:
+                            valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(JVMWeacTypes.FLOAT_TYPE));
+                            break;
+
+                        case DADD:
+                        case DSUB:
+                        case DREM:
+                        case DDIV:
+                        case DMUL:
+                            valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                            break;
+
+                        case LADD:
+                        case LSUB:
+                        case LREM:
+                        case LAND:
+                        case LOR:
+                        case LDIV:
+                        case LMUL:
+                            valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(JVMWeacTypes.LONG_TYPE));
+                            break;
+
+                        case DUP: {
+                            Value onTop = valueStack.pop();
+                            valueStack.push(onTop);
+                            valueStack.push(onTop);
+                        }
                         break;
 
-                    case DADD:
-                    case DSUB:
-                    case DREM:
-                    case DDIV:
-                    case DMUL:
-                        valueStack.pop();
-                        valueStack.pop();
-                        valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                        case DUP2: {
+                            Value onTop = valueStack.pop();
+                            valueStack.push(onTop);
+                            valueStack.push(onTop);
+                            valueStack.push(onTop);
+                        }
                         break;
 
-                    case LADD:
-                    case LSUB:
-                    case LREM:
-                    case LAND:
-                    case LOR:
-                    case LDIV:
-                    case LMUL:
-                        valueStack.pop();
-                        valueStack.pop();
-                        valueStack.push(new ConstantValue(JVMWeacTypes.LONG_TYPE));
+                        case I2B:
+                        case I2C:
+                        case I2D:
+                        case I2F:
+                        case I2L:
+                        case I2S:
+                        case F2D:
+                        case F2I:
+                        case F2L:
+                        case L2D:
+                        case L2F:
+                        case L2I:
+                            handlePrimitiveCast(opcode, valueStack);
+                            break;
+
+                        case INEG:
+                        case DNEG:
+                        case FNEG:
+                        case LNEG: {
+                            Value toNegate = valueStack.pop();
+                            valueStack.push(new ConstantValue(toNegate.getType()));
+                        }
                         break;
 
-                    default:
-                        System.err.println("Value stack not yet implemented for "+opcodeName);
+                        case SIPUSH:
+                        case BIPUSH: {
+                            int number = Integer.parseInt(operands[0]);
+                            valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                            sequences.add((mv, varOffset) -> mv.visitIntInsn(opcode, number));
+                        }
                         break;
+
+                        case IINC: {
+                            int varIndex = getVarIndex(operands[0], map);
+                            int incrementCount = Integer.parseInt(operands[1]);
+                            sequences.add((mv, varOffset) -> mv.visitIincInsn(varIndex == 0 ? 0 : (varOffset) + varIndex, incrementCount));
+                        }
+                        break;
+
+                        case ALOAD:
+                        case ILOAD:
+                        case FLOAD:
+                        case DLOAD:
+                        case LLOAD: {
+                            int varIndex = getVarIndex(operands[0], map);
+                            sequences.add((mv, varOffset) -> mv.visitVarInsn(opcode, varIndex == 0 ? 0 : (varOffset) + varIndex));
+                            String name = map.getLocalName(varIndex);
+                            WeacType type = map.getLocalType(name);
+                            valueStack.push(new VariableValue(name, type, varIndex));
+                        }
+                        break;
+
+                        case ASTORE:
+                        case ISTORE:
+                        case FSTORE:
+                        case DSTORE:
+                        case LSTORE: {
+                            int varIndex = getVarIndex(operands[0], map);
+                            sequences.add((mv, varOffset) -> mv.visitVarInsn(opcode, varIndex == 0 ? 0 : (varOffset) + varIndex));
+                            valueStack.pop();
+                        }
+                        break;
+
+                        case NOP:
+                            // nop
+                            break;
+
+                        case ARRAYLENGTH:
+                            valueStack.pop();
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                            break;
+
+                        case DCMPG:
+                        case DCMPL:
+                            valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                            break;
+
+                        case FCMPG:
+                        case FCMPL:
+                            valueStack.push(new ConstantValue(JVMWeacTypes.FLOAT_TYPE));
+                            break;
+
+                        case ICONST_0:
+                        case ICONST_1:
+                        case ICONST_2:
+                        case ICONST_3:
+                        case ICONST_4:
+                        case ICONST_5:
+                        case ICONST_M1:
+                            valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                            break;
+
+                        case DCONST_0:
+                        case DCONST_1:
+                            valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                            break;
+
+                        case FCONST_0:
+                        case FCONST_1:
+                        case FCONST_2:
+                            valueStack.push(new ConstantValue(JVMWeacTypes.FLOAT_TYPE));
+                            break;
+
+                        case SWAP:
+                            Value top = valueStack.pop();
+                            Value second = valueStack.pop();
+                            valueStack.push(top);
+                            valueStack.push(second);
+                            break;
+
+                        case IF_ACMPEQ:
+                        case IF_ACMPNE:
+                        case IF_ICMPEQ:
+                        case IF_ICMPNE:
+                        case IF_ICMPLT:
+                        case IF_ICMPGT:
+                        case IF_ICMPLE:
+                        case IF_ICMPGE:
+                            valueStack.pop();
+                        case IFNE:
+                        case IFLT:
+                        case IFGT:
+                        case IFEQ:
+                        case IFGE:
+                        case IFLE:
+                        case IFNULL:
+                        case IFNONNULL:
+                            valueStack.pop();
+                        case GOTO:
+                            System.out.println("!!!jump");
+                            Label targeted = getLabel(operands[0]);
+                            sequences.add((mv, varOffset) -> mv.visitJumpInsn(opcode, targeted));
+                            break;
+
+                        default:
+                            System.err.println("Value stack not yet implemented for " + opcodeName);
+                            break;
+                    }
                 }
             }
         }
         insns.add(new BytecodeSequencesInsn(sequences));
+    }
+
+    private Label getLabel(String operand) {
+        if(!labelMap.containsKey(operand)) {
+            labelMap.put(operand, new Label());
+            System.out.println(":: "+operand);
+        }
+        return labelMap.get(operand);
+    }
+
+    private int getVarIndex(String operand, VariableMap map) {
+        if(!operand.startsWith("#"))
+            throw new IllegalArgumentException("Local variable operand name must start with '#' (was "+operand+")");
+        String name = operand.substring(1);
+        if(map.localExists(name)) {
+            return map.getLocalIndex(name);
+        } else {
+            throw new IllegalArgumentException("No local variable operand with name "+name+" was found");
+        }
+    }
+
+    private void handlePrimitiveCast(int opcode, Stack<Value> valueStack) {
+        switch (opcode) {
+            case I2B:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.BYTE_TYPE));
+                break;
+
+            case I2C:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.CHAR_TYPE));
+                break;
+
+            case I2D:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                break;
+
+            case I2F:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.FLOAT_TYPE));
+                break;
+
+            case I2L:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.LONG_TYPE));
+                break;
+
+            case I2S:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.SHORT_TYPE));
+                break;
+
+            case F2D:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                break;
+
+            case F2I:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                break;
+
+            case F2L:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.LONG_TYPE));
+                break;
+
+            case L2D:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.DOUBLE_TYPE));
+                break;
+
+            case L2F:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.FLOAT_TYPE));
+                break;
+
+            case L2I:
+                valueStack.pop();
+                valueStack.push(new ConstantValue(JVMWeacTypes.INTEGER_TYPE));
+                break;
+
+        }
     }
 
     private WeacType extractType(ResolvedInsn number) {

@@ -37,9 +37,15 @@ object HelloWorld > Application + TestMixin {
         v1(0);
 
         native {
-            getstatic java/lang/System out Ljava/io/PrintStream;
+            label l0
+            getstatic weac/lang/Console __instance__ Lweac/lang/Console;
             ldc "Test"
-            invokevirtual java/io/PrintStream println (Ljava/lang/Object;)V
+            invokevirtual weac/lang/Console writeLine (Ljava/lang/String;)V
+            aconst_null
+            dup
+            astore #v
+            astore #v1
+            goto l0
         }
         Console.writeLine(simpleField);
     }
