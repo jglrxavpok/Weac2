@@ -219,14 +219,17 @@ public class Resolver extends CompileUtils {
             ResolvedMethod existing = iterator.next();
             if(existing.name.equals(toAdd.name)) { // same name
                 if(existing.argumentTypes.size() == toAdd.argumentTypes.size()) { // same count of arguments
+                    boolean match = true;
                     for(int i = 0;i<existing.argumentTypes.size();i++) { // check if same argument types
                         WeacType toAddArgType = toAdd.argumentTypes.get(i);
                         WeacType existingArgType = existing.argumentTypes.get(i);
                         if(!toAddArgType.equals(existingArgType)) {
+                            match = false;
                             break; // not matching types, abord
                         }
                     }
-                    iterator.remove();
+                    if(match)
+                        iterator.remove();
                 }
             }
         }
