@@ -16,7 +16,7 @@ WeaC TODO List
 
 - [ ] Create improved actual parser
     - [ ] Must support going forward and backwards
-    - [ ] Must support to extract a pattern (regular expressions ?)
+    - [ ] Must support extracting a pattern (regular expressions ?)
 
 - [ ] Auto type inference
     - [x] Fields
