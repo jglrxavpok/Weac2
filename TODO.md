@@ -14,8 +14,8 @@ WeaC TODO List
     
 - [ ] Use correct line in error messages
 
-- [ ] Create improved actual parser
-    - [ ] Must support going forward and backwards
+- [ ] Create improved actual parser (in progress)
+    - [x] Must support going forward and backwards
     - [ ] Must support extracting a pattern (regular expressions ?)
 
 - [ ] Auto type inference
@@ -27,7 +27,7 @@ WeaC TODO List
 
 - [ ] Improve unit tests
     - [ ] Preprocessor
-    - [ ] 'Parsing'
+    - [ ] Chopping
     - [ ] Precompilation
     - [ ] Resolution
     - [ ] Compilation
