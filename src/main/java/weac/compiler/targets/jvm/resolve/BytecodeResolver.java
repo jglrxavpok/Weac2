@@ -17,6 +17,7 @@ import weac.compiler.targets.jvm.compile.JVMCompiler;
 import weac.compiler.targets.jvm.compile.PseudoInterpreter;
 import weac.compiler.targets.jvm.resolve.insn.BytecodeSequencesInsn;
 import weac.compiler.utils.Identifier;
+import weac.compiler.utils.WeacArrayType;
 import weac.compiler.utils.WeacType;
 
 import java.lang.reflect.Field;
@@ -115,7 +116,6 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
             String[] operands = readOperands(l.substring(opcodeName.length()));
             int count = operands.length;
             if(opcodeName.equals("label") && count == 1) {
-                System.out.println("new label: "+operands[0]);
                 Label label = getLabel(operands[0]);
                 sequences.add((mv, o) -> mv.visitLabel(label));
             } else {
@@ -419,9 +419,53 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
                         case IFNONNULL:
                             valueStack.pop();
                         case GOTO:
-                            System.out.println("!!!jump");
                             Label targeted = getLabel(operands[0]);
                             sequences.add((mv, varOffset) -> mv.visitJumpInsn(opcode, targeted));
+                            break;
+
+                        case CHECKCAST: {
+                            String type = operands[0];
+                            checkValidInternalName(type);
+                            sequences.add((mv, varOffset) -> mv.visitTypeInsn(CHECKCAST, type));
+
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(getTypeFromInternal(type)));
+                        }
+                            break;
+
+                        case INSTANCEOF: {
+                            String type = operands[0];
+                            checkValidInternalName(type);
+                            sequences.add((mv, o) -> mv.visitTypeInsn(INSTANCEOF, type));
+                            valueStack.pop();
+                            valueStack.push(new ConstantValue(JVMWeacTypes.BOOLEAN_TYPE));
+                        }
+                            break;
+
+                        case NEW: {
+                            String type = operands[0];
+                            checkValidInternalName(type);
+                            sequences.add((mv, o) -> mv.visitTypeInsn(NEW, type));
+                            valueStack.push(new ConstantValue(getTypeFromInternal(type)));
+                        }
+                            break;
+
+                        case NEWARRAY: {
+                            String type = operands[0];
+                            checkValidPrimitive(type);
+                            sequences.add((mv, o) -> mv.visitTypeInsn(NEWARRAY, type));
+                            valueStack.pop(); // pop size value
+                            valueStack.push(new ConstantValue(new WeacArrayType(getType(type))));
+                        }
+                            break;
+
+                        case ANEWARRAY: {
+                            String type = operands[0];
+                            checkValidInternalName(type);
+                            sequences.add((mv, o) -> mv.visitTypeInsn(ANEWARRAY, type));
+                            valueStack.pop(); // pop size value
+                            valueStack.push(new ConstantValue(new WeacArrayType(getTypeFromInternal(type))));
+                        }
                             break;
 
                         default:
@@ -434,10 +478,27 @@ public class BytecodeResolver extends NativeCodeResolver implements Opcodes {
         insns.add(new BytecodeSequencesInsn(sequences));
     }
 
+    private void checkValidPrimitive(String type) {
+        switch (type) {
+            case "I":
+            case "F":
+            case "Z":
+            case "J":
+            case "D":
+            case "S":
+            case "B":
+            case "C":
+            case "V":
+                break;
+
+            default:
+                throw new IllegalArgumentException("Invalid primitive type: "+type);
+        }
+    }
+
     private Label getLabel(String operand) {
         if(!labelMap.containsKey(operand)) {
             labelMap.put(operand, new Label());
-            System.out.println(":: "+operand);
         }
         return labelMap.get(operand);
     }

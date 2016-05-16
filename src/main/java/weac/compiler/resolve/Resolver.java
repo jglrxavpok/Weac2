@@ -357,7 +357,15 @@ public class Resolver extends CompileUtils {
     }
 
     private List<ResolvedInsn> resolveSingleExpression(List<PrecompiledInsn> precompiled, WeacType selfType, ResolvingContext context, VariableMap varMap, Stack<Value> valueStack) {
-        return expressionResolver.resolve(precompiled, selfType, context, varMap, valueStack);
+        List<ResolvedInsn> result = expressionResolver.resolve(precompiled, selfType, context, varMap, valueStack);
+        // check that no local variable is still requesting automatic type inferring (ie not initialized)
+        for(String n : varMap.getLocalNames().values()) {
+            WeacType type = varMap.getLocalType(n);
+            if(type.equals(WeacType.AUTO)) {
+                newError("Cannot infer type for variable "+n+"+: variable not initialized", -1); // todo line
+            }
+        }
+        return result;
     }
 
     protected Label newLabel() {

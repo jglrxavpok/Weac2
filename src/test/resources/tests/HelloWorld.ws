@@ -59,10 +59,14 @@ object HelloWorld > Application + TestMixin {
     }
 
     Object nativeTest() {
-       native {
-           aconst_null
-           areturn
-       }
+        String[] strings;
+        native {
+            bipush 5
+            anewarray java/lang/String
+            astore #strings
+            aconst_null
+            areturn
+        }
     }
 
 }

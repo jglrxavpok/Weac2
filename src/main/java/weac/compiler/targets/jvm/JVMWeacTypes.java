@@ -9,7 +9,6 @@ public class JVMWeacTypes implements WeacTargetTypes {
     public static final WeacType STRING_TYPE = new WeacType(JOBJECT_TYPE, "java.lang.String", true);
     public static final WeacType VOID_TYPE = new WeacType(JOBJECT_TYPE, "weac.lang.Void", false);
     public static final WeacType OBJECT_TYPE = new WeacType(JOBJECT_TYPE, JVMConstants.BASE_CLASS, true);
-    public static final WeacType ARRAY_TYPE = new WeacType(OBJECT_TYPE, "$$Array", true);
     public static final WeacType POINTER_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Pointer<Type>", true);
     public static final WeacType NULL_TYPE = new WeacType(JOBJECT_TYPE, OBJECT_TYPE.getIdentifier());
     public static final WeacType PRIMITIVE_TYPE = new WeacType(OBJECT_TYPE, "weac.lang.Primitive", true);
@@ -25,7 +24,7 @@ public class JVMWeacTypes implements WeacTargetTypes {
 
     private WeacType[] defaultTypes = new WeacType[] {
             JOBJECT_TYPE, INTEGER_TYPE, INTERVAL_TYPE, STRING_TYPE, VOID_TYPE, OBJECT_TYPE,
-            ARRAY_TYPE, POINTER_TYPE, NULL_TYPE, PRIMITIVE_TYPE, CHAR_TYPE, SHORT_TYPE, LONG_TYPE, INTEGER_TYPE,
+            POINTER_TYPE, NULL_TYPE, PRIMITIVE_TYPE, CHAR_TYPE, SHORT_TYPE, LONG_TYPE, INTEGER_TYPE,
             FLOAT_TYPE, DOUBLE_TYPE, BYTE_TYPE, BOOLEAN_TYPE, CLASS_TYPE
     };
 

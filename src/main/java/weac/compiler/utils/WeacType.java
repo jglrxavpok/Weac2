@@ -5,6 +5,7 @@ import weac.compiler.targets.jvm.JVMWeacTypes;
 
 public class WeacType {
 
+    public static final WeacType ARRAY_TYPE = new WeacType(null, "$$Array", true);
     public static final WeacType AUTO = new WeacType(JVMWeacTypes.OBJECT_TYPE, "var", true);
 
     private final WeacType superType;
@@ -36,7 +37,7 @@ public class WeacType {
             } else if(id.endsWith("[]")) {
                 isArray = true;
                 id = id.substring(0, id.length()-2); // removes the '[]' from the id
-                arrayType = new WeacType(JVMWeacTypes.ARRAY_TYPE, id, true);
+                arrayType = new WeacType(ARRAY_TYPE, id, true);
                 coreType = arrayType.getCoreType();
             } else {
                 coreType = this;

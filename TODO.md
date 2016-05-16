@@ -18,8 +18,6 @@ WeaC TODO List
     - [ ] Must support going forward and backwards
     - [ ] Must support to extract a pattern (regular expressions ?)
 
-- [ ] Resolution should fail if a variable is not initialized and requests auto type inferring.
-
 - [ ] Auto type inference
     - [x] Fields
     - [x] Local variables
@@ -66,3 +64,5 @@ Done
 ===
 - [x] Rename 'Parsing' step to a better fitting name: Chopping
     - [x] Apply new name
+    
+- [x] Resolution should fail if a variable is not initialized and requests auto type inferring.
