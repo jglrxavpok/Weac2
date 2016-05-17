@@ -3,8 +3,10 @@ package weac.compiler.parser;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class Parser {
 
@@ -49,7 +51,7 @@ public class Parser {
             return backwards(-count);
         int oldCursor = cursor;
         cursor += count;
-        if(cursor >= length) {
+        if(cursor > length) {
             throw new IndexOutOfBoundsException("Reached end of data");
         }
         return new String(characters, oldCursor, count);
@@ -83,18 +85,97 @@ public class Parser {
         return this;
     }
 
-    public Parser on(String string, Consumer<ParseRule> ruleConsumer) {
-        ParseRule rule = newRule();
-        rule.on(string, ruleConsumer);
-        rules.add(rule);
-        return this;
-    }
-
-    private ParseRule newRule() {
-        return new ParseRule();
-    }
-
     public void applyRules() {
+        while(true) {
+            Optional<ParseRule> rule = rules.stream()
+                    .filter(this::applicable)
+                    .sorted((a, b) -> -Integer.compare(a.getTrigger().length(), b.getTrigger().length()))
+                    .findFirst();
+            if(!rule.isPresent()) {
+                break;
+            }
+            forward(rule.get().getTrigger().length());
+            rule.get().apply(this);
+        }
+    }
 
+    public boolean applicable(ParseRule rule) {
+        return rawData.indexOf(rule.getTrigger(), cursor) == cursor;
+    }
+
+    public boolean hasNextCharacter() {
+        return cursor < length;
+    }
+
+    /**
+     * Reads the data from the current position up to the given destination, stopping right before it and going backwards
+     * @param destination
+     *      The string to stop at
+     * @return
+     *      The read string
+     * @throws StringIndexOutOfBoundsException If destination could not be find in the data string
+     */
+    public String backwardsTo(String destination) {
+        if(backwardsIndexOf(rawData, destination, cursor) < 0)
+            throw new StringIndexOutOfBoundsException("Could not find '"+destination+"' to forward to");
+        int dest = backwardsIndexOf(rawData, destination, cursor) +1;
+        return backwards(cursor-dest);
+    }
+
+    /**
+     * Same as {@link String#indexOf(String)} but goes from end to start of string instead of start to end
+     * @param hay
+     * @param needle
+     * @param start
+     * @return
+     */
+    private int backwardsIndexOf(String hay, String needle, int start) {
+        for (int i = start; i >= 0; i--) {
+            if(hay.indexOf(needle, i) == i)
+                return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Reads the data from the current position up to the given destination, stopping right before it
+     * @param destination
+     *      The string to stop at
+     * @return
+     *      The read string
+     * @throws StringIndexOutOfBoundsException If destination could not be find in the data string
+     */
+    public String forwardTo(String destination) {
+        if(rawData.indexOf(destination, cursor) < 0)
+            throw new StringIndexOutOfBoundsException("Could not find '"+destination+"' to forward to");
+        int dest = rawData.indexOf(destination, cursor);
+        return forward(dest-cursor);
+    }
+
+    public String forwardToOrEnd(String destination) {
+        mark();
+        try {
+            String result = forwardTo(destination);
+            discardMark();
+            return result;
+        } catch (StringIndexOutOfBoundsException e) {
+            rewind();
+            return forward(length-cursor);
+        }
+    }
+
+    private void discardMark() {
+        markStack.pop();
+    }
+
+    public ParseRule newRule(String trigger) {
+        return newRule(trigger, r -> {});
+    }
+
+    public ParseRule newRule(String trigger, Consumer<ParseRule> ruleInitializer) {
+        ParseRule rule = new ParseRule(trigger);
+        ruleInitializer.accept(rule);
+        rules.add(rule);
+        return rule;
     }
 }
