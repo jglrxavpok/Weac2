@@ -4,7 +4,6 @@ import org.junit.Test;
 import weac.compiler.parser.ParseRule;
 import weac.compiler.parser.Parser;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;

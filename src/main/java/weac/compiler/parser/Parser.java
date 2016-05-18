@@ -255,4 +255,17 @@ public class Parser {
     public boolean isAtEnd() {
         return length <= cursor;
     }
+
+    public String getClosest(String... strings) {
+        int lowestIndex = length;
+        String closest = null;
+        for (int i = 0; i < strings.length; i++) {
+            int strIndex = rawData.indexOf(strings[i], cursor);
+            if(strIndex >= 0 && strIndex < lowestIndex) {
+                lowestIndex = strIndex;
+                closest = strings[i];
+            }
+        }
+        return closest;
+    }
 }
