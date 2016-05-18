@@ -63,6 +63,41 @@ public class TestParser {
     }
 
     @Test
+    public void readBlock() {
+        StringBuffer buffer = new StringBuffer();
+        Parser parser = new Parser("; Something that we don't care about\n" +
+                "import java.util.{Collection, List} as Test");
+        parser.addBlockDelimiters("{", "}", true);
+        parser.newRule(";", r -> {
+            System.out.println("read: "+parser.forwardToOrEnd("\n"));
+            parser.mark();
+            System.out.println("next: "+parser.forward(8));
+            parser.rewind();
+        });
+        parser.newRule("\r", ParseRule::discard);
+        parser.newRule("\n", ParseRule::discard);
+        parser.newRule(" ", ParseRule::discard);
+        parser.newRule("as", r -> {
+            r.setAction(() -> {
+                parser.forwardUntilNot(" ");
+                String name = parser.forwardToOrEnd("\n");
+                buffer.append("=").append(name);
+            });
+        });
+        parser.newRule("import", r -> {
+            r.setAction(() -> {
+                parser.enableBlocks();
+                parser.forwardUntilNot(" ");
+                String result = parser.forwardToOrEnd(" ");
+                buffer.append(result);
+                parser.disableBlocks();
+            });
+        });
+        parser.applyRules();
+        assertEquals("java.util.{Collection, List}=Test", buffer.toString());
+    }
+
+    @Test
     public void pattern() {
         Parser parser = new Parser("+abc =48 +14");
         parser.newRule("+", rule -> {
@@ -90,23 +125,6 @@ public class TestParser {
                 }
             });
         });
-        /**
-         parser {
-            rule "+" {
-                action()
-                subRule "abc" {
-                    print "yay"
-                }
-                other {
-                    IllegalArgumentException
-                }
-            }
-            rule " " {
-                discard()
-            }
-         }
-         */
-
         parser.applyRules();
         assertEquals(48, counter.get());
     }

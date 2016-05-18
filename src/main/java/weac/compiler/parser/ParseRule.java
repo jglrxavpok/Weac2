@@ -49,9 +49,12 @@ public class ParseRule {
                 .sorted((a, b) -> -Integer.compare(a.getTrigger().length(), b.getTrigger().length()))
                 .findFirst();
         if(!subRule.isPresent()) {
-            parser.mark();
-            char character = parser.nextCharacter();
-            parser.rewind();
+            char character = '\0';
+            if(!parser.isAtEnd()) {
+                parser.mark();
+                character = parser.nextCharacter();
+                parser.rewind();
+            }
             otherAction.accept(character, parser);
         } else {
             parser.forward(subRule.get().getTrigger().length());
