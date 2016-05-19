@@ -202,6 +202,14 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
             choppedSource.target = "jvm";
         if(choppedSource.version == null)
             choppedSource.version = Constants.CURRENT_VERSION;
+
+        choppedSource.classes.forEach(clazz -> {
+            if(!clazz.getName().equals("WeacVersion")) { // TODO: use full name
+                ChoppedAnnotation versionAnnotation = new ChoppedAnnotation("WeacVersion");
+                versionAnnotation.args.add("\""+choppedSource.version+"\"");
+                clazz.annotations.add(versionAnnotation);
+            }
+        });
     }
 
     /**

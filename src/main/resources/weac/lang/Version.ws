@@ -1,6 +1,6 @@
 package weac.lang
 
-annotation Version {
+annotation WeacVersion {
     String value()
 
     compilerspecial Boolean __runtime = true;
