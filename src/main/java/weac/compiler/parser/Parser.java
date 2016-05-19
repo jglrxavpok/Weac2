@@ -1,33 +1,33 @@
 package weac.compiler.parser;
 
+import weac.compiler.utils.Import;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class Parser {
 
-    private final String rawData;
-    private final char[] characters;
-    private final int length;
+    private String rawData;
+    private char[] characters;
+    private int length;
     private final Stack<Integer> markStack;
     private final List<ParseRule> rules;
     private final List<BlockDelimiter> delimiters;
     private int cursor;
     private boolean blocksEnabled;
+    private Object userObject;
 
-    public Parser(String data) {
-        if(data == null)
-            throw new NullPointerException("'data' parameter cannot be null");
-        this.rawData = data;
-        this.characters = rawData.toCharArray();
-        this.length = characters.length;
+    public Parser() {
         markStack = new Stack<>();
         rules = new ArrayList<>();
         delimiters = new ArrayList<>();
+    }
+
+    public Parser(String data) {
+        this();
+        setData(data);
     }
 
     public String getData() {
@@ -55,7 +55,7 @@ public class Parser {
         int oldCursor = cursor;
         cursor += count;
         if(cursor > length) {
-            throw new IndexOutOfBoundsException("Reached end of data");
+            throw new IndexOutOfBoundsException("Reached end of data, cursor is "+cursor+", max length is "+length);
         }
         return new String(characters, oldCursor, count);
     }
@@ -121,7 +121,7 @@ public class Parser {
     public String backwardsTo(String destination) {
         if(backwardsIndexOf(rawData, destination, cursor) < 0)
             throw new StringIndexOutOfBoundsException("Could not find '"+destination+"' to forward to");
-        int dest = backwardsIndexOf(rawData, destination, cursor) +1;
+        int dest = backwardsIndexOf(rawData, destination, cursor);
         return backwards(cursor-dest);
     }
 
@@ -171,8 +171,8 @@ public class Parser {
                     }
                     if(delimiter.isStartDifferentFromEnd()) {
                         if(has(delimiter.getStart(), i)) {
+                            blockStack.push(currentDelimiter);
                             currentDelimiter = delimiter;
-                            blockStack.push(delimiter);
                         } else {
                             currentDelimiter = blockStack.pop();
                         }
@@ -181,16 +181,16 @@ public class Parser {
                         if(delimiter.isClosed()) {
                             currentDelimiter = blockStack.pop();
                         } else {
+                            blockStack.push(currentDelimiter);
                             currentDelimiter = delimiter;
-                            blockStack.push(delimiter);
                         }
                     }
                 }
 
-                if(rawData.indexOf(destination, i) == i && blockStack.isEmpty())
+                if(has(destination, i) && blockStack.isEmpty())
                     return forward(i - cursor);
             }
-            throw new StringIndexOutOfBoundsException("Could not find '"+destination+"' to forward to (blocks are enabled)");
+            throw new StringIndexOutOfBoundsException("Could not find '"+destination+"' to forward to (blocks are enabled), block stack is "+Arrays.toString(blockStack.toArray()));
         }
     }
 
@@ -204,13 +204,13 @@ public class Parser {
             String result = forwardTo(destination);
             discardMark();
             return result;
-        } catch (StringIndexOutOfBoundsException e) {
+        } catch (StringIndexOutOfBoundsException | EmptyStackException e) {
             rewind();
             return forward(length-cursor);
         }
     }
 
-    private void discardMark() {
+    public void discardMark() {
         markStack.pop();
     }
 
@@ -257,15 +257,81 @@ public class Parser {
     }
 
     public String getClosest(String... strings) {
-        int lowestIndex = length;
+        int lowestLength = length-cursor;
         String closest = null;
         for (int i = 0; i < strings.length; i++) {
-            int strIndex = rawData.indexOf(strings[i], cursor);
-            if(strIndex >= 0 && strIndex < lowestIndex) {
-                lowestIndex = strIndex;
+            mark();
+            int strLength = lowestLength;
+            try {
+                strLength = forwardTo(strings[i]).length();
+            } catch (StringIndexOutOfBoundsException e) {
+                // ignore
+            }
+            rewind();
+            if(strLength < lowestLength) {
+                lowestLength = strLength;
                 closest = strings[i];
             }
         }
         return closest;
+    }
+
+    public String forwardUntilNotList(String... strings) {
+        int dest = cursor;
+        while(hasList(dest, strings) && dest < length) {
+            dest++;
+        }
+        return forward(dest-cursor);
+    }
+
+    private boolean hasList(int cursor, String[] strings) {
+        for(String s : strings) {
+            if(has(s, cursor))
+                return true;
+        }
+        return false;
+    }
+
+    public String forwardToOrEndList(String... list) {
+        String closest = getClosest(list);
+        if(closest != null)
+            return forwardToOrEnd(closest);
+        return forwardToEnd();
+    }
+
+    public String forwardToList(String... list) {
+        String closest = getClosest(list);
+        if(closest != null)
+            return forwardTo(closest);
+        return null;
+    }
+
+    public void setData(String data) {
+        if(data == null)
+            throw new NullPointerException("'data' parameter cannot be null");
+        this.rawData = data;
+        this.characters = rawData.toCharArray();
+        this.length = characters.length;
+        cursor = 0;
+    }
+
+    public void setUserObject(Object userObject) {
+        this.userObject = userObject;
+    }
+
+    public Object getUserObject() {
+        return userObject;
+    }
+
+    public String forwardToEnd() {
+        return forward(length-cursor);
+    }
+
+    public Parser applyRuleIfPossible(ParseRule rule) {
+        if(isAt(rule.getTrigger())) {
+            forward(rule.getTrigger().length());
+            rule.apply(this);
+        }
+        return this;
     }
 }

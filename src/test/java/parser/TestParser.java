@@ -34,7 +34,7 @@ public class TestParser {
         Parser parser = new Parser("markableData");
         parser.forwardTo("Data");
         String data = parser.backwardsTo("a");
-        assertEquals("ble", data);
+        assertEquals("able", data);
     }
 
     @Test
@@ -77,14 +77,14 @@ public class TestParser {
         parser.newRule("\n", ParseRule::discard);
         parser.newRule(" ", ParseRule::discard);
         parser.newRule("as", r -> {
-            r.setAction(() -> {
+            r.setAction((p) -> {
                 parser.forwardUntilNot(" ");
                 String name = parser.forwardToOrEnd("\n");
                 buffer.append("=").append(name);
             });
         });
         parser.newRule("import", r -> {
-            r.setAction(() -> {
+            r.setAction((p) -> {
                 parser.enableBlocks();
                 parser.forwardUntilNot(" ");
                 String result = parser.forwardToOrEnd(" ");
@@ -100,7 +100,7 @@ public class TestParser {
     public void pattern() {
         Parser parser = new Parser("+abc =48 +14");
         parser.newRule("+", rule -> {
-            rule.setAction(() -> {
+            rule.setAction((p) -> {
                 System.out.println("Found '+'");
             });
             rule.newSubRule("abc", subRule -> {
@@ -113,7 +113,7 @@ public class TestParser {
         parser.newRule(" ", ParseRule::discard);
         AtomicInteger counter = new AtomicInteger();
         parser.newRule("=", r -> {
-            r.setAction(() -> {
+            r.setAction((p) -> {
                 System.out.println("yay2");
             });
             r.onOther((c, p) -> {

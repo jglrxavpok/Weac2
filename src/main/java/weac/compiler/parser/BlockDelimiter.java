@@ -8,6 +8,7 @@ public class BlockDelimiter {
     private boolean closed;
 
     public BlockDelimiter(String start, String end, boolean allowSubBlocks) {
+        closed = true;
         this.start = start;
         this.end = end;
         this.allowsSubBlocks = allowSubBlocks;
@@ -40,5 +41,10 @@ public class BlockDelimiter {
 
     public boolean isApplicable(Parser parser, int index) {
         return parser.has(start, index) || parser.has(end, index);
+    }
+
+    @Override
+    public String toString() {
+        return "Delimiter["+start+" -> "+end+"]"+(allowsSubBlocks ? "" : ", no sub blocks");
     }
 }
