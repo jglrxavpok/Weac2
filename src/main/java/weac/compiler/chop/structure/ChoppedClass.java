@@ -114,7 +114,7 @@ public class ChoppedClass implements Member {
 
     @Override
     public String getCanonicalName() {
-        return getName();
+        return packageName == null ? getName() : packageName+"."+getName();
     }
 
     @Override
