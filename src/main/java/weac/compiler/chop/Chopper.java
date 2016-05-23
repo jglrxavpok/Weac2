@@ -53,7 +53,7 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
             if(importParser.isAt("as ")) {
                 importParser.forward(3);
                 importParser.forwardUntilNotList(" ", "\n");
-                if(importParser.isAt("\n") || importParser.isAtEnd()) {
+                if(importParser.isAt("\n") || importParser.hasReachedEnd()) {
                     newError("Invalid import, must have an usage name after 'as'", -1); // todo line
                 } else {
                     usageName = importParser.forwardToOrEndList(" ", "\n");
@@ -110,7 +110,7 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
         parser.addBlockDelimiters("{", "}", true);
         parser.addBlockDelimiters("\"", "\"", false);
         parser.addBlockDelimiters("'", "'", false);
-        while(!parser.isAtEnd()) {
+        while(!parser.hasReachedEnd()) {
             parser.forwardUntilNotList(" ", "\n");
             parser.applyRuleIfPossible(commentRule);
             parser.mark();
@@ -147,7 +147,7 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
                     break;
 
                 default:
-                    if(parser.isAtEnd())
+                    if(parser.hasReachedEnd())
                         break;
                     parser.rewind();
                     parser.forward(readModifiers(chars, parser.getPosition(), modifiers));

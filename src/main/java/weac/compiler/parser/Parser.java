@@ -252,7 +252,7 @@ public class Parser {
         return rawData.indexOf(string, at) == at;
     }
 
-    public boolean isAtEnd() {
+    public boolean hasReachedEnd() {
         return length <= cursor;
     }
 

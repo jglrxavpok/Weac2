@@ -50,7 +50,7 @@ public class ParseRule {
                 .findFirst();
         if(!subRule.isPresent()) {
             char character = '\0';
-            if(!parser.isAtEnd()) {
+            if(!parser.hasReachedEnd()) {
                 parser.mark();
                 character = parser.nextCharacter();
                 parser.rewind();
