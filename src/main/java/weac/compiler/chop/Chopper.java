@@ -150,7 +150,8 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
                     if(parser.hasReachedEnd())
                         break;
                     parser.rewind();
-                    parser.forward(readModifiers(chars, parser.getPosition(), modifiers));
+                    modifiers = readModifiers(parser);
+                    parser.forwardUntilNotList(" ", "\n", "\r");
                     ModifierType currentAccess = null;
                     boolean isAbstract = false;
                     boolean isMixin = false;
@@ -204,7 +205,7 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
             choppedSource.version = Constants.CURRENT_VERSION;
 
         choppedSource.classes.forEach(clazz -> {
-            if(!clazz.getCanonicalName().equals(Constants.WEAC_VERSION_ANNOTATION)) { // TODO: use full name
+            if(!clazz.getCanonicalName().equals(Constants.WEAC_VERSION_ANNOTATION)) {
                 ChoppedAnnotation versionAnnotation = new ChoppedAnnotation("WeacVersion");
                 versionAnnotation.args.add("\""+choppedSource.version+"\"");
                 clazz.annotations.add(versionAnnotation);

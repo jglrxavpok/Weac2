@@ -55,14 +55,15 @@ public class ClassBodyChopper extends CompileUtils {
         }
 
         int lineIndex = 0;
-        List<Modifier> modifiers = new LinkedList<>();
+        List<Modifier> modifiers;
         while(!parser.hasReachedEnd()) {
             String read = parser.forwardUntilNotList(" ", "\n");
             lineIndex += count(read, '\n');
             if(parser.hasReachedEnd()) {
                 break;
             }
-            parser.forward(readModifiers(body.toCharArray(), parser.getPosition(), modifiers)); // TODO: change when full migration done
+            modifiers = readModifiers(parser);
+            parser.forwardUntilNotList(" ", "\n", "\r");
             ModifierType currentAccess = null;
             boolean isAbstract = false;
             boolean isMixin = false;
