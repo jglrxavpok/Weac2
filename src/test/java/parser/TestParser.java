@@ -45,6 +45,15 @@ public class TestParser {
     }
 
     @Test
+    public void forwardToStartOfBlock() {
+        Parser parser = new Parser(" { mark").enableBlocks();
+        parser.addBlockDelimiters("{", "}", true);
+        parser.addBlockDelimiters("\"", "\"", false);
+        String data = parser.forwardTo("{");
+        assertEquals(" ", data);
+    }
+
+    @Test
     public void backwards() {
         Parser parser = new Parser("markableData");
         parser.forward(4);

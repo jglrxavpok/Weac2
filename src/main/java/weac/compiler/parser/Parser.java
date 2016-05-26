@@ -158,6 +158,9 @@ public class Parser {
             Stack<BlockDelimiter> blockStack = new Stack<>();
             BlockDelimiter currentDelimiter = null;
             for (int i = cursor; i < length; i++) {
+                if(has(destination, i) && blockStack.isEmpty())
+                    return forward(i - cursor);
+
                 int tempIndex = i;
                 Optional<BlockDelimiter> optional = delimiters.stream()
                         .filter(d -> d.isApplicable(this, tempIndex))

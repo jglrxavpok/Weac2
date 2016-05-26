@@ -29,7 +29,9 @@ public class ClassBodyChopper extends CompileUtils {
      */
     public void parseBody(ChoppedClass choppedClass, String body, int startingLine) {
         Parser parser = new Parser(body);
-        parser.enableBlocks().addBlockDelimiters("\"", "\"", false).addBlockDelimiters("{", "}", true);
+        parser.enableBlocks()
+                .addBlockDelimiters("\"", "\"", false)
+                .addBlockDelimiters("{", "}", true);
         parser.forwardUntilNot(" ");
 
         String emptyBeginning = parser.forwardUntilNotList(" ", "\n");
@@ -40,6 +42,7 @@ public class ClassBodyChopper extends CompileUtils {
                 return;
             }
             String constants = parser.forwardTo(";");
+            parser.forward(1);
 
             parser.forwardUntilNotList(" ", "\n");
 
@@ -97,15 +100,13 @@ public class ClassBodyChopper extends CompileUtils {
                 parser.forward(firstPart.getId().length()); // TODO: remove when full migration done
                 parser.forwardUntilNotList(" ", "\n");
                 if(parser.isAt("(")) { // Constructor
-
-                    ChoppedMethod function = readFunction(body.toCharArray(), parser.getPosition(), choppedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
+                    ChoppedMethod function = readFunction(parser, choppedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
                     function.isCompilerSpecial = isCompilerSpecial;
                     function.annotations = annotations;
                     function.startingLine = lineIndex+startingLine;
                     function.isConstructor = true;
                     function.name = new Identifier("<init>");
                     choppedClass.methods.add(function);
-                    parser.forward(function.off); // TODO: remove when full migration done
 
                 } else {
                     Identifier secondPart = Identifier.read(body.toCharArray(), parser.getPosition());
@@ -117,7 +118,6 @@ public class ClassBodyChopper extends CompileUtils {
 
                         String start = null;
                         boolean isField = false;
-                        parser.mark();
                         if(closest.equals("=") || closest.equals(";")) {
                             isField = true;
                             start = parser.forwardTo(";");
@@ -125,7 +125,6 @@ public class ClassBodyChopper extends CompileUtils {
                         } else if(closest.equals("(")) {
                             isField = false;
                             start = parser.forwardTo("(");
-                            parser.rewind();
                         }
                         if(isField) {
                             ChoppedField field = new ChoppedField();
@@ -139,14 +138,12 @@ public class ClassBodyChopper extends CompileUtils {
                                 field.defaultValue = trimStartingSpace(start.split("=")[1]);
                             }
                             choppedClass.fields.add(field);
-                            parser.discardMark();
                         } else {
-                            ChoppedMethod function = readFunction(body.toCharArray(), parser.getPosition(), choppedClass, firstPart, secondPart, currentAccess, isAbstract);
+                            ChoppedMethod function = readFunction(parser, choppedClass, firstPart, secondPart, currentAccess, isAbstract);
                             function.isCompilerSpecial = isCompilerSpecial;
                             function.annotations = annotations;
                             function.startingLine = lineIndex+startingLine;
                             choppedClass.methods.add(function);
-                            parser.forward(function.off); // TODO: remove when full migration done
                         }
                     }
                 }
@@ -184,10 +181,8 @@ public class ClassBodyChopper extends CompileUtils {
 
     /**
      * Extracts a single method from the source
-     * @param chars
-     *              The source characters
-     * @param i
-     *              The offset at which to start the reading
+     * @param parser
+     *              The parser used to read the function from
      * @param choppedClass
      *              The owner of this method
      * @param type
@@ -201,14 +196,13 @@ public class ClassBodyChopper extends CompileUtils {
      * @return
      *              The extracted method
      */
-    private ChoppedMethod readFunction(char[] chars, int i, ChoppedClass choppedClass, Identifier type, Identifier name, ModifierType access, boolean isAbstract) {
-        final int start = i;
+    private ChoppedMethod readFunction(Parser parser, ChoppedClass choppedClass, Identifier type, Identifier name, ModifierType access, boolean isAbstract) {
         ChoppedMethod method = new ChoppedMethod();
         method.returnType = type;
         method.name = name;
         method.isAbstract = isAbstract;
         method.access = access;
-        String allArgs = readArguments(chars, i);
+        String allArgs = readArguments(parser.getData().toCharArray(), parser.getPosition());
         String[] arguments = allArgs.split(",");
         for(String arg : arguments) {
             arg = trimStartingSpace(arg);
@@ -222,17 +216,18 @@ public class ClassBodyChopper extends CompileUtils {
             method.argumentNames.add(argName);
         }
 
-        i+=allArgs.length();
+        parser.forward(allArgs.length()+2); // TODO: remove when full migration done
+
         if(isAbstract || choppedClass.classType == EnumClassTypes.INTERFACE || choppedClass.classType == EnumClassTypes.ANNOTATION) {
-            i+=1;
             method.methodSource = "";
             method.isAbstract = true;
-            method.off = i - start;
         } else {
-            int codeStart = i + readUntil(chars, i, '{').length()+1;
-            codeStart += readUntilNot(chars, codeStart, '\n').length();
-            method.methodSource = readCodeblock(chars, codeStart);
-            method.off = (method.methodSource.length()+1+codeStart)-start;
+            parser.forwardTo("{");
+            parser.forward(1);
+
+            parser.forwardUntilNot("\n");
+            method.methodSource = readCodeblock(parser.getData().toCharArray(), parser.getPosition());
+            parser.forward(method.methodSource.length());
         }
         return method;
     }
