@@ -39,7 +39,7 @@ public class Parser {
     }
 
     public char nextCharacter() {
-        if(cursor + 1 >= length) {
+        if(cursor >= length) {
             throw new IndexOutOfBoundsException("Reached end of data");
         }
         return characters[cursor++];
@@ -336,5 +336,31 @@ public class Parser {
             rule.apply(this);
         }
         return this;
+    }
+
+
+    public char getCurrentCharacter() {
+        return getRelativeCharacter(0);
+    }
+
+    public char[] getCharacters() {
+        return characters;
+    }
+
+    /**
+     * Returns the <b>relative</b> distance from the last mark to the current position applied on the data. If no mark could be found, the parser returns {@link Integer#MAX_VALUE}<br/>
+     * The value is called as such: <code>distance = currentPosition - markedPosition</code>
+     * @return
+     *      The relative distance to the last mark
+     */
+    public int distanceFromMark() {
+        if(markStack.isEmpty()) {
+            return Integer.MAX_VALUE;
+        }
+        return cursor - markStack.peek();
+    }
+
+    public char getRelativeCharacter(int i) {
+        return characters[cursor + i];
     }
 }

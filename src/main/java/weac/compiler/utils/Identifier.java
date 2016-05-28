@@ -3,6 +3,7 @@ package weac.compiler.utils;
 import org.jglr.flows.collection.VariableTopStack;
 import weac.compiler.Keywords;
 import weac.compiler.CompileUtils;
+import weac.compiler.parser.Parser;
 
 /**
  * A WeaC identifier, used for types, variable and method names
@@ -179,6 +180,12 @@ public class Identifier {
             }
         }
         return false;
+    }
+
+    public static Identifier read(Parser parser) {
+        Identifier id = read(parser.getCharacters(), parser.getPosition());
+        parser.forward(id.getId().length());
+        return id;
     }
 
     /**

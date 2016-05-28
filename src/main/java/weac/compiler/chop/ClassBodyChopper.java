@@ -5,6 +5,7 @@ import weac.compiler.chop.structure.ChoppedAnnotation;
 import weac.compiler.chop.structure.ChoppedClass;
 import weac.compiler.chop.structure.ChoppedField;
 import weac.compiler.chop.structure.ChoppedMethod;
+import weac.compiler.parser.ParseRule;
 import weac.compiler.parser.Parser;
 import weac.compiler.utils.AnnotationModifier;
 import weac.compiler.utils.Identifier;
@@ -17,6 +18,17 @@ import java.util.List;
 import java.util.Objects;
 
 public class ClassBodyChopper extends CompileUtils {
+
+    private final ParseRule avoidMonolineComment;
+    private final ParseRule avoidMultilineComment;
+
+    public ClassBodyChopper() {
+        avoidMonolineComment = new ParseRule("//");
+        avoidMonolineComment.setAction(p -> p.forwardToOrEnd("\n"));
+
+        avoidMultilineComment = new ParseRule("/*");
+        avoidMultilineComment.setAction(p -> p.forwardToOrEnd("*/"));
+    }
 
     /**
      * Parses the body of the class. Locates methods and fields
@@ -58,6 +70,10 @@ public class ClassBodyChopper extends CompileUtils {
         List<Modifier> modifiers;
         while(!parser.hasReachedEnd()) {
             String read = parser.forwardUntilNotList(" ", "\n");
+
+            parser.applyRuleIfPossible(avoidMultilineComment);
+            parser.applyRuleIfPossible(avoidMonolineComment);
+
             lineIndex += count(read, '\n');
             if(parser.hasReachedEnd()) {
                 break;
@@ -122,7 +138,6 @@ public class ClassBodyChopper extends CompileUtils {
                         if(closest.equals("=") || closest.equals(";")) {
                             isField = true;
                             start = parser.forwardTo(";");
-                            parser.forward(1);
                         } else if(closest.equals("(")) {
                             isField = false;
                             start = parser.forwardTo("(");

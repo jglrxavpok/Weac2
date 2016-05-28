@@ -2,6 +2,7 @@ package weac.compiler.precompile;
 
 import weac.compiler.CompilePhase;
 import weac.compiler.chop.structure.*;
+import weac.compiler.parser.Parser;
 import weac.compiler.patterns.InstructionPattern;
 import weac.compiler.precompile.insn.*;
 import weac.compiler.precompile.patterns.*;
@@ -233,14 +234,17 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
         }
         List<PrecompiledInsn> insns = new LinkedList<>();
         insns.add(new PrecompiledLineNumber(startLine));
-        char[] chars = expression.toCharArray();
+        Parser parser = new Parser(expression)
+                .enableBlocks()
+                .addBlockDelimiters("{", "}", true)
+                .addBlockDelimiters("\"", "\"", false);
         List<Token> tokens = new LinkedList<>();
         int line = startLine;
-        for(int i = 0;i<chars.length;) {
-            Token token = tokenizer.nextToken(chars, i);
+        while(!parser.hasReachedEnd()) {
+            Token token = tokenizer.nextToken(parser);
             if(token != null) {
-                i += token.length;
                 tokens.add(token);
+                //System.out.println("last tokn: "+token);
                 if(token instanceof NewLineToken) {
                     token.setContent(String.valueOf(line));
                     line++;
@@ -283,6 +287,10 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
 
         tokens = solvePatterns(tokens);
         addInstancePops(tokens);
+
+        /*System.out.println("==== TOKENS OF "+expression+" ====");
+        tokens.forEach(System.out::println);
+        System.out.println("========");*/
 
         List<Token> output = convertToRPN(expression, tokens);
         List<PrecompiledInsn> instructions = toInstructions(output, insns);
