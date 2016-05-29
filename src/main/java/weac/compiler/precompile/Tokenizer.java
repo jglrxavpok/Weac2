@@ -116,8 +116,8 @@ public class Tokenizer extends CompileUtils {
                 if(literal.equals("native")) {
                     parser.forwardTo("{");
                     parser.forward(1);
-                    String nativeCode = readCodeblock(parser.getData().toCharArray(), parser.getPosition()); // TODO: change when full migration done
-                    parser.forward(nativeCode.length()+1); // TODO: change when full migration done
+                    String nativeCode = parser.forwardTo("}");
+                    parser.forward(1);
                     return new NativeCodeToken(nativeCode, TokenType.NATIVE_CODE, nativeCode.length());
                 }
                 if(literal.isEmpty()) {

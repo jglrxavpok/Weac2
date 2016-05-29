@@ -36,25 +36,6 @@ public abstract class CompileUtils {
         return l;
     }
 
-    /**
-     * Extracts a String from <code>start</code> to <code>end</code>
-     * @param array
-     *              The characters to extract from
-     * @param start
-     *              The starting point from which to read
-     * @param end
-     *              The ending point until which to read
-     * @return
-     *              The extracted text
-     */
-    public static String read(char[] array, int start, int end) {
-        StringBuilder builder = new StringBuilder();
-        for(int i = start;i<end;i++) {
-            builder.append(array[i]);
-        }
-        return builder.toString();
-    }
-
     public static String readUntilNot(char[] array, int start, char... seeked) {
         StringBuilder builder = new StringBuilder();
         for(int i = start;i<array.length;i++) {
@@ -74,25 +55,8 @@ public abstract class CompileUtils {
         return false;
     }
 
-    public static String readUntil(char[] array, int start, char... seeked) {
-        StringBuilder builder = new StringBuilder();
-        for(int i = start;i<array.length;i++) {
-            if(contains(seeked, array[i]))
-                break;
-            else
-                builder.append(array[i]);
-        }
-        return builder.toString();
-    }
-
     /**
      * Reads the possible modifiers present in the text starting from given offset
-     * @param chars
-     *                  The characters to read from
-     * @param offset
-     *                  The offset from which to start the reading
-     * @param out
-     *                  The list where to store the modifiers
      * @return
      *         The read modifiers
      */

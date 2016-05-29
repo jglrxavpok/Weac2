@@ -306,12 +306,6 @@ public class PreCompiler extends CompilePhase<ChoppedSource, PrecompiledSource> 
             }
         }
 
-        if(expression.contains("[0..10]")) {
-            System.out.println("==== START INSNS "+expression+" POSTFIX ====");
-            instructions.forEach(System.out::println);
-            System.out.println("=====================================");
-        }
-
         return instructions;
     }
 

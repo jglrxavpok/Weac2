@@ -50,9 +50,9 @@ public class ClassChopper extends CompileUtils {
      *                  The header code
      */
     private void parseHeader(ChoppedClass choppedClass, String header) {
-        char[] chars = header.toCharArray();
-        int start = readUntilNot(chars, 0, ' ', '\t', '\n').length();
-        String firstPart = readUntil(chars, start, ' ');
+        Parser parser = new Parser(header);
+        parser.forwardUntilNotList(" ", "\t", "\n");
+        String firstPart = parser.forwardToOrEnd(" ");
         switch (firstPart) {
             case "class":
             case "data":
