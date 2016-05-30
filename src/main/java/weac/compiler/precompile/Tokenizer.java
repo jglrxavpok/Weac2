@@ -20,20 +20,6 @@ public class Tokenizer extends CompileUtils {
             } else {
                 if (first == '.') {
                     parser.backwards(1);
-                    /*if (parser.getPosition() + 1 < parser.getDataSize()) {
-                        parser.mark();
-                        char next = parser.nextCharacter();
-                        if (Character.isDigit(next)) {
-                            parser.backwards(2);
-                            String number = readNumber(parser);
-                            parser.discardMark();
-                            return new Token(number, TokenType.NUMBER, number.length());
-                        } else if(next == '.') {
-                            parser.discardMark();
-                            return new Token("..", TokenType.BINARY_OPERATOR, 2);
-                        }
-                        parser.rewind();
-                    }*/
                     if(parser.isAt("..")) {
                         parser.forward(2);
                         return new Token("..", TokenType.BINARY_OPERATOR, 2);
@@ -121,9 +107,8 @@ public class Tokenizer extends CompileUtils {
                     return new NativeCodeToken(nativeCode, TokenType.NATIVE_CODE, nativeCode.length());
                 }
                 if(literal.isEmpty()) {
-                    String operator = readOperator(parser.getData().toCharArray(), parser.getPosition());
+                    String operator = readOperator(parser);
                     if(operator != null && !operator.isEmpty()) {
-                        parser.forward(operator.length()); // TODO: change when full migration done
                         return new Token(operator, TokenType.OPERATOR, operator.length());
                     }
                 } else {

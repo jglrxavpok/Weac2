@@ -332,6 +332,14 @@ public abstract class CompileUtils {
         return methodSource.toString();
     }
 
+    public static String readOperator(Parser parser) {
+        String read = readOperator(parser.getData().toCharArray(), parser.getPosition());
+        if(read != null) {
+            parser.forward(read.length());
+        }
+        return read;
+    }
+
     public static String readOperator(char[] chars, int offset) {
         List<EnumOperators> operators = new LinkedList<>();
         Collections.addAll(operators, EnumOperators.values());
