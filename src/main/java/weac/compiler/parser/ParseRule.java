@@ -10,12 +10,12 @@ public class ParseRule {
     private final String trigger;
     private final List<ParseRule> subRules;
     private BiConsumer<Character, Parser> otherAction;
-    private Runnable action;
+    private Consumer<Parser> action;
 
     public ParseRule(String trigger) {
         this.trigger = trigger;
         otherAction = (c, p) -> {};
-        action = this::discard;
+        action = p -> {};
         subRules = new ArrayList<>();
     }
 
@@ -38,19 +38,19 @@ public class ParseRule {
         // nothing
     }
 
-    public void setAction(Runnable runnable) {
+    public void setAction(Consumer<Parser> runnable) {
         this.action = runnable;
     }
 
     public void apply(Parser parser) {
-        action.run();
+        action.accept(parser);
         Optional<ParseRule> subRule = subRules.stream()
                 .filter(parser::applicable)
                 .sorted((a, b) -> -Integer.compare(a.getTrigger().length(), b.getTrigger().length()))
                 .findFirst();
         if(!subRule.isPresent()) {
             char character = '\0';
-            if(!parser.isAtEnd()) {
+            if(!parser.hasReachedEnd()) {
                 parser.mark();
                 character = parser.nextCharacter();
                 parser.rewind();

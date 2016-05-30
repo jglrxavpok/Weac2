@@ -1,32 +1,35 @@
 package weac.compiler.precompile;
 
 import weac.compiler.CompileUtils;
+import weac.compiler.parser.Parser;
 import weac.compiler.utils.EnumOperators;
 import weac.compiler.utils.Identifier;
 
 public class Tokenizer extends CompileUtils {
 
-    public Token nextToken(char[] chars, int offset) {
-        final int start = offset;
-        if (offset >= chars.length) {
+    public Token nextToken(Parser parser) {
+        if (parser.hasReachedEnd()) {
             return null;
         } else {
-            char first = chars[offset];
+            char first = parser.nextCharacter();
             if(Character.isDigit(first)) {
                 // it's a number, read it!
-                String number = readNumber(chars, offset);
+                parser.backwards(1);
+                String number = readNumber(parser);
                 return new Token(number, TokenType.NUMBER, number.length());
             } else {
                 if (first == '.') {
-                    if (offset + 1 < chars.length) {
-                        char next = chars[offset + 1];
-                        if (Character.isDigit(next)) {
-                            String number = readNumber(chars, offset + 1);
-                            return new Token(number, TokenType.NUMBER, number.length());
-                        } else if(next == '.') {
-                            return new Token("..", TokenType.BINARY_OPERATOR, 2);
-                        }
+                    parser.backwards(1);
+                    if(parser.isAt("..")) {
+                        parser.forward(2);
+                        return new Token("..", TokenType.BINARY_OPERATOR, 2);
+                    } else if(Character.isDigit(parser.getCurrentCharacter())) {
+                        parser.backwards(1);
+                        String number = readNumber(parser);
+                        parser.discardMark();
+                        return new Token(number, TokenType.NUMBER, number.length());
                     }
+                    parser.forward(1);
                     return new Token(String.valueOf(first), TokenType.MEMBER_ACCESSING, 1);
                 }
                 switch (first) {
@@ -41,8 +44,7 @@ public class Tokenizer extends CompileUtils {
 
                     case '\'':
                         // read character
-                        // is naming it Chara an Undertale reference? I don't know... Am I allowed to do it?
-                        String chara = readCharacter(chars, offset);
+                        String chara = readCharacter(parser);
                         if (chara != null) {
                             return new Token(chara, TokenType.SINGLE_CHARACTER, chara.length() + 2);
                         } else {
@@ -51,7 +53,7 @@ public class Tokenizer extends CompileUtils {
                         }
 
                     case '"':
-                        String text = readString(chars, offset);
+                        String text = readString(parser);
                         if (text != null) {
                             return new Token(text, TokenType.STRING, text.length() + 2);
                         } else {
@@ -84,30 +86,31 @@ public class Tokenizer extends CompileUtils {
                         return new Token(String.valueOf(first), TokenType.INSTRUCTION_END, 1);
 
                     case '/':
-                        if(chars[offset+1] == '/') {
-                            while(!(offset >= chars.length || chars[offset] == '\n')) {
-                                offset++;
-                            }
-                            return new CommentToken(new String(chars, start, offset), false);
-                        } else if(chars[offset+1] == '*') {
-                            while(!(offset+1 >= chars.length || (chars[offset] == '*' && chars[offset+1] == '/'))) {
-                                offset++;
-                            }
-                            return new CommentToken(new String(chars, start, offset+2), false);
+                        if(parser.isAt("/")) {
+                            String comment = parser.forwardToOrEnd("\n");
+                            parser.forward(1);
+                            return new CommentToken(comment, false);
+                        } else if(parser.isAt("*")) {
+                            String comment = parser.forwardToOrEnd("*/");
+                            parser.forward(2);
+                            return new CommentToken(comment, false);
                         }
                 }
+                parser.backwards(1);
 
-                String literal = readLiteral(chars, offset);
+                String literal = readLiteral(parser);
                 if(literal.equals("native")) {
-                    offset += literal.length()+1;
-                    offset += readUntil(chars, offset, '{').length();
-                    String nativeCode = readCodeblock(chars, offset+1);
-                    return new NativeCodeToken(nativeCode, TokenType.NATIVE_CODE, offset+nativeCode.length() - start +2);
+                    parser.forwardTo("{");
+                    parser.forward(1);
+                    String nativeCode = parser.forwardTo("}");
+                    parser.forward(1);
+                    return new NativeCodeToken(nativeCode, TokenType.NATIVE_CODE, nativeCode.length());
                 }
                 if(literal.isEmpty()) {
-                    String operator = readOperator(chars, offset);
-                    if(operator != null && !operator.isEmpty())
+                    String operator = readOperator(parser);
+                    if(operator != null && !operator.isEmpty()) {
                         return new Token(operator, TokenType.OPERATOR, operator.length());
+                    }
                 } else {
                     if(literal.isEmpty())
                         return null;
@@ -124,66 +127,45 @@ public class Tokenizer extends CompileUtils {
         }
     }
 
-    private String readLiteral(char[] chars, int i) {
-        return Identifier.read(chars, i).getId();
+    private String readLiteral(Parser parser) {
+        return Identifier.read(parser).getId();
     }
 
-    private String readInQuotes(char[] chars, int offset, char quote) {
-        char first = chars[offset];
-        if(first == quote) {
-            boolean escaped = false;
-            StringBuilder builder = new StringBuilder();
-            for(int i = offset+1;i<chars.length;i++) {
-                char c = chars[i];
-                if(c == quote && !escaped) {
-                    break;
-                } else if(c == '\\') {
-                    if(!escaped) {
-                        escaped = true;
-                        continue;
-                    } else {
-                        builder.append('\\');
-                    }
-                } else {
-                    if(escaped) {
-                        escaped = false;
-                        builder.append('\\');
-                    }
-                    builder.append(c);
-                }
-            }
-            return builder.toString();
-        }
-        return null;
+    private String readInQuotes(Parser parser, String quote) {
+        String read = parser.forwardTo(quote);
+        parser.forward(quote.length()); // skip closing character(s)
+        return read;
     }
 
-    private String readString(char[] chars, int offset) {
-        return readInQuotes(chars, offset, '"');
+    private String readString(Parser parser) {
+        return readInQuotes(parser, "\"");
     }
 
-    private String readCharacter(char[] chars, int offset) {
-        return readInQuotes(chars, offset, '\'');
+    private String readCharacter(Parser parser) {
+        return readInQuotes(parser, "'");
     }
 
-    private String readNumber(char[] chars, int offset) {
+    private String readNumber(Parser parser) {
         StringBuilder buffer = new StringBuilder();
         boolean hasDecimalPoint = false;
         boolean canHaveCustomBase = false;
-        if(chars[offset] == '0') {
+        if(parser.isAt("0")) {
             canHaveCustomBase = true;
         }
         int base = 10;
-        for(int i = offset;i<chars.length;i++) {
-            char c = chars[i];
+        parser.mark();
+        while(!parser.hasReachedEnd()) {
+            char c = parser.getCurrentCharacter();
             if(isDigit(c, base)) {
                 buffer.append(c);
             } else {
-                if(isBaseCharacter(c) && i == offset+1 && canHaveCustomBase) {
+                if(isBaseCharacter(c) && parser.distanceFromMark() == 1 && canHaveCustomBase) {
                     buffer.append(c);
                     base = getBase(c);
                     if(base == -10) {
-                        String baseStr = readBase(chars, i+1);
-                        i+=baseStr.length()+1;
+                        parser.forward(1);
+                        String baseStr = readBase(parser);
+                        //parser.forward(1);
                         base = Integer.parseInt(baseStr);
                         buffer.append(baseStr).append("#");
                     }
@@ -194,11 +176,12 @@ public class Tokenizer extends CompileUtils {
                     }
                 } else if(c == '.') {
                     if(!hasDecimalPoint && base == 10) {
-                        if(i+1 < chars.length) {
-                            char next = chars[i+1];
+                        if(parser.getPosition()+1 < parser.getDataSize()) {
+                            char next = parser.getRelativeCharacter(1);
                             if(next == '.') {
                                 break;
                             }
+                            parser.forward(1);
                         }
                         buffer.append(c);
                         hasDecimalPoint = true;
@@ -218,26 +201,31 @@ public class Tokenizer extends CompileUtils {
                         case 'b': // byte
                         case 'B': // byte
                             buffer.append(c);
+                            parser.forward(1);
                             break;
                     }
                     break;
                 }
             }
+            parser.forward(1);
         }
+        parser.discardMark();
         return buffer.toString();
     }
 
-    private String readBase(char[] chars, int offset) {
+    private String readBase(Parser parser) {
         StringBuilder builder = new StringBuilder();
-        for(int i = offset;i<chars.length;i++) {
-            char c = chars[i];
-            if(c == '#') {
+        while(!parser.hasReachedEnd()) {
+            if(parser.isAt("#")) {
                 break;
-            } else if(isDigit(c, 10)) {
-                builder.append(c);
             } else {
-                newError("Invalid base character: "+c, -1); // TODO: find correct line
-                break;
+                char c = parser.nextCharacter();
+                if(isDigit(c, 10)) {
+                    builder.append(c);
+                } else {
+                    newError("Invalid base character: "+c, -1); // TODO: find correct line
+                    break;
+                }
             }
         }
         return builder.toString();

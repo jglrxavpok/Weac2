@@ -5,6 +5,8 @@ import weac.compiler.chop.structure.ChoppedAnnotation;
 import weac.compiler.chop.structure.ChoppedClass;
 import weac.compiler.chop.structure.ChoppedField;
 import weac.compiler.chop.structure.ChoppedMethod;
+import weac.compiler.parser.ParseRule;
+import weac.compiler.parser.Parser;
 import weac.compiler.utils.AnnotationModifier;
 import weac.compiler.utils.Identifier;
 import weac.compiler.utils.Modifier;
@@ -13,8 +15,20 @@ import weac.compiler.utils.ModifierType;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 
 public class ClassBodyChopper extends CompileUtils {
+
+    private final ParseRule avoidMonolineComment;
+    private final ParseRule avoidMultilineComment;
+
+    public ClassBodyChopper() {
+        avoidMonolineComment = new ParseRule("//");
+        avoidMonolineComment.setAction(p -> p.forwardToOrEnd("\n"));
+
+        avoidMultilineComment = new ParseRule("/*");
+        avoidMultilineComment.setAction(p -> p.forwardToOrEnd("*/"));
+    }
 
     /**
      * Parses the body of the class. Locates methods and fields
@@ -26,43 +40,46 @@ public class ClassBodyChopper extends CompileUtils {
      *                  The line at which the class starts in the source file
      */
     public void parseBody(ChoppedClass choppedClass, String body, int startingLine) {
-        body = trimStartingSpace(body);
-        int i = 0;
-        char[] chars = body.toCharArray();
-        String emptyBeginning = readUntilNot(chars, i, ' ', '\n');
+        Parser parser = new Parser(body);
+        parser.enableBlocks()
+                .addBlockDelimiters("\"", "\"", false)
+                .addBlockDelimiters("{", "}", true);
+        parser.forwardUntilNot(" ");
+
+        String emptyBeginning = parser.forwardUntilNotList(" ", "\n");
         startingLine += count(emptyBeginning, '\n');
-        i += emptyBeginning.length();
 
         if(choppedClass.classType == EnumClassTypes.ENUM) {
-            if(i >= chars.length) {
+            if(parser.hasReachedEnd()) {
                 return;
             }
-            if(choppedClass.classType == EnumClassTypes.ENUM) {
-                String constants = readUntilInsnEnd(chars, i);
+            String constants = parser.forwardTo(";");
+            parser.forward(1);
 
-                i += constants.length()+1;
-                i += readUntilNot(chars, i, ' ', '\n').length();
+            parser.forwardUntilNotList(" ", "\n");
 
-                fillEnumConstants(constants, choppedClass.enumConstants);
+            fillEnumConstants(constants, choppedClass.enumConstants);
 
-                if(i >= chars.length) // We might have reached end of file
-                {
-                    return;
-                }
+            if(parser.hasReachedEnd()) // We might have reached end of file
+            {
+                return;
             }
         }
 
         int lineIndex = 0;
-        List<Modifier> modifiers = new LinkedList<>();
-        for(;i<chars.length;i++) {
-            char c = chars[i];
-            String read = readUntilNot(chars, i, ' ', '\n');
+        List<Modifier> modifiers;
+        while(!parser.hasReachedEnd()) {
+            String read = parser.forwardUntilNotList(" ", "\n");
+
+            parser.applyRuleIfPossible(avoidMultilineComment);
+            parser.applyRuleIfPossible(avoidMonolineComment);
+
             lineIndex += count(read, '\n');
-            i += read.length();
-            if(i >= chars.length) {
+            if(parser.hasReachedEnd()) {
                 break;
             }
-            i += readModifiers(chars, i, modifiers);
+            modifiers = readModifiers(parser);
+            parser.forwardUntilNotList(" ", "\n", "\r");
             ModifierType currentAccess = null;
             boolean isAbstract = false;
             boolean isMixin = false;
@@ -95,46 +112,36 @@ public class ClassBodyChopper extends CompileUtils {
                 isAbstract = true; // mixin (are analog to interfaces for the JVM) methods are always abstract
             else if(choppedClass.classType == EnumClassTypes.ANNOTATION)
                 isAbstract = true; // annotation methods are always abstract
-            Identifier firstPart = Identifier.read(chars, i);
+            Identifier firstPart = Identifier.read(body.toCharArray(), parser.getPosition());
             if(firstPart.isValid()) {
-                i += firstPart.getId().length();
-                i += readUntilNot(chars, i, ' ', '\n').length();
-                if(chars[i] == '(') { // Constructor
-
-                    ChoppedMethod function = readFunction(chars, i, choppedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
+                parser.forward(firstPart.getId().length()); // TODO: remove when full migration done
+                parser.forwardUntilNotList(" ", "\n");
+                if(parser.isAt("(")) { // Constructor
+                    ChoppedMethod function = readFunction(parser, choppedClass, Identifier.VOID, firstPart, currentAccess, isAbstract);
                     function.isCompilerSpecial = isCompilerSpecial;
                     function.annotations = annotations;
                     function.startingLine = lineIndex+startingLine;
                     function.isConstructor = true;
                     function.name = new Identifier("<init>");
                     choppedClass.methods.add(function);
-                    i += function.off;
 
                 } else {
-                    Identifier secondPart = Identifier.read(chars, i);
-                    i+=secondPart.getId().length();
+                    Identifier secondPart = Identifier.read(body.toCharArray(), parser.getPosition());
+                    parser.forward(secondPart.getId().length()); // TODO: remove when full migration done
                     if(!secondPart.isValid()) {
                         newError("Invalid identifier: "+secondPart.getId()+" in "+ choppedClass.packageName+"."+ choppedClass.name, startingLine);
                     } else {
-                        int potentialFunction = indexOf(chars, i, '(');
-                        int potentialField = indexOf(chars, i, ';');
-                        int nameEnd;
-                        boolean isField = false; // true for field, false for function
-                        if(potentialField == -1) {
-                            nameEnd = potentialFunction;
-                        } else if(potentialFunction == -1) {
-                            nameEnd = potentialField;
-                            isField = true;
-                        } else {
-                            if(potentialField < potentialFunction) {
-                                nameEnd = potentialField;
-                                isField = true;
-                            } else {
-                                nameEnd = potentialFunction;
-                            }
-                        }
+                        String closest = parser.getClosest("(", ";", "=");
 
-                        String start = read(chars, i, nameEnd);
+                        String start = null;
+                        boolean isField = false;
+                        if(closest.equals("=") || closest.equals(";")) {
+                            isField = true;
+                            start = parser.forwardTo(";");
+                        } else if(closest.equals("(")) {
+                            isField = false;
+                            start = parser.forwardTo("(");
+                        }
                         if(isField) {
                             ChoppedField field = new ChoppedField();
                             field.isCompilerSpecial = isCompilerSpecial;
@@ -147,23 +154,23 @@ public class ClassBodyChopper extends CompileUtils {
                                 field.defaultValue = trimStartingSpace(start.split("=")[1]);
                             }
                             choppedClass.fields.add(field);
-                            i = nameEnd+1;
                         } else {
-                            ChoppedMethod function = readFunction(chars, i, choppedClass, firstPart, secondPart, currentAccess, isAbstract);
+                            ChoppedMethod function = readFunction(parser, choppedClass, firstPart, secondPart, currentAccess, isAbstract);
                             function.isCompilerSpecial = isCompilerSpecial;
                             function.annotations = annotations;
                             function.startingLine = lineIndex+startingLine;
                             choppedClass.methods.add(function);
-                            i += function.off;
                         }
                     }
                 }
             } else {
-                newError("Invalid identifier: " + firstPart.getId()+" in "+ choppedClass.packageName+"."+ choppedClass.name+" from "+new String(chars, i, chars.length-i), startingLine+lineIndex);
+                newError("Invalid identifier: " + firstPart.getId()+" in "+ choppedClass.packageName+"."+ choppedClass.name+" from "+body.substring(parser.getPosition(), body.length()), startingLine+lineIndex);
             }
 
-            if(chars[i] == '\n')
+            if(parser.isAt("\n"))
                 lineIndex++;
+
+            parser.forward(1);
         }
     }
 
@@ -176,7 +183,7 @@ public class ClassBodyChopper extends CompileUtils {
     }
 
     private void fillEnumConstants(String constantList, List<String> out) {
-        int i = 0;
+        int i = 0; // TODO: replace with new parser
         String constant = readSingleArgument(constantList, 0, true).replace("\n", "");
         while(!constant.isEmpty()) {
             out.add(constant);
@@ -190,10 +197,8 @@ public class ClassBodyChopper extends CompileUtils {
 
     /**
      * Extracts a single method from the source
-     * @param chars
-     *              The source characters
-     * @param i
-     *              The offset at which to start the reading
+     * @param parser
+     *              The parser used to read the function from
      * @param choppedClass
      *              The owner of this method
      * @param type
@@ -207,14 +212,13 @@ public class ClassBodyChopper extends CompileUtils {
      * @return
      *              The extracted method
      */
-    private ChoppedMethod readFunction(char[] chars, int i, ChoppedClass choppedClass, Identifier type, Identifier name, ModifierType access, boolean isAbstract) {
-        final int start = i;
+    private ChoppedMethod readFunction(Parser parser, ChoppedClass choppedClass, Identifier type, Identifier name, ModifierType access, boolean isAbstract) {
         ChoppedMethod method = new ChoppedMethod();
         method.returnType = type;
         method.name = name;
         method.isAbstract = isAbstract;
         method.access = access;
-        String allArgs = readArguments(chars, i);
+        String allArgs = readArguments(parser.getData().toCharArray(), parser.getPosition());
         String[] arguments = allArgs.split(",");
         for(String arg : arguments) {
             arg = trimStartingSpace(arg);
@@ -228,17 +232,18 @@ public class ClassBodyChopper extends CompileUtils {
             method.argumentNames.add(argName);
         }
 
-        i+=allArgs.length();
+        parser.forward(allArgs.length()+2); // TODO: remove when full migration done
+
         if(isAbstract || choppedClass.classType == EnumClassTypes.INTERFACE || choppedClass.classType == EnumClassTypes.ANNOTATION) {
-            i+=1;
             method.methodSource = "";
             method.isAbstract = true;
-            method.off = i - start;
         } else {
-            int codeStart = i + readUntil(chars, i, '{').length()+1;
-            codeStart += readUntilNot(chars, codeStart, '\n').length();
-            method.methodSource = readCodeblock(chars, codeStart);
-            method.off = (method.methodSource.length()+1+codeStart)-start;
+            parser.forwardTo("{");
+            parser.forward(1);
+
+            parser.forwardUntilNot("\n");
+            method.methodSource = readCodeblock(parser.getData().toCharArray(), parser.getPosition());
+            parser.forward(method.methodSource.length());
         }
         return method;
     }

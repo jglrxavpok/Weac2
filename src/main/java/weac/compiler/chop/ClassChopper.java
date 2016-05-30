@@ -2,6 +2,7 @@ package weac.compiler.chop;
 
 import weac.compiler.CompileUtils;
 import weac.compiler.chop.structure.ChoppedClass;
+import weac.compiler.parser.Parser;
 import weac.compiler.targets.jvm.JVMWeacTypes;
 import weac.compiler.utils.WeacType;
 
@@ -49,9 +50,9 @@ public class ClassChopper extends CompileUtils {
      *                  The header code
      */
     private void parseHeader(ChoppedClass choppedClass, String header) {
-        char[] chars = header.toCharArray();
-        int start = readUntilNot(chars, 0, ' ', '\t', '\n').length();
-        String firstPart = readUntil(chars, start, ' ');
+        Parser parser = new Parser(header);
+        parser.forwardUntilNotList(" ", "\t", "\n");
+        String firstPart = parser.forwardToOrEnd(" ");
         switch (firstPart) {
             case "class":
             case "data":
@@ -79,62 +80,27 @@ public class ClassChopper extends CompileUtils {
      *              The hierarchy code
      */
     private void readHierarchy(ChoppedClass choppedClass, String s) {
-        char[] chars = s.toCharArray();
-        int start = readUntilNot(chars, 0, ' ', '\n').length();
-        String name = readUntil(chars, start, ' ', '\n');
+        Parser parser = new Parser(s);
+        parser.forwardUntilNotList(" ", "\n");
+        String name = parser.forwardToList(" ", "\n");
         choppedClass.name = new WeacType(JVMWeacTypes.OBJECT_TYPE, name, false);
-        StringBuilder buffer = new StringBuilder();
-        for(int i = name.length()+start;i<chars.length;i++) {
-            char c = chars[i];
-            if(c == '>') {
-                i++;
+        while(!parser.hasReachedEnd()) {
+            if(parser.isAt(">")) { // TODO: Change to avoid conflicts in generics
                 if(choppedClass.motherClass != null) {
                     newError("A class can only have one mother class", choppedClass.startingLine);
                 } else {
-                    choppedClass.motherClass = extractClassName(buffer, s, i);
-                    buffer.delete(0, buffer.length());
+                    parser.forward(1); // skip the character
+                    parser.forwardUntilNot(" ");
+                    choppedClass.motherClass = parser.forwardToOrEnd(" ");
                 }
-            } else if(c == '+') {
-                i++;
-                String extracted = extractClassName(buffer, s, i);
+            } else if(parser.isAt("+")) {
+                parser.forward(1); // skip the character
+                parser.forwardUntilNot(" ");
+                String extracted = parser.forwardToOrEnd(" ");
                 choppedClass.interfacesImplemented.add(extracted);
-                buffer.delete(0, buffer.length());
             }
+            parser.forward(1);
         }
-
-        if(buffer.length() != 0) {
-            if(choppedClass.motherClass == null) {
-                choppedClass.motherClass = buffer.toString();
-            } else {
-                choppedClass.interfacesImplemented.add(buffer.toString());
-            }
-        }
-    }
-
-    /**
-     * Extracts a single class name
-     * @param buffer
-     * @param s
-     * @param i
-     * @return
-     */
-    private String extractClassName(StringBuilder buffer, String s, int i) {
-        char[] chars = s.toCharArray();
-        for(int j = i;j<s.length();j++) {
-            char c = chars[j];
-            if(c == ' ') {
-                if(buffer.length() != 0) {
-                    return buffer.toString();
-                }
-            } else {
-                if (Character.isJavaIdentifierPart(c)) {
-                    buffer.append(c);
-                } else {
-                    return buffer.toString();
-                }
-            }
-        }
-        return buffer.toString();
     }
 
 }

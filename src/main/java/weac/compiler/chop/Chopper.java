@@ -4,6 +4,8 @@ import weac.compiler.CompilePhase;
 import weac.compiler.chop.structure.ChoppedSource;
 import weac.compiler.chop.structure.ChoppedAnnotation;
 import weac.compiler.chop.structure.ChoppedClass;
+import weac.compiler.parser.ParseRule;
+import weac.compiler.parser.Parser;
 import weac.compiler.utils.*;
 
 import java.util.*;
@@ -17,9 +19,51 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
      * The class chopping helper
      */
     private final ClassChopper classChopper;
+    private final Parser importParser;
+    private final ParseRule commentRule;
 
     public Chopper() {
         classChopper = new ClassChopper();
+        commentRule = new ParseRule("/");
+        commentRule.setAction(p -> {
+            char next = p.nextCharacter();
+            if(next == '/') {
+                p.forwardTo("\n");
+                //lineIndex++;
+            } else if(next == '*') {
+                while(p.nextCharacter() != '/') {
+                    p.backwards(1);
+                    String read = p.forwardTo("*");
+                    /*lineIndex += read.chars()
+                            .boxed()
+                            .filter(c -> c == '\n')
+                            .count();*/ // TODO: line number
+                }
+                p.backwards(1);
+            }
+        });
+        importParser = new Parser();
+        importParser.enableBlocks().addBlockDelimiters("{", "}", false);
+        importParser.newRule("import", importRule -> importRule.setAction((p) -> {
+            importParser.forwardUntilNotList(" ", "\n");
+            String end = importParser.getClosest(" ", "\n");
+            String imported = end == null ? importParser.forwardToEnd() : importParser.forwardToOrEnd(end);
+            importParser.forwardUntilNot(" ");
+            String usageName = null;
+            if(importParser.isAt("as ")) {
+                importParser.forward(3);
+                importParser.forwardUntilNotList(" ", "\n");
+                if(importParser.isAt("\n") || importParser.hasReachedEnd()) {
+                    newError("Invalid import, must have an usage name after 'as'", -1); // todo line
+                } else {
+                    usageName = importParser.forwardToOrEndList(" ", "\n");
+                }
+            }
+            Import importResult = new Import();
+            importResult.importedType = imported;
+            importResult.usageName = usageName;
+            importParser.setUserObject(importResult);
+        }));
     }
 
     /**
@@ -61,58 +105,53 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
         char[] chars = source.toCharArray();
         int lineIndex = 0;
         List<Modifier> modifiers = new LinkedList<>();
-        for(int i = 0;i<chars.length;i++) {
-            i += readUntilNot(chars, i, ' ', '\n').length();
-            if(chars[i] == '/') {
-                char next = chars[i+1];
-                if(next == '/') {
-                    i += readUntil(chars, i, '\n').length()+1;
-                    lineIndex++;
-                } else if(next == '*') {
-                    while(chars[i+1] != '/') {
-                        String read = readUntil(chars, i, '*');
-                        i += read.length();
-                        lineIndex += read.chars()
-                                .boxed()
-                                .filter(c -> c == '\n')
-                                .count();
-                    }
-                }
-            }
-            String command = readUntil(chars, i, ' ', '\n');
+        Parser parser = new Parser(source);
+        parser.enableBlocks();
+        parser.addBlockDelimiters("{", "}", true);
+        parser.addBlockDelimiters("\"", "\"", false);
+        parser.addBlockDelimiters("'", "'", false);
+        while(!parser.hasReachedEnd()) {
+            parser.forwardUntilNotList(" ", "\n");
+            parser.applyRuleIfPossible(commentRule);
+            parser.mark();
+            String command = parser.forwardToList(" ", "\n");
+            if(command == null)
+                command = parser.forwardToEnd();
             switch (command) {
                 case "package":
-                    i += command.length();
-                    i += readUntilNot(chars, i, ' ', '\n').length();
-                    String packageName = readUntil(chars, i, ' ', '\n');
+                    parser.discardMark();
+                    parser.forwardUntilNotList(" ", "\n");
+                    String packageName = parser.forwardToList(" ", "\n");
                     if(choppedSource.packageName != null) {
-                        newError("Cannot set package name twice", lineIndex);
+                        newError("Cannot set package name twice, was "+choppedSource.packageName, lineIndex);
                     } else {
                         choppedSource.packageName = packageName;
                     }
-                    i += packageName.length();
                     break;
 
                 case "#target":
-                    i += command.length();
-                    i += readUntilNot(chars, i, ' ', '\n').length();
-                    choppedSource.target = readUntil(chars, i, '\n').replace("\r", "");
+                    parser.discardMark();
+                    parser.forwardUntilNotList(" ", "\n");
+                    choppedSource.target = parser.forwardToOrEnd("\n").replace("\r", "");
                     break;
 
                 case "#version":
-                    i += command.length();
-                    i += readUntilNot(chars, i, ' ', '\n').length();
-                    choppedSource.version = readUntil(chars, i, '\n').replace("\r", "");
+                    parser.discardMark();
+                    parser.forwardUntilNotList(" ", "\n");
+                    choppedSource.version = parser.forwardToOrEnd("\n").replace("\r", "");
                     break;
 
                 case "import":
-                    i += command.length();
-                    i += readUntilNot(chars, i, ' ', '\n').length();
-                    i += readImport(choppedSource, chars, i, lineIndex);
+                    parser.rewind();
+                    readImport(choppedSource, parser, lineIndex);
                     break;
 
                 default:
-                    i += readModifiers(chars, i, modifiers);
+                    if(parser.hasReachedEnd())
+                        break;
+                    parser.rewind();
+                    modifiers = readModifiers(parser);
+                    parser.forwardUntilNotList(" ", "\n", "\r");
                     ModifierType currentAccess = null;
                     boolean isAbstract = false;
                     boolean isMixin = false;
@@ -142,16 +181,21 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
                     modifiers.clear();
                     if(currentAccess == null)
                         currentAccess = ModifierType.PUBLIC;
-                    String extractedClass = extractClass(chars, i);
-                    ChoppedClass clazz = readClass(choppedSource, extractedClass, lineIndex, isAbstract, isMixin);
-                    clazz.access = currentAccess;
-                    clazz.annotations = annotations;
-                    clazz.isCompilerSpecial = isCompilerSpecial;
-                    clazz.isFinal = isFinal;
-                    i+=extractedClass.length();
+                    try {
+                        String extractedClass = extractClass(parser);
+                        ChoppedClass clazz = readClass(choppedSource, extractedClass, lineIndex, isAbstract, isMixin);
+                        clazz.access = currentAccess;
+                        clazz.annotations = annotations;
+                        clazz.isCompilerSpecial = isCompilerSpecial;
+                        clazz.isFinal = isFinal;
+                    }
+                    catch (Exception e) {
+                        System.err.println(parser.getData().substring(parser.getPosition()));
+                        e.printStackTrace();
+                    }
                     break;
             }
-            if(chars[i] == '\n')
+            if(parser.isAt("\n"))
                 lineIndex++;
         }
 
@@ -159,65 +203,40 @@ public class Chopper extends CompilePhase<SourceCode, ChoppedSource> {
             choppedSource.target = "jvm";
         if(choppedSource.version == null)
             choppedSource.version = Constants.CURRENT_VERSION;
+
+        choppedSource.classes.forEach(clazz -> {
+            if(!clazz.getCanonicalName().equals(Constants.WEAC_VERSION_ANNOTATION)) {
+                ChoppedAnnotation versionAnnotation = new ChoppedAnnotation("WeacVersion");
+                versionAnnotation.args.add("\""+choppedSource.version+"\"");
+                clazz.annotations.add(versionAnnotation);
+            }
+        });
     }
 
     /**
      * Extracts a single class from the source code
-     * @param chars
-     *                  The source code characters
-     * @param startIndex
-     *                  The offset at which to start the extraction
      * @return
      *                  The extracted class source code
      */
-    private String extractClass(char[] chars, int startIndex) {
-        int unclosedCurlyBrackets = 0;
-        StringBuilder builder = new StringBuilder();
-        for(int i = startIndex;i<chars.length;i++) {
-            char c = chars[i];
-            builder.append(c);
-
-            if(c == '{') {
-                unclosedCurlyBrackets++;
-            } else if(c == '}') {
-                unclosedCurlyBrackets--;
-                if(unclosedCurlyBrackets == 0) {
-                    break;
-                }
-            }
-        }
-        return builder.toString();
+    private String extractClass(Parser parser) {
+        return parser.forwardTo("}")+parser.forward(1);
     }
 
     /**
      * Extracts an import from the source and stores it into <code>choppedSource</code>.
      * @param choppedSource
      *                  The current source
-     * @param chars
-     *                  The source characters
-     * @param offset
-     *                  The offset at which to start extracting the import declaration
      * @param lineIndex
      *                  The line of the import
      * @return
      *                  The number of characters read
      */
-    private int readImport(ChoppedSource choppedSource, char[] chars, int offset, int lineIndex) {
-        final int start = offset;
-        String importStatement = readUntil(chars, offset, '\n');
-        String[] parts = importStatement.split(" ");
-        offset += importStatement.length();
-        Import parsedImport = new Import();
-        parsedImport.importedType = parts[0];
-        if(parts.length > 2) {
-            if(parts[1].equals("as")) {
-                parsedImport.usageName = parts[2];
-            } else {
-                newError("Import statement not understood, should follow: 'import <name>' or 'import <name> as <usageName>''", lineIndex);
-            }
-        }
-        choppedSource.imports.add(parsedImport);
-        return offset-start;
+    private void readImport(ChoppedSource choppedSource, Parser parser, int lineIndex) {
+        String importStatement = parser.forwardToOrEnd("\n");
+        importParser.setData(importStatement);
+        importParser.applyRules();
+        Import importObj = (Import) importParser.getUserObject();
+        choppedSource.imports.add(importObj);
     }
 
     /**

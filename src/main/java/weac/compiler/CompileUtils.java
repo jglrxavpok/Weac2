@@ -1,6 +1,7 @@
 package weac.compiler;
 
 import weac.compiler.chop.structure.ChoppedAnnotation;
+import weac.compiler.parser.Parser;
 import weac.compiler.utils.*;
 
 import java.util.*;
@@ -35,33 +36,6 @@ public abstract class CompileUtils {
         return l;
     }
 
-    /**
-     * Extracts a String from <code>start</code> to <code>end</code>
-     * @param array
-     *              The characters to extract from
-     * @param start
-     *              The starting point from which to read
-     * @param end
-     *              The ending point until which to read
-     * @return
-     *              The extracted text
-     */
-    public static String read(char[] array, int start, int end) {
-        StringBuilder builder = new StringBuilder();
-        for(int i = start;i<end;i++) {
-            builder.append(array[i]);
-        }
-        return builder.toString();
-    }
-
-    public static int indexOf(char[] array, int start, char toFind) {
-        for(int i = start;i<array.length;i++) {
-            if(array[i] == toFind)
-                return i;
-        }
-        return -1;
-    }
-
     public static String readUntilNot(char[] array, int start, char... seeked) {
         StringBuilder builder = new StringBuilder();
         for(int i = start;i<array.length;i++) {
@@ -81,34 +55,18 @@ public abstract class CompileUtils {
         return false;
     }
 
-    public static String readUntil(char[] array, int start, char... seeked) {
-        StringBuilder builder = new StringBuilder();
-        for(int i = start;i<array.length;i++) {
-            if(contains(seeked, array[i]))
-                break;
-            else
-                builder.append(array[i]);
-        }
-        return builder.toString();
-    }
-
     /**
      * Reads the possible modifiers present in the text starting from given offset
-     * @param chars
-     *                  The characters to read from
-     * @param offset
-     *                  The offset from which to start the reading
-     * @param out
-     *                  The list where to store the modifiers
      * @return
-     *         The number of read characters
+     *         The read modifiers
      */
-    public static int readModifiers(char[] chars, int offset, List<Modifier> out) {
-        int start = offset;
-        offset += readUntilNot(chars, start, ' ', '\n').length();
+    public static List<Modifier> readModifiers(Parser parser) {
+        List<Modifier> out = new ArrayList<>();
         boolean isValidToken = true;
         while(isValidToken) {
-            String token = readUntil(chars, offset, ' ', '\n');
+            parser.mark();
+            parser.forwardUntilNotList(" ", "\n", "\r");
+            String token = parser.forwardToList(" ", "\n");
             isValidToken = false;
             for(ModifierType modifier : ModifierType.values()) {
                 if(modifier == ModifierType.ANNOTATION)
@@ -118,16 +76,17 @@ public abstract class CompileUtils {
                     out.add(new Modifier(modifier));
                 }
             }
+
             if(!isValidToken) {
                 if(token.startsWith("@")) {
-                    String name = Identifier.read(chars, offset+1).getId();
+                    String name = Identifier.read(token.toCharArray(), 1).getId();
                     ChoppedAnnotation annotation = new ChoppedAnnotation(name);
                     out.add(new AnnotationModifier(ModifierType.ANNOTATION, annotation));
-                    int nameEnd = offset + name.length();
-                    if(nameEnd < chars.length) {
+                    int nameEnd = name.length()+1;
+                    if(nameEnd < token.length()) {
                         isValidToken = true;
-                        if(chars[nameEnd+1] == '(') { // We have arguments, yay!
-                            String args = readArguments(chars, nameEnd+1);
+                        if(token.charAt(nameEnd) == '(') { // We have arguments, yay!
+                            String args = readArguments(token.toCharArray(), nameEnd);
                             List<String> argList = new LinkedList<>();
                             String arg;
                             int argumentOffset = 0;
@@ -139,18 +98,19 @@ public abstract class CompileUtils {
                                 }
                             } while(!arg.isEmpty());
                             annotation.args.addAll(argList);
-                            offset = nameEnd + args.length()+1;
-                            offset += readUntil(chars, offset, ')').length()+1;
-                            offset += readUntilNot(chars, offset, ' ', '\n', '\r').length();
+                            parser.discardMark();
                             continue;
                         }
                     }
                 }
             }
-            if(isValidToken)
-                offset += token.length()+readUntilNot(chars, offset+token.length(), ' ', '\n').length();
+            if(isValidToken) {
+                parser.discardMark();
+            } else {
+                parser.rewind();
+            }
         }
-        return offset-start;
+        return out;
     }
 
     /***
@@ -370,6 +330,14 @@ public abstract class CompileUtils {
                 methodSource.append(c);
         }
         return methodSource.toString();
+    }
+
+    public static String readOperator(Parser parser) {
+        String read = readOperator(parser.getData().toCharArray(), parser.getPosition());
+        if(read != null) {
+            parser.forward(read.length());
+        }
+        return read;
     }
 
     public static String readOperator(char[] chars, int offset) {

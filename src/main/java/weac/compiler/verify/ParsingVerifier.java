@@ -17,14 +17,14 @@ public class ParsingVerifier extends CompilePhase<ChoppedSource, ChoppedSource> 
     }
 
     private void verify(ChoppedClass choppedClass) {
-        verifyValidName(choppedClass.name.getCoreType().getIdentifier().getId(), choppedClass.startingLine);
+        verifyValidName(choppedClass.name.getCoreType().getIdentifier(), choppedClass.startingLine);
 
         for (ChoppedField field : choppedClass.fields) {
-            verifyValidName(field.name.getId(), field.startingLine);
+            verifyValidName(field.name, field.startingLine);
         }
 
         for (ChoppedMethod method : choppedClass.methods) {
-            verifyValidName(method.name.getId(), method.startingLine);
+            verifyValidName(method.name, method.startingLine);
         }
 
         if(choppedClass.classType == EnumClassTypes.OBJECT) {
@@ -47,9 +47,9 @@ public class ParsingVerifier extends CompilePhase<ChoppedSource, ChoppedSource> 
         }
     }
 
-    private void verifyValidName(String name, int line) {
-        if(!Identifier.isValid(name)) {
-            newError("Invalid identifier start in name "+name, line);
+    private void verifyValidName(Identifier name, int line) {
+        if(!name.isValid()) {
+            newError("Invalid identifier in name "+name, line);
         }
     }
 
