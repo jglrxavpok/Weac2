@@ -4,6 +4,7 @@ WeaC TODO List
 - [ ] Loops
     - [ ] For loop
     - [ ] While loop
+    - [ ] Until loop
 
 - [ ] Support for native code
     - [ ] JVM
@@ -14,14 +15,7 @@ WeaC TODO List
     
 - [ ] Use correct line in error messages
 
-- [ ] Create improved actual parser (in progress)
-    - [x] Must support going forward and backwards
-    - [ ] Must support extracting a pattern (regular expressions ?)
-
-- [ ] Auto type inference
-    - [x] Fields
-    - [x] Local variables
-    - [ ] Function return type 
+- [ ] Complete migration to the new parser
 
 - [ ] More verification steps in order to check the code is valid before trying to compile/resolve/precompile it
 
@@ -36,10 +30,10 @@ WeaC TODO List
     - [x] Java Virtual Machine
     - [ ] Spir-V
 
-- [ ] Replace '>' (equivalent of Java 'extends' / 'implements') by more easily resolvable token (causes problems with generic types)
-
-- [ ] Don't perform type erasure on generic types until compilation (if needed)
-    - [ ] Type Resolver must take generic types in account
+- [ ] Better generics handling
+    - [ ] Don't perform type erasure on generic types until compilation (if needed)
+        - [ ] Type Resolver must take generic types in account
+    - [ ] More intelligent generic parameters identification (avoid confusion with 'superclass keyword' '>')
 
 - [ ] Intermediate representation to allow to switch from a compilation target to another
 
@@ -66,3 +60,11 @@ Done
     - [x] Apply new name
     
 - [x] Resolution should fail if a variable is not initialized and requests auto type inferring.
+
+- [x] Create improved actual parser
+    - [x] Must support going forward and backwards
+    - [x] Must support extracting a pattern
+    
+- [x] Auto type inference
+    - [x] Fields
+    - [x] Local variables
