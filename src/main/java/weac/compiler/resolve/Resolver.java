@@ -26,10 +26,12 @@ public class Resolver extends CompileUtils {
     private ExpressionResolver expressionResolver;
     private TypeResolver typeResolver;
     private WeacTarget target;
+    private Map<String, ResolvingContext> pseudoContexts;
 
     public Resolver(WeacTarget target) {
         this.target = target;
         this.typeResolver = target.newTypeResolver(this);
+        pseudoContexts = new HashMap<>();
         expressionResolver = new ExpressionResolver(this);
         numberResolver = new NumberResolver();
         stringResolver = new StringResolver();
@@ -394,24 +396,27 @@ public class Resolver extends CompileUtils {
 
     private PrecompiledMethod findMethodFromHierarchy(WeacType topType, String potentialNames, int argCount, WeacType[] argTypes, ResolvingContext context, VariableMap varMap) {
         String[] names = potentialNames.split(Pattern.quote("|"));
+        PrecompiledClass topClass = findClass(topType.getIdentifier().getId(), context);
+        context = getPseudoContext(topType, context);
+
+        ResolvingContext finalContext = context;
         for (String name : names) {
-            PrecompiledClass topClass = findClass(topType.getIdentifier().getId(), context);
             List<PrecompiledMethod> result = topClass.methods.stream()
                     .filter(m -> m.name.getId().equals(name) || (m.isConstructor && topType.getIdentifier().getId().endsWith(name)))
                     .filter(m -> m.argumentNames.size() == argCount)
                     .filter(m -> {
                         for (int i = 0; i < argTypes.length; i++) {
                             WeacType argType = argTypes[i];
-                            WeacType paramType = resolveType(m.argumentTypes.get(i), context);
-                            if (!isCastable(argType, paramType, context)) {
+                            WeacType paramType = resolveType(m.argumentTypes.get(i), finalContext);
+                            if (!isCastable(argType, paramType, finalContext)) {
                                 return false;
                             }
                         }
                         return true;
                     })
                     .sorted((a, b) -> {
-                        int aMethodScore = computeMethodScore(a, argTypes, context);
-                        int bMethodScore = computeMethodScore(b, argTypes, context);
+                        int aMethodScore = computeMethodScore(a, argTypes, finalContext);
+                        int bMethodScore = computeMethodScore(b, argTypes, finalContext);
                         a.score = aMethodScore;
                         b.score = bMethodScore;
                         return Integer.compare(aMethodScore, bMethodScore); // the lower the better
@@ -451,12 +456,12 @@ public class Resolver extends CompileUtils {
             PrecompiledClass superclass = hierarchy.getSuperclass();
             if (superclass != null && !superclass.fullName.equals(topClass.fullName)) {
                 WeacType superType = resolveType(new Identifier(superclass.fullName, true), context);
-                PrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, context, varMap);
+                PrecompiledMethod supermethod = findMethodFromHierarchy(superType, name, argCount, argTypes, newContext, varMap);
                 if (supermethod == null) {
                     List<PrecompiledClass> interfaces = hierarchy.getInterfaces();
                     for (PrecompiledClass in : interfaces) {
                         WeacType interType = resolveType(new Identifier(in.fullName, true), context);
-                        PrecompiledMethod m = findMethodFromHierarchy(interType, name, argCount, argTypes, context, varMap);
+                        PrecompiledMethod m = findMethodFromHierarchy(interType, name, argCount, argTypes, newContext, varMap);
                         if (m != null) {
                             return m;
                         }
@@ -544,5 +549,30 @@ public class Resolver extends CompileUtils {
 
     public WeacTarget getTarget() {
         return target;
+    }
+
+    /**
+     * Returns a pseudo resolving context, used for type resolving
+     * @param owner
+     * @param context
+     * @return
+     */
+    public ResolvingContext getPseudoContext(WeacType owner, ResolvingContext context) {
+        if(!pseudoContexts.containsKey(owner.toString())) {
+            PrecompiledClass topClass = findClass(owner.getIdentifier().getId(), context);
+            PrecompiledSource newSource = new PrecompiledSource();
+            newSource.classes = new LinkedList<>();
+            newSource.classes.add(topClass);
+            newSource.imports = topClass.imports;
+            newSource.packageName = topClass.packageName;
+            PrecompiledClass[] sideClasses = new PrecompiledClass[context.getSideClasses().length + context.getSource().classes.size()];
+            System.arraycopy(context.getSideClasses(), 0, sideClasses, 0, context.getSideClasses().length);
+            List<PrecompiledClass> classes = context.getSource().classes;
+            for (int i = 0; i < classes.size(); i++) {
+                sideClasses[i + context.getSideClasses().length] = classes.get(i);
+            }
+            pseudoContexts.put(owner.toString(), new ResolvingContext(newSource, sideClasses));
+        }
+        return pseudoContexts.get(owner.toString());
     }
 }

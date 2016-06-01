@@ -260,10 +260,10 @@ public class ExpressionResolver extends CompileUtils {
                 }
 
                 for(int i0 = 0;i0<argTypes.length;i0++) {
-                    argTypes[i0] = resolver.resolveType(realMethod.argumentTypes.get(i0), context);
+                    argTypes[i0] = resolver.resolveType(realMethod.argumentTypes.get(i0), resolver.getPseudoContext(owner.getType(), context));
                 }
 
-                WeacType returnType = resolver.resolveType(realMethod.returnType, context);
+                WeacType returnType = resolver.resolveType(realMethod.returnType, resolver.getPseudoContext(owner.getType(), context));
                 insns.add(new FunctionCallInsn(realMethod.name.getId(), owner.getType(), argTypes, realMethod.isConstructor ? JVMWeacTypes.VOID_TYPE : returnType, isStatic));
 
                 staticness.setCurrent(false).push();

@@ -50,7 +50,7 @@ object HelloWorld > Application + TestMixin {
         }
         Console.writeLine(simpleField);
         Class c = Object.class;
-        //Console.writeLine(c);
+        Console.writeLine(c);
     }
 
     String test(String a) {
