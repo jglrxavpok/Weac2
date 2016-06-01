@@ -13,4 +13,6 @@ public abstract class TypeResolver {
     public abstract PrecompiledClass findClass(String inter, ResolvingContext context);
 
     public abstract WeacType findResultType(WeacType left, WeacType right, ResolvingContext context);
+
+    public abstract WeacType getClassType(WeacType currentType);
 }

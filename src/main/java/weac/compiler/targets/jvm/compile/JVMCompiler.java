@@ -629,6 +629,9 @@ public class JVMCompiler extends CompileUtils implements Opcodes, TargetCompiler
         } else if(insn instanceof LineNumberInstruction) {
             LineNumberInstruction lineNumberInstruction = (LineNumberInstruction)insn;
             writer.visitLineNumber(lineNumberInstruction.getLineNumber(), currentLabel);
+        } else if(insn instanceof LoadClassInsn) {
+            LoadClassInsn loadClassInsn = (LoadClassInsn)insn;
+            writer.visitLdcInsn(toJVMType(loadClassInsn.getClassToLoad()));
         } else if(insn instanceof FunctionStartResInsn) {
             // discard
         } else {

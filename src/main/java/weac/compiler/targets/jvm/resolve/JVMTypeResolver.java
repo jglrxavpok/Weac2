@@ -69,6 +69,11 @@ public class JVMTypeResolver extends TypeResolver {
     }
 
     @Override
+    public WeacType getClassType(WeacType currentType) {
+        return JVMWeacTypes.CLASS_TYPE;
+    }
+
+    @Override
     public boolean isCastable(PrecompiledClass from, PrecompiledClass to, ResolvingContext context) {
         if(from.fullName.equals("java.lang.Object") && !to.fullName.equals("java.lang.Object"))
             return false;

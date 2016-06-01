@@ -97,6 +97,7 @@ public class Resolver extends CompileUtils {
         }
         List<ResolvedField> fields = new LinkedList<>();
         VariableMap fieldVarMap = new VariableMap();
+        fieldVarMap.registerField("class", typeResolver.getClassType(currentType));
         toMixIn.fields.forEach(m -> addOrOverrideField(resolveSingleField(m, currentType, context, fieldVarMap), fields));
 
         aClass.fields.forEach(m -> addOrOverrideField(resolveSingleField(m, currentType, context, fieldVarMap), fields));
@@ -167,7 +168,7 @@ public class Resolver extends CompileUtils {
                 .forEach(method.argumentTypes::add);
 
         VariableMap localVariables = new VariableMap();
-        registerFields(localVariables, currentClass);
+        registerFields(localVariables, currentType, currentClass, context);
         localVariables.registerLocal("this", currentType);
         for(int i = 0;i<method.argumentNames.size();i++) {
             Identifier name = method.argumentNames.get(i);
@@ -179,20 +180,13 @@ public class Resolver extends CompileUtils {
         return method;
     }
 
-    private void registerFields(VariableMap variables, ResolvedClass resolvedClass) {
+    private void registerFields(VariableMap variables, WeacType currentType, ResolvedClass resolvedClass, ResolvingContext context) {
         for(ResolvedField f : resolvedClass.fields) {
             WeacType type = f.type;
             String name = f.name.getId();
             variables.registerField(name, type);
         }
-    }
-
-    private void registerFields(VariableMap variables, PrecompiledClass precompiledClass, ResolvingContext context) {
-        for(PrecompiledField f : precompiledClass.fields) {
-            WeacType type = resolveType(f.type, context);
-            String name = f.name.getId();
-            variables.registerField(name, type);
-        }
+        variables.registerField("class", typeResolver.getClassType(currentType));
     }
 
     protected WeacType resolveType(Identifier type, ResolvingContext context) {
@@ -329,6 +323,7 @@ public class Resolver extends CompileUtils {
                 newError(cst.name+" enum field already localExists", -1); // TODO: line
             }
             enumVarMap.registerLocal(cst.name, currentType);
+            enumVarMap.registerField("class", typeResolver.getClassType(currentType));
             ResolvedEnumConstant resolved = new ResolvedEnumConstant();
             resolved.name = cst.name;
             resolved.ordinal = cst.ordinal;
@@ -372,7 +367,7 @@ public class Resolver extends CompileUtils {
         return new Label(labelID--);
     }
 
-    protected void registerVariables(PrecompiledClass cl, Map<WeacType, VariableMap> variableMaps, ResolvingContext context) {
+    protected void registerVariables(WeacType currentVarType, PrecompiledClass cl, Map<WeacType, VariableMap> variableMaps, ResolvingContext context) {
         WeacType type = resolveType(new Identifier(cl.fullName, true), context);
         VariableMap map = new VariableMap();
         for(PrecompiledField f : cl.fields) {
@@ -383,6 +378,7 @@ public class Resolver extends CompileUtils {
             if(fieldType == null)
                 fieldType = resolveType(f.type, context);
             map.registerField(f.name.getId(), fieldType);
+            map.registerField("class", typeResolver.getClassType(currentVarType));
         }
         variableMaps.put(type, map);
     }

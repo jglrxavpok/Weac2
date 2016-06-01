@@ -88,11 +88,13 @@ public class Tokenizer extends CompileUtils {
                     case '/':
                         if(parser.isAt("/")) {
                             String comment = parser.forwardToOrEnd("\n");
-                            parser.forward(1);
+                            if(!parser.hasReachedEnd())
+                                parser.forward(1);
                             return new CommentToken(comment, false);
                         } else if(parser.isAt("*")) {
                             String comment = parser.forwardToOrEnd("*/");
-                            parser.forward(2);
+                            if(!parser.hasReachedEnd())
+                                parser.forward(2);
                             return new CommentToken(comment, false);
                         }
                 }

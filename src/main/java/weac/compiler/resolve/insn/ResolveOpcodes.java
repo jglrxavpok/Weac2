@@ -73,6 +73,7 @@ public interface ResolveOpcodes {
 
             NATIVE_CODE = 0x60,
             NATIVE_CALL = 0x61,
+            LOAD_CLASS = 0x62,
 
             LINE_NUMBER = 0x80, // misc
 

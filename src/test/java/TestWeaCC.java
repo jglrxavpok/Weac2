@@ -33,10 +33,18 @@ public class TestWeaCC extends Tests {
     }
 
     @Test
+    public void simplePrecompilation() throws IOException, TimeoutException {
+        File output = new File(".", "monolith/precompilation");
+        empty(new File(output, "tests"));
+        WeaCC.main(new String[] {"--out", output.getPath(), "--stdl", "src/main/resources/weac/lang", "src/test/resources/tests/HelloWorld.ws", "src/test/resources/tests/TestValue.ws", "--stopAt", "precompilation"});
+        assertEquals(asList(new File(output, "tests/HelloWorld.preweac"), new File(output, "tests/TestMixin.preweac")), asList(new File(output, "tests").listFiles()));
+    }
+
+    @Test
     public void simpleResolution() throws IOException, TimeoutException {
         File output = new File(".", "monolith/resolution");
         empty(new File(output, "tests"));
-        WeaCC.main(new String[] {"--out", output.getPath(), "--stdl", "src/main/resources/weac/lang", "src/test/resources/tests/HelloWorld.ws", "src/test/resources/tests/TestValue.ws", "--stopAt", "precompilation"});
+        WeaCC.main(new String[] {"--out", output.getPath(), "--stdl", "src/main/resources/weac/lang", "src/test/resources/tests/HelloWorld.ws", "src/test/resources/tests/TestValue.ws", "--stopAt", "resolution"});
         assertEquals(asList(new File(output, "tests/HelloWorld.preweac"), new File(output, "tests/TestMixin.preweac")), asList(new File(output, "tests").listFiles()));
     }
 

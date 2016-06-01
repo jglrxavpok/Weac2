@@ -1,5 +1,7 @@
 package weac.lang
 
+import java.lang.Object as JObject
+
 object Console {
 
     Void writeLine(String line) {
@@ -36,5 +38,9 @@ object Console {
 
     Void writeLine(Short s) {
         System.out.println(s);
+    }
+
+    Void writeLine(JObject o) {
+        System.out.println(o);
     }
 }

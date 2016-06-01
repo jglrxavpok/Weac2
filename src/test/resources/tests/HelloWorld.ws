@@ -49,6 +49,8 @@ object HelloWorld > Application + TestMixin {
             ifnonnull l0
         }
         Console.writeLine(simpleField);
+        Class c = Object.class;
+        //Console.writeLine(c);
     }
 
     String test(String a) {

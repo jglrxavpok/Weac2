@@ -49,7 +49,7 @@ public class ExpressionResolver extends CompileUtils {
         Map<WeacType, VariableMap> variableMaps = new HashMap<>();
         // fill variableMaps
         for(PrecompiledClass cl : context.getSideClasses()) {
-            resolver.registerVariables(cl, variableMaps, context);
+            resolver.registerVariables(resolver.resolveType(new Identifier(cl.fullName, true), context), cl, variableMaps, context);
         }
         variableMaps.put(selfType, varMap);
 
@@ -119,6 +119,17 @@ public class ExpressionResolver extends CompileUtils {
                     valueStack.push(new ThisValue(selfType));
                     currentVarType = selfType;
                     staticness.setCurrent(false).push();
+                } else if(varName.equals("class")) {
+                    Value stackTop = valueStack.pop();
+                    WeacType type = stackTop.getType();
+                    if(!(stackTop instanceof ClassInstanceValue)) {
+                        insns.add(new PopInsn(type));
+                    }
+                    WeacType classType = resolver.getTypeResolver().getClassType(type);
+                    insns.add(new LoadClassInsn(type));
+                    valueStack.push(new ConstantValue(classType));
+                    currentVarType = classType;
+                    staticness.setCurrent(false).push();
                 } else {
                     // check if local variable
                     if(varMap.localExists(varName)) {
@@ -133,7 +144,7 @@ public class ExpressionResolver extends CompileUtils {
                         // check if field
                         if(!variableMaps.containsKey(currentVarType)) {
                             PrecompiledClass clazz = resolver.findClass(currentVarType.getIdentifier().getId(), context);
-                            resolver.registerVariables(clazz, variableMaps, context);
+                            resolver.registerVariables(currentVarType, clazz, variableMaps, context);
                         }
                         if(variableMaps.get(currentVarType).fieldExists(varName)) {
                             if(currentVarType.equals(selfType)) {
@@ -164,7 +175,8 @@ public class ExpressionResolver extends CompileUtils {
                                     valueStack.push(new FieldValue(Constants.SINGLETON_INSTANCE_FIELD, currentVarType, currentVarType));
                                     staticness.setCurrent(false).push();
                                 } else {
-                                    newError(":cc2 "+context.getSource().classes.get(0).fullName+" / "+currentVarType.getIdentifier(), -1); // todo line
+                                    valueStack.push(new ClassInstanceValue(currentVarType));
+                                    staticness.setCurrent(false).push();
                                 }
                             } else {
                                 newError(":cc "+context.getSource().classes.get(0).fullName+" / "+varName+" / "+currentVarType, -1); // todo line
@@ -244,7 +256,7 @@ public class ExpressionResolver extends CompileUtils {
                 PrecompiledMethod realMethod = resolver.findMethod(owner.getType(), name, cst.getArgCount(), valueStack, context, varMap);
 
                 if(realMethod == null) {
-                    newError("Could not find method named "+name+" in "+owner.getType()+" with "+cst.getArgCount()+" argument(s). (current class: "+selfType+")", -1);
+                    newError("Could not find method named "+name+" in "+owner.getType()+" with "+cst.getArgCount()+" ("+Arrays.toString(valueStack.toArray())+") argument(s). (current class: "+selfType+")", -1);
                 }
 
                 for(int i0 = 0;i0<argTypes.length;i0++) {
@@ -663,6 +675,20 @@ public class ExpressionResolver extends CompileUtils {
         }
 
         insns.add(0, new LocalVariableTableInsn(varMap));
+        return filter(insns);
+    }
+
+    private List<ResolvedInsn> filter(List<ResolvedInsn> insns) {
+        ListIterator<ResolvedInsn> iterator = insns.listIterator();
+        while(iterator.hasNext()) {
+            ResolvedInsn instruction = iterator.next();
+            if(instruction instanceof LoadFieldInsn) {
+                LoadFieldInsn loadFieldInsn = (LoadFieldInsn) instruction;
+                if(loadFieldInsn.getFieldName().equals("class")) {
+                    iterator.set(new LoadClassInsn(loadFieldInsn.getOwner()));
+                }
+            }
+        }
         return insns;
     }
 
