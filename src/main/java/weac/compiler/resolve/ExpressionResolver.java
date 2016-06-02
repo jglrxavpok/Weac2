@@ -122,14 +122,15 @@ public class ExpressionResolver extends CompileUtils {
                 } else if(varName.equals("class")) {
                     Value stackTop = valueStack.pop();
                     WeacType type = stackTop.getType();
-                    if(!(stackTop instanceof ClassInstanceValue)) {
-                        insns.add(new PopInsn(type));
-                    }
                     WeacType classType = resolver.getTypeResolver().getClassType(type);
-                    insns.add(new LoadClassInsn(type));
                     valueStack.push(new ConstantValue(classType));
                     currentVarType = classType;
                     staticness.setCurrent(false).push();
+                    if(stackTop instanceof ClassInstanceValue) {
+                        insns.add(new LoadClassInsn(type));
+                    } else {
+                        insns.add(new FunctionCallInsn("getClass", type, new WeacType[0], classType, false));
+                    }
                 } else {
                     // check if local variable
                     if(varMap.localExists(varName)) {

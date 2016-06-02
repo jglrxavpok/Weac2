@@ -50,8 +50,6 @@ WeaC TODO List
 
 - [ ] Default argument values
 
-- [ ] Allow to access class (like "Object.class" in Java)
-
 - [ ] Finish specifications
 
 Done
@@ -68,3 +66,5 @@ Done
 - [x] Auto type inference
     - [x] Fields
     - [x] Local variables
+    
+- [x] Allow to access class (like "Object.class" in Java)

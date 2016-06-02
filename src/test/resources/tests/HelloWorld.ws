@@ -51,6 +51,8 @@ object HelloWorld > Application + TestMixin {
         Console.writeLine(simpleField);
         Class c = Object.class;
         Console.writeLine(c);
+        Console.writeLine(this.class);
+        Console.writeLine(c.class);
     }
 
     String test(String a) {
